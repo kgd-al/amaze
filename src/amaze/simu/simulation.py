@@ -1,309 +1,358 @@
-from dataclasses import dataclass, fields
-from enum import Enum, auto
 from logging import getLogger
-from random import Random
 from types import SimpleNamespace
-from typing import Tuple, Optional, Annotated
-from PIL import Image
+from typing import Union, TypeVar
 
 import numpy as np
-from PyQt5.QtCore import QObject, Qt, QEvent
-from PyQt5.QtGui import QKeyEvent
-from PyQt5.QtWidgets import QApplication
 
+from amaze.simu.controllers.base import BaseController
 from amaze.simu.env.maze import Maze
+from amaze.simu.pos import Pos
+from amaze.simu.robot import Robot, InputType, OutputType, Action, State
 from amaze.visu import resources
 
 logger = getLogger(__name__)
 
 
-class Pos:
-    def __init__(self, x: float, y: float):
-        self.x, self.y = x, y
-
-    def __repr__(self):
-        return f"({self.x}, {self.y})"
-
-    def __eq__(self, other):
-        try:
-            return self.x == other[0] and self.y == other[1]
-        except:
-            return False
-
-    def __iadd__(self, other):
-        self.x += other[0]
-        self.y += other[1]
-        return self
-
-    def __add__(self, other):
-        return Pos(self.x + other.x, self.y + other.y)
-
-    def __sub__(self, other):
-        return Pos(self.x - other.x, self.y - other.y)
-
-    def __getitem__(self, i):
-        if i < 0 or 1 < i:
-            raise IndexError
-        return self.x if i == 0 else self.y
-
-    def aligned(self) -> Tuple[int, int]:
-        return int(self.x), int(self.y)
+def _optimal_reward(): return 1
 
 
-class InputType(Enum):
-    DISCRETE = auto()
-    CONTINUOUS = auto()
-
-
-class OutputType(Enum):
-    DISCRETE = auto()
-    CONTINUOUS = auto()
-
-
-class ControlType(Enum):
-    AUTONOMOUS = auto()
-    RANDOM = auto()
-    KEYBOARD = auto()
-
-
-class RandomController:
-    def __init__(self):
-        self.rng = Random(0)
-        self.stack = []
-        self.visited = set()
-        self.last_pos = None
-
-    def __call__(self, pos, _):
-        ci, cj = pos = pos.aligned()
-        self.visited.add(pos)
-
-        if self.last_pos and self.last_pos == pos:
-            self.stack.pop()  # Cancel last move
-
-        neighbors = []
-        for d, (di, dj) in Maze._offsets.items():
-            i, j = ci + di, cj + dj
-            if (i, j) not in self.visited:
-                neighbors.append((d, (i, j), (di, dj)))
-
-        self.last_pos = pos
-        if len(neighbors) > 0:
-            d_chosen, chosen, delta = self.rng.choice(neighbors)
-            self.stack.append((-delta[0], -delta[1]))
-
-            return delta
-        else:
-            return self.stack.pop()
-
-
-class KeyboardController(QObject):
-    def __init__(self):
-        super().__init__()
-        QApplication.instance().installEventFilter(self)
-        self.actions = {
-            Qt.Key_Right: (1, 0),
-            Qt.Key_Up: (0, 1),
-            Qt.Key_Left: (-1, 0),
-            Qt.Key_Down: (0, -1),
-        }
-        self.current_action = None
-
-    def eventFilter(self, obj: 'QObject', e: 'QEvent') -> bool:
-        if not e.type() == QEvent.KeyPress:
-            return False
-
-        if e.key() in self.actions:
-            self.current_action = self.actions[e.key()]
-            return True
-        return False
-
-    def __call__(self, *_):
-        if self.current_action is None:
-            return 0, 0
-        else:
-            a = self.current_action
-            self.current_action = None
-            return a
-
-
-class Robot:
-    @dataclass
-    class BuildData:
-        vision: Annotated[int, "agent vision size"] = 10
-        inputs: InputType = InputType.DISCRETE
-        outputs: OutputType = OutputType.DISCRETE
-        control: ControlType = ControlType.KEYBOARD
-
-        @classmethod
-        def from_argparse(cls, namespace):
-            logger.warning(f"argparse extraction Not implemented for {cls}")
-            data = cls()
-            for field in fields(cls):
-                setattr(data, field.name, None)
-            return data
-
-    def __init__(self, pos: Pos):
-        self.pos = Pos(*pos)
-        self.reward = 0
-
-        self.inputs = None
-        self.controller = None
-
-        self.acc = (0, 0)
-
-        self.prev_pos = pos.aligned()
-
-    def set_input_buffer(self, buffer):
-        self.inputs = buffer
-
-    def step(self) -> Pos:
-        return self.controller(self.pos, self.inputs)
-
-        # return Pos(self.rng.uniform(-1, 1), self.rng.uniform(-1, 1))
-
-
-def _compute_rewards(length):
+def _compute_rewards(length, dt):
     return SimpleNamespace(
-        timestep=-.001/length,
-        collision=-.05/length,
-        finish=1
+        timestep=-dt/(length-1),
+        backward=-1/100,
+        collision=-2/100,
+        finish=2,
     )
+
+
+T = TypeVar('T')
+Resettable = Union[None, T]
 
 
 class Simulation:
     def __init__(self,
-                 maze: Optional[Maze] = None,
-                 data: Optional[Robot.BuildData] = None):
-        self.maze = maze
-        self.robot = None
-        if maze is not None:
-            start = Pos(*maze.start) + Pos(.5, .5)
-            self.robot = Robot(start)
+                 maze: Resettable[Maze] = None,
+                 robot: Resettable[Robot.BuildData] = None,
+                 controller: Resettable[BaseController] = None):
 
-            sl = len(self.maze.solution)
-            self.deadline = 2 * sl
-            self.rewards = _compute_rewards(sl)
+        def test_valid_set_reset(o_, s_, a_):
+            assert getattr(o_, s_, None) or a_, \
+                f"Cannot reuse attributes from {s_} as it was never set"
+        for o, s, a in [(self, 'maze', maze), (self, 'robot', robot),
+                        (getattr(self, 'robot', None),
+                         'controller', controller)]:
+            test_valid_set_reset(o, s, a)
 
-        self.data = None
+        if maze:
+            self.maze = maze
+
+        if robot:
+            self.data = robot
+            self.robot = Robot()
+
+        if controller:
+            self.robot.controller = controller
+
+        start = Pos(*self.maze.start) + Pos(.5, .5)
+        self.robot.reset(start)
+
         self.timestep = 0
-        self.dt = 1
+        self.dt = 1 if self.data.outputs is OutputType.DISCRETE else .1
 
-        self.data = data
+        sl = len(self.maze.solution)
+        self.deadline = 4 * sl / self.dt
+        self.rewards = _compute_rewards(sl, self.dt)
+
         self.cues = None
         self.traps = None
-        if data is not None:
-            if data.inputs is InputType.CONTINUOUS:
-                inputs = np.zeros((data.vision, data.vision), dtype=float)
-            else:
-                inputs = np.zeros(4)
-            self.robot.set_input_buffer(inputs)
 
-            if data.control is ControlType.RANDOM:
-                self.robot.controller = RandomController()
-            elif data.control is ControlType.KEYBOARD:
-                self.robot.controller = KeyboardController()
-            else:
-                raise NotImplementedError
+        if self.data.inputs is InputType.CONTINUOUS:
+            inputs = np.zeros((self.data.vision, self.data.vision),
+                              dtype=float)
+        else:
+            inputs = np.zeros(8)
+        self.robot.set_input_buffer(inputs)
 
-        self.visuals = None
-        if maze is not None and data is not None \
-                and data.inputs is InputType.CONTINUOUS:
-            self.visuals = np.full((maze.width, maze.height), None,
-                                   dtype=object)
+        self.robot.set_dt(self.dt)
 
-            v = data.vision
+        self.visuals = np.full((self.maze.width, self.maze.height), np.nan,
+                               dtype=object)
+
+        if self.data.inputs is InputType.CONTINUOUS:
+
+            v = self.data.vision
             cues = resources.np_images(self.maze.cue, v - 2) \
                 if self.maze.cue is not None else None
             traps = resources.np_images(self.maze.trap, v - 2) \
                 if self.maze.trap is not None else None
 
-            for lst, img_lst in [(maze.intersections, cues),
-                                 (maze.traps, traps)]:
+            for lst, img_lst in [(self.maze.intersections, cues),
+                                 (self.maze.traps, traps)]:
                 if lst is not None and img_lst is not None:
                     for i, d in lst:
-                        self.visuals[maze.solution[i]] = img_lst[d.value]
+                        self.visuals[self.maze.solution[i]] = img_lst[d.value]
 
-        if self.robot:
-            self.generate_inputs()
+        elif self.data.inputs is InputType.DISCRETE:
+            for lst in [self.maze.intersections, self.maze.traps]:
+                if lst is not None:
+                    for i, d in lst:
+                        self.visuals[self.maze.solution[i]] = d
+
+        self.generate_inputs()
 
     def time(self):
         return self.timestep * self.dt
 
-    def reset(self, *args):
-        self.__init__(*args)
+    def reset(self, *args, **kwargs):
+        self.__init__(*args, **kwargs)
+
+    def action(self) -> Action:
+        action = self.robot.step()
+
+        if self.data.outputs == OutputType.DISCRETE:
+            if abs(action[0]) > abs(action[1]):
+                action = (action[0], 0)
+            else:
+                action = (0, action[1])
+
+        return action
+
+    def _discrete_collision_detection(self, action: Action):
+        x, y = self.robot.cell()
+        if self.maze.wall_delta(x, y, action[0], action[1]):
+            return self.rewards.collision
+        else:
+            self.robot.pos += action
+            return 0
+
+    # noinspection DuplicatedCode
+    def _continuous_collision_detection(self, action: Action):
+        # noinspection PyPep8Naming
+        EAST, NORTH, WEST, SOUTH = [d for d in Maze.Direction]
+        w, h = self.maze.width, self.maze.height
+        pos = self.robot.pos
+        x, y = new_pos = pos.copy() + action
+        x_, y_ = x, y
+        i, j = new_pos.aligned()
+        r = self.robot.RADIUS
+
+        def wall(i_, j_, d_): return self.maze.wall(i_, j_, d_)
+        def chk(): return (x - i <= r), (i + 1 - x <= r), (y - j <= r), (j + 1 - y <= r)
+
+        o_w, o_e, o_s, o_n = chk()
+
+        #######################################################################
+        # Simple stay-in-the cell tests
+
+        if o_w:
+            if wall(i, j, WEST):
+                x_ = i+r
+
+        elif i + 1 - x <= r:
+            if wall(i, j, EAST):
+                x_ = i+1-r
+
+        if y - j <= r:
+            if wall(i, j, SOUTH):
+                y_ = j+r
+
+        elif j + 1 - y <= r:
+            if wall(i, j, NORTH):
+                y_ = j+1-r
+
+        #######################################################################
+        # Literal corner cases
+
+        o_w, o_e, o_s, o_n = chk()
+
+        def corner_case(wall0, wall1, corner):
+            if wall(*wall0) or wall(*wall1):
+                cx, cy = corner
+                dv = (Pos(cx, cy) - new_pos)
+                d = dv.length()
+                pen = r - d
+                if d < r:
+                    nonlocal x_, y_
+                    dv = dv / d
+                    x_ -= dv.x * pen
+                    y_ -= dv.y * pen
+
+        if o_w and o_s and i > 0 and j > 0:
+            corner_case((i - 1, j, SOUTH), (i, j - 1, WEST), (i, j))
+
+        elif o_w and o_n and i > 0 and j < h-1:
+            corner_case((i - 1, j, NORTH), (i, j + 1, WEST), (i, j+1))
+
+        elif o_e and o_s and i < w-1 and j > 0:
+            corner_case((i + 1, j, SOUTH), (i, j - 1, EAST), (i+1, j))
+
+        elif o_e and o_n and i < w-1 and j < h-1:
+            corner_case((i + 1, j, NORTH), (i, j + 1, EAST), (i+1, j+1))
+
+        #######################################################################
+        # Also check next cells
+
+        new_pos = Pos(x_, y_)
+        self.robot.pos = new_pos
+
+        return ((x != x_) + (y != y_)) * self.rewards.collision
+
+    def take_action(self, action: Action) -> float:
+        reward = 0
+
+        prev_prev_cell = self.robot.prev_cell
+
+        if action != (0, 0):
+            prev_cell = self.robot.cell()
+            if self.data.outputs == OutputType.DISCRETE:
+                reward += self._discrete_collision_detection(action)
+            else:
+                reward += self._continuous_collision_detection(action)
+
+            if prev_cell != self.robot.cell():
+                self.robot.prev_cell = prev_cell
+
+        reward += self.rewards.timestep
+
+        if self.done():
+            reward += self.rewards.finish
+
+        if prev_prev_cell == self.robot.cell():
+            reward += self.rewards.backward
+
+        self.robot.reward += reward
+        self.generate_inputs()
+        self.timestep += 1
+
+        return reward
 
     def step(self):
         # logger.debug(f"{'-'*80}\n-- step {self.time()}")
 
-        action = self.robot.step()
+        action = self.action()
 
-        if self.data.control == ControlType.KEYBOARD and action == (0, 0):
+        if self.data.control == "KEYBOARD" and action == (0, 0):
             return
 
-        if abs(action[0]) > abs(action[1]):
-            action_ = (action[0], 0)
-        else:
-            action_ = (0, action[1])
+        self.take_action(action)
 
-        if action != (0, 0):
-            if self.maze.wall_delta(*self.robot.pos.aligned(), action_):
-                self.robot.reward += self.rewards.collision
-            else:
-                prev_pos = self.robot.pos.aligned()
-                self.robot.pos += action_
+    def generate_inputs(self) -> State:
+        # noinspection PyPep8Naming
+        D = Maze.Direction
 
-                if prev_pos != self.robot.pos.aligned():
-                    self.robot.prev_pos = prev_pos
-
-        if self.done():
-            self.robot.reward += self.rewards.finish
-        else:
-            self.robot.reward += self.rewards.timestep
-
-        self.timestep += 1
-        self.generate_inputs()
-
-    def generate_inputs(self):
-        i = self.robot.inputs
+        i: State = self.robot.inputs
         i.fill(0)
-        pos = self.robot.pos.aligned()
-        def _wall(d): return self.maze.wall(*pos, d)
+        cell = self.robot.cell()
+        prev_cell = self.robot.prev_cell
+
+        prev_dir = None
+        if prev_cell != cell:
+            dx = prev_cell[0] - cell[0]
+            dy = prev_cell[1] - cell[1]
+            prev_dir = self.maze.direction_from_offset(dx, dy)
+
+        def _wall(d): return self.maze.wall(*cell, d)
         if self.data.inputs is InputType.DISCRETE:
-            i[:] = [_wall(d) for d in Maze.Direction]
+            i[:4] = [_wall(d) for d in Maze.Direction]
+            if prev_dir:
+                i[prev_dir.value] = -1
+
+            if isinstance(d := self.visuals[cell], D):
+                i[4+d.value] = 1
+
         else:
+            p = self.robot.pos
+            r = self.robot.RADIUS
+            dpx = (p.x - cell[0] - r) / (1 - 2*r) - .5
+            dpy = (p.y - cell[1] - r) / (1 - 2*r) - .5
+            v = self.data.vision
+            dp_scale = v - 1
+            dpi, dpj = int(dpx * dp_scale), int(dpy * dp_scale)
+            print(f"({dpx}, {dpy}) -> ({dpi}, {dpj})")
+
+            v_l = 0 - min(0, dpi)
+            v_r = v - 1 - max(0, dpi)
+            v_b = v - 1 + min(0, dpj)
+            v_t = 0 + max(0, dpj)
+            print(f"offsets: [{v_l}:{v_r}, {v_t}:{v_b}]")
 
             # Draw walls & corners
-            D = Maze.Direction
             w = [_wall(d) for d in D]
-            for s, d in [(np.s_[:, -1], D.EAST),
-                         (np.s_[+0, :], D.NORTH),
-                         (np.s_[:, +0], D.WEST),
-                         (np.s_[-1, :], D.SOUTH)]:
-                i[s] = w[d.value]
-            for s, dc, dr in [((+0, -1), D.NORTH, D.EAST),
-                              ((+0, +0), D.NORTH, D.WEST),
-                              ((-1, -1), D.SOUTH, D.EAST),
-                              ((-1, +0), D.SOUTH, D.WEST)]:
-                i[s] = (w[dc.value] or w[dr.value])
+            for s, d, delta in \
+                    [(np.s_[v_t:v_b, v_r], D.EAST, dpi),
+                     (np.s_[v_t, v_l:v_r], D.NORTH, dpj),
+                     (np.s_[v_t:v_b, v_l], D.WEST, -dpi),
+                     (np.s_[v_b, v_l:v_r], D.SOUTH, -dpj)]:
+                if delta >= 0:
+                    i[s] = w[d.value]
+            for s, dc, dr, do in \
+                    [((v_t, v_r), D.NORTH, D.EAST, dpj >= 0 and dpi >= 0),
+                     ((v_t, v_l), D.NORTH, D.WEST, dpj >= 0 and dpi <= 0),
+                     ((v_b, v_r), D.SOUTH, D.EAST, dpj <= 0 and dpi >= 0),
+                     ((v_b, v_l), D.SOUTH, D.WEST, dpj <= 0 and dpi <= 0)]:
+                if do:
+                    i[s] = (w[dc.value] or w[dr.value])
 
             # Place cues/traps
             if self.visuals is not None and \
-                    (v := self.visuals[pos]) is not None:
-                i[1:-1, 1:-1] = v
+                    not np.any(np.isnan(visual := self.visuals[cell])):
+                c_l = 0 + max(0, dpi_)
+                c_r = v - 3 - min(0, dpi_)
+                c_b = 0 + max(0, dpj_)
+                c_t = v - 3 - min(0, dpj_)
+                print(f"visual cell: [{c_l}:{c_r}, {c_b}:{c_t}]")
+                print(f"target cell shape: {i[v_t+1:v_b, v_l+1:v_r].shape}")
+                print(f" input cell shape: {visual[c_b:c_t, c_l:c_r].shape}")
+                print("--", flush=True)
+
+                # i[v_l+1:v_r-1, v_t+1:v_b-1] = v
+                i[v_t+1:v_b, v_l+1:v_r] = visual[c_b:c_t+1, c_l:c_r+1]
 
             # Pixel shows the previous cell
-            if self.robot.prev_pos != pos:
-                dx = self.robot.prev_pos[0] - pos[0]
-                dy = self.robot.prev_pos[1] - pos[1]
-                ix = i.shape[0]//2
-                d = self.maze.direction_from_offset(dx, dy)
+            if prev_dir:    # TODO How should it work in continuous case?
+                ix = i.shape[0] // 2
                 s = [(np.s_[ix, -1]),
                      (np.s_[+0, ix]),
                      (np.s_[ix, +0]),
-                     (np.s_[-1, ix])][d.value]
+                     (np.s_[-1, ix])][prev_dir.value]
                 i[s] = 1
 
+            # Original version
+            # # Draw walls & corners
+            # w = [_wall(d) for d in D]
+            # for s, d in [(np.s_[:, -1], D.EAST),
+            #              (np.s_[+0, :], D.NORTH),
+            #              (np.s_[:, +0], D.WEST),
+            #              (np.s_[-1, :], D.SOUTH)]:
+            #     i[s] = w[d.value]
+            # for s, dc, dr in [((+0, -1), D.NORTH, D.EAST),
+            #                   ((+0, +0), D.NORTH, D.WEST),
+            #                   ((-1, -1), D.SOUTH, D.EAST),
+            #                   ((-1, +0), D.SOUTH, D.WEST)]:
+            #     i[s] = (w[dc.value] or w[dr.value])
+            #
+            # # Place cues/traps
+            # if self.visuals is not None and \
+            #         not np.any(np.isnan(v := self.visuals[cell])):
+            #     i[1:-1, 1:-1] = v
+            #
+            # # Pixel shows the previous cell
+            # if prev_dir:
+            #     ix = i.shape[0] // 2
+            #     s = [(np.s_[ix, -1]),
+            #          (np.s_[+0, ix]),
+            #          (np.s_[ix, +0]),
+            #          (np.s_[-1, ix])][prev_dir.value]
+            #     i[s] = 1
+
+        return i
+
+    @staticmethod
+    def optimal_reward():
+        return _optimal_reward()
+
+    def success(self):
+        return self.robot.cell() == self.maze.end
 
     def done(self):
-        return self.robot.pos.aligned() == self.maze.end \
-            or self.timestep >= self.deadline
+        return self.success() or self.timestep >= self.deadline

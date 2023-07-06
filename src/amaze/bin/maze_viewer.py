@@ -42,7 +42,7 @@ def main():
         window = MainWindow(args)
         window.show()
 
-        window.generate_maze()
+        window.reset()
 
         if args.autostart:
             window.start()

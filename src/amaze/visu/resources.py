@@ -151,12 +151,16 @@ _data = {
 }
 
 
-def image(name: str, resolution: int) -> QImage:
-    return _data[name]
+def image(name: str) -> QImage:
+    if i := _data.get(name, None):
+        return i
+    else:
+        raise ValueError(f"'{name}' is not a built-in sign."
+                         f" See help (-h) for more information")
 
 
 def qt_images(name: str, resolution: int) -> List[QImage]:
-    img: QImage = _data[name]
+    img: QImage = image(name)
     w, h = img.width(), img.height()
     tgt_w, tgt_h = resolution if w == h else 4*resolution, resolution
     img = img.scaled(tgt_w, tgt_h, Qt.KeepAspectRatio, Qt.SmoothTransformation)
@@ -190,10 +194,24 @@ def np_images(name: str, resolution: int) -> List[np.ndarray]:
         arr = np.ndarray(shape=(h, bw),
                          buffer=b,
                          dtype=np.uint8)[:, :w]
-        arrays.append(copy.deepcopy(_v_scale(arr)))
+        arrays.append(copy.deepcopy(_v_scale(np.flipud(arr))))
 
     return arrays
 
 
 def resources():
     return _data.items()
+
+
+def builtins():
+    return list(_data.keys())
+
+
+def validate(arg) -> bool:
+    if Path(arg).exists():
+        return True
+    else:
+        if arg not in _data:
+            raise ValueError(
+                f"'{arg} is not a built-in sign."
+                f" See help for more information")
