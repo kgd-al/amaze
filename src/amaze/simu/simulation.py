@@ -52,6 +52,7 @@ class Simulation:
 
         if controller:
             self.robot.controller = controller
+        self.robot.controller.reset()
 
         start = Pos(*self.maze.start) + Pos(.5, .5)
         self.robot.reset(start)
@@ -125,7 +126,6 @@ class Simulation:
             self.robot.pos += action
             return 0
 
-    # noinspection DuplicatedCode
     def _continuous_collision_detection(self, action: Action):
         # noinspection PyPep8Naming
         EAST, NORTH, WEST, SOUTH = [d for d in Maze.Direction]
@@ -237,9 +237,6 @@ class Simulation:
         self.take_action(action)
 
     def generate_inputs(self) -> State:
-        # noinspection PyPep8Naming
-        D = Maze.Direction
-
         i: State = self.robot.inputs
         i.fill(0)
         cell = self.robot.cell()
@@ -251,101 +248,75 @@ class Simulation:
             dy = prev_cell[1] - cell[1]
             prev_dir = self.maze.direction_from_offset(dx, dy)
 
-        def _wall(d): return self.maze.wall(*cell, d)
         if self.data.inputs is InputType.DISCRETE:
-            i[:4] = [_wall(d) for d in Maze.Direction]
+            i[:4] = [self.maze.wall(cell[0], cell[1], d) for d in Maze.Direction]
             if prev_dir:
                 i[prev_dir.value] = -1
 
-            if isinstance(d := self.visuals[cell], D):
+            if isinstance(d := self.visuals[cell], Maze.Direction):
                 i[4+d.value] = 1
 
         else:
-            p = self.robot.pos
-            r = self.robot.RADIUS
-            dpx = (p.x - cell[0] - r) / (1 - 2*r) - .5
-            dpy = (p.y - cell[1] - r) / (1 - 2*r) - .5
-            v = self.data.vision
-            dp_scale = v - 1
-            dpi, dpj = int(dpx * dp_scale), int(dpy * dp_scale)
-            print(f"({dpx}, {dpy}) -> ({dpi}, {dpj})")
 
-            v_l = 0 - min(0, dpi)
-            v_r = v - 1 - max(0, dpi)
-            v_b = v - 1 + min(0, dpj)
-            v_t = 0 + max(0, dpj)
-            print(f"offsets: [{v_l}:{v_r}, {v_t}:{v_b}]")
+            if self.data.outputs is OutputType.DISCRETE:
+                self._fill_visual_buffer(i, cell, prev_dir)
+            else:
+                v = self.data.vision
 
-            # Draw walls & corners
-            w = [_wall(d) for d in D]
-            for s, d, delta in \
-                    [(np.s_[v_t:v_b, v_r], D.EAST, dpi),
-                     (np.s_[v_t, v_l:v_r], D.NORTH, dpj),
-                     (np.s_[v_t:v_b, v_l], D.WEST, -dpi),
-                     (np.s_[v_b, v_l:v_r], D.SOUTH, -dpj)]:
-                if delta >= 0:
-                    i[s] = w[d.value]
-            for s, dc, dr, do in \
-                    [((v_t, v_r), D.NORTH, D.EAST, dpj >= 0 and dpi >= 0),
-                     ((v_t, v_l), D.NORTH, D.WEST, dpj >= 0 and dpi <= 0),
-                     ((v_b, v_r), D.SOUTH, D.EAST, dpj <= 0 and dpi >= 0),
-                     ((v_b, v_l), D.SOUTH, D.WEST, dpj <= 0 and dpi <= 0)]:
-                if do:
-                    i[s] = (w[dc.value] or w[dr.value])
+                x, y = self.robot.pos
+                dpx = int((x - int(x) - .5) * v)
+                dpy = int((y - int(y) - .5) * v)
 
-            # Place cues/traps
-            if self.visuals is not None and \
-                    not np.any(np.isnan(visual := self.visuals[cell])):
-                c_l = 0 + max(0, dpi_)
-                c_r = v - 3 - min(0, dpi_)
-                c_b = 0 + max(0, dpj_)
-                c_t = v - 3 - min(0, dpj_)
-                print(f"visual cell: [{c_l}:{c_r}, {c_b}:{c_t}]")
-                print(f"target cell shape: {i[v_t+1:v_b, v_l+1:v_r].shape}")
-                print(f" input cell shape: {visual[c_b:c_t, c_l:c_r].shape}")
-                print("--", flush=True)
+                if dpx == 0 and dpy == 0:
+                    self._fill_visual_buffer(i, cell, prev_dir)
 
-                # i[v_l+1:v_r-1, v_t+1:v_b-1] = v
-                i[v_t+1:v_b, v_l+1:v_r] = visual[c_b:c_t+1, c_l:c_r+1]
+                else:
+                    buffer = np.zeros((3*v, 3*v))
+                    for di, dj in [(i - 1, j - 1) for i, j in np.ndindex(3, 3)]:
+                        cx, cy = cell[0] + di, cell[1] + dj
+                        if not 0 <= cx <= self.maze.width - 1 \
+                                or not 0 <= cy <= self.maze.height - 1:
+                            continue
+                        self._fill_visual_buffer(
+                            buffer[(-dj+1)*v:(-dj+2)*v, (di+1)*v:(di+2)*v],
+                            (cx, cy),
+                            prev_dir if di == 0 and dj == 0 else None)
 
-            # Pixel shows the previous cell
-            if prev_dir:    # TODO How should it work in continuous case?
-                ix = i.shape[0] // 2
-                s = [(np.s_[ix, -1]),
-                     (np.s_[+0, ix]),
-                     (np.s_[ix, +0]),
-                     (np.s_[-1, ix])][prev_dir.value]
-                i[s] = 1
-
-            # Original version
-            # # Draw walls & corners
-            # w = [_wall(d) for d in D]
-            # for s, d in [(np.s_[:, -1], D.EAST),
-            #              (np.s_[+0, :], D.NORTH),
-            #              (np.s_[:, +0], D.WEST),
-            #              (np.s_[-1, :], D.SOUTH)]:
-            #     i[s] = w[d.value]
-            # for s, dc, dr in [((+0, -1), D.NORTH, D.EAST),
-            #                   ((+0, +0), D.NORTH, D.WEST),
-            #                   ((-1, -1), D.SOUTH, D.EAST),
-            #                   ((-1, +0), D.SOUTH, D.WEST)]:
-            #     i[s] = (w[dc.value] or w[dr.value])
-            #
-            # # Place cues/traps
-            # if self.visuals is not None and \
-            #         not np.any(np.isnan(v := self.visuals[cell])):
-            #     i[1:-1, 1:-1] = v
-            #
-            # # Pixel shows the previous cell
-            # if prev_dir:
-            #     ix = i.shape[0] // 2
-            #     s = [(np.s_[ix, -1]),
-            #          (np.s_[+0, ix]),
-            #          (np.s_[ix, +0]),
-            #          (np.s_[-1, ix])][prev_dir.value]
-            #     i[s] = 1
+                    i[:] = buffer[v-dpy:2*v-dpy, v+dpx:2*v+dpx]
 
         return i
+
+    def _fill_visual_buffer(self, buffer, cell, prev_dir):
+        # noinspection PyPep8Naming
+        EAST, NORTH, WEST, SOUTH = [d for d in Maze.Direction]
+        def _wall(d): return self.maze.wall(*cell, d)
+
+        # Draw walls & corners
+        w = [_wall(d) for d in Maze.Direction]
+        for s, d in [(np.s_[:, -1], EAST),
+                     (np.s_[+0, :], NORTH),
+                     (np.s_[:, +0], WEST),
+                     (np.s_[-1, :], SOUTH)]:
+            buffer[s] = w[d.value]
+        for s, dc, dr in [((+0, -1), NORTH, EAST),
+                          ((+0, +0), NORTH, WEST),
+                          ((-1, -1), SOUTH, EAST),
+                          ((-1, +0), SOUTH, WEST)]:
+            buffer[s] = (w[dc.value] or w[dr.value])
+
+        # Place cues/traps
+        if self.visuals is not None and \
+                not np.any(np.isnan(v := self.visuals[cell])):
+            buffer[1:-1, 1:-1] = v
+
+        # Pixel shows the previous cell
+        if prev_dir:
+            ix = self.data.vision // 2
+            s = [(np.s_[ix, -1]),
+                 (np.s_[+0, ix]),
+                 (np.s_[ix, +0]),
+                 (np.s_[-1, ix])][prev_dir.value]
+            buffer[s] = 1
 
     @staticmethod
     def optimal_reward():

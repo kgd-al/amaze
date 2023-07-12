@@ -36,6 +36,9 @@ class KeyboardController(QObject, BaseController, metaclass=__Meta):
             return True
         return False
 
+    def reset(self):
+        self.current_action = Vec.null()
+
     def __call__(self, *_) -> Vec:
         # if self.current_action is None:
         #     return Vec.

@@ -21,6 +21,10 @@ class BaseController(ABC):
         return {}
 
     @abstractmethod
+    def reset(self):
+        pass
+
+    @abstractmethod
     def save(self):
         pass
 

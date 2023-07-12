@@ -28,6 +28,9 @@ class TabularController(BaseController):
     def states(self):
         return self._data.keys()
 
+    def reset(self):
+        pass
+
     def save(self):
         return {
             "epsilon": self.epsilon,

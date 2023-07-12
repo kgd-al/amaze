@@ -72,7 +72,7 @@ class Robot:
     def set_dt(self, dt):
         self.delta_t = dt
 
-    def cell(self):
+    def cell(self) -> Tuple[int, int]:
         return self.pos.aligned()
 
     def step(self) -> Action:
