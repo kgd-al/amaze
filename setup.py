@@ -13,7 +13,7 @@ setup(name='amaze',
             "humanize", "colorama",
             "PyQt5",
 
-            "gymnasium", "stable-baselines3", "opencv-python", "pygame",
+            "gymnasium", "stable_baselines3", "opencv_python", "pygame",
             "torch", "graphviz", "pillow", "seaborn", "tensorboard", "scipy"
       ],
       scripts=[])
