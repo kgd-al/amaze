@@ -11,6 +11,9 @@ setup(name='amaze',
             "abrain",
             "numpy", "pandas", "matplotlib",
             "humanize", "colorama",
-            "PyQt5"
+            "PyQt5",
+
+            "gymnasium", "stable-baselines3", "opencv-python", "pygame",
+            "torch", "graphviz", "pillow", "seaborn", "tensorboard", "scipy"
       ],
       scripts=[])

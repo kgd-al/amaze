@@ -1,5 +1,5 @@
-from PyQt5.QtCore import QAbstractAnimation, Qt, QPropertyAnimation, QParallelAnimationGroup, pyqtSlot
-from PyQt5.QtWidgets import QFrame, QSizePolicy, QVBoxLayout, QScrollArea, QToolButton, QWidget, QGroupBox
+from PyQt5.QtCore import Qt, pyqtSlot
+from PyQt5.QtWidgets import QSizePolicy, QVBoxLayout, QToolButton, QWidget, QGroupBox
 
 
 class CollapsibleBox(QWidget):
@@ -30,7 +30,7 @@ class CollapsibleBox(QWidget):
         lay.setContentsMargins(0, 0, 0, 0)
         lay.addWidget(self.toggle_button)
         lay.addWidget(self.content_area)
-        self._setLayout(lay)
+        self._set_layout(lay)
 
     @pyqtSlot()
     def on_pressed(self):
@@ -54,7 +54,7 @@ class CollapsibleBox(QWidget):
         else:
             super().setEnabled(enabled)
 
-    def _setLayout(self, layout):
+    def _set_layout(self, layout):
         super().setLayout(layout)
 
     def setLayout(self, layout):

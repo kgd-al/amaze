@@ -1,16 +1,18 @@
 from abc import ABC, abstractmethod
-from typing import Tuple
+from typing import Optional
 
-from amaze.simu.pos import Vec, Pos
+from amaze.simu.pos import Vec
+from amaze.simu.robot import State, InputType, OutputType
 
 
 class BaseController(ABC):
+    simple = True  # Whether this controller has a state (table, ANN, ...)
+
     @abstractmethod
-    def __call__(self, pos: Pos, inputs) -> Vec:
+    def __call__(self, inputs: State) -> Vec:
         """
         Generate next move
 
-        :param pos: Current absolute position (should not be used)
         :param inputs: Current local information
 
         :return: (dx,dy) in [-1,1]x[-1,1], the requested movement
@@ -20,16 +22,21 @@ class BaseController(ABC):
     def details(self) -> dict:
         return {}
 
+    def name(self): return self.__class__.__name__
+
     @abstractmethod
-    def reset(self):
-        pass
+    def reset(self): pass
 
     @abstractmethod
     def save(self):
+        """Return a state from which self can be restored
+
+         (i.e. to temporarily deactivate gamma exploration)"""
         pass
 
     @abstractmethod
     def restore(self, state):
+        """Restore state from provided object"""
         pass
 
     def to_json(self) -> dict:
@@ -39,3 +46,10 @@ class BaseController(ABC):
     def from_json(cls, dct: dict) -> 'BaseController':
         print(f'[kgd-debug] from json called on base controller, type={cls}')
         return cls()
+
+    # noinspection PyMethodMayBeStatic
+    def inputs_type(self) -> Optional[InputType]: return None
+    # noinspection PyMethodMayBeStatic
+    def outputs_type(self) -> Optional[OutputType]: return None
+    # noinspection PyMethodMayBeStatic
+    def vision(self) -> Optional[int]: return None

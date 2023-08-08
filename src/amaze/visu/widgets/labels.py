@@ -1,4 +1,4 @@
-from typing import Tuple
+from logging import getLogger
 
 import numpy as np
 from PyQt5 import QtGui
@@ -6,8 +6,10 @@ from PyQt5.QtCore import QRectF, Qt, QPointF
 from PyQt5.QtGui import QPainter, QImage, QPixmap, QColor
 from PyQt5.QtWidgets import QLabel
 
-from amaze.simu.controllers.tabular import TabularController
-from amaze.simu.robot import InputType, State, Robot, OutputType, Action
+from amaze.simu.controllers.base import BaseController
+from amaze.simu.robot import InputType, State, OutputType, Action
+
+logger = getLogger(__name__)
 
 
 class TinyLabel(QLabel):
@@ -34,12 +36,13 @@ class InputsLabel(TinyLabel):
             coordinates = [
                 (3, 2), (2, 1), (1, 2), (2, 3,), (4, 2), (2, 0), (0, 2), (2, 4)
             ]
-            colors = {0: Qt.black, 1: Qt.white, -1: Qt.red}
+            colors = {0: Qt.black, 1: Qt.white, .5: Qt.red}
 
             img = QImage(5, 5, QImage.Format_ARGB32)
             img.fill(Qt.transparent)
-            for v, pos in zip(inputs, coordinates):
-                img.setPixelColor(*pos, colors[v])
+            for i, (v, pos) in enumerate(zip(inputs, coordinates)):
+                c = colors[v] if i < 4 else QColor.fromHslF(0, 0, v)
+                img.setPixelColor(*pos, c)
             self.setPixmap(QPixmap.fromImage(img))
 
     def paintEvent(self, _) -> None:
@@ -66,7 +69,7 @@ class OutputsLabel(TinyLabel):
         return w
 
     def set_outputs(self, outputs: Action, o_type: OutputType):
-        self.action = outputs
+        self.action = tuple(outputs)
         self.output_type = o_type
         self.update()
 
@@ -109,16 +112,18 @@ class ValuesLabel(TinyLabel):
     def heightForWidth(self, w: int) -> int:
         return w
 
-    def set_values(self, table: TabularController, s: State):
-        if not isinstance(table, TabularController):
+    def set_values(self, c: BaseController, s: State):
+        value_f = getattr(c, 'value', None)
+        if value_f is None:
             self.setText("N/A")
             return
         self.setText("")
-        l, u = table.min_value, table.max_value
-        r = max(abs(l), abs(u))
-        l, u = -r, r
+        self.values = value_f(s)
+        # l, u = c.min_value, c.max_value
+        l, u = min(self.values), max(self.values)
+        # r = max(abs(l), abs(u))
+        # l, u = -r, r
         d = u-l
-        self.values = [table.value(s, a) for a in Robot.discrete_actions()]
         if d != 0:
             self.values = [(v, 2 * ((v-l)/d) - 1) for v in self.values]
         self.update()

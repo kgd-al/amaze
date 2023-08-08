@@ -2,19 +2,31 @@
 
 import argparse
 import logging
+# TODO Careful
+import warnings
 from dataclasses import dataclass
+from pathlib import Path
+from typing import Optional
 
 from PyQt5.QtWidgets import QApplication
 
+original_warn = warnings.warn
+warnings.warn = lambda msg, category, *args, **kwargs: (
+    original_warn(msg, category, *args, **kwargs)
+    if category is not DeprecationWarning else None)
+
+
 from amaze.simu.env.maze import Maze
-from amaze.visu.maze import MazeWidget
+from amaze.sb3.utils import CV2QTGuard
 from amaze.visu.viewer import MainWindow
 
 
 @dataclass
 class Options:
-    view: bool = False
+    maze: Optional[str] = None
+    controller: Optional[Path] = None
     autostart: bool = True
+    render: Optional[Path] = None
 
     @staticmethod
     def populate(parser: argparse.ArgumentParser):
@@ -22,11 +34,17 @@ class Options:
             "Maze", "Initial settings for maze generation")
         Maze.BuildData.populate_argparser(group)
 
-        parser.add_argument("--view", dest="view", action="store_true",
-                            help="Show maze on screen")
+        parser.add_argument("--maze", dest="maze",
+                            help="Use provided string-format maze")
         parser.add_argument("--no-autostart", dest="autostart",
                             action="store_false",
                             help="Whether to autostart the evaluation")
+
+        parser.add_argument("--controller", dest="controller", type=Path,
+                            help="Load robot/controller from file")
+
+        parser.add_argument("--render", dest="render", type=Path,
+                            help="Render maze to requested file (and quit)")
 
 
 def main():
@@ -38,22 +56,24 @@ def main():
     app = QApplication([])
     logging.basicConfig(level=logging.DEBUG)
 
-    if args.view:
-        window = MainWindow(args)
-        window.show()
+    window = MainWindow(args)
+    window.reset()
 
-        window.reset()
+    if args.render:
+        window.maze_w.update_config("robot", False)
+        window.maze_w.update_config("dark", True)
+        window.save_on_exit = False
+        window.maze_w.draw_to(args.render)
+
+    else:
+        window.show()
 
         if args.autostart:
             window.start()
 
         return app.exec()
 
-    else:
-        maze = Maze.generate(Maze.BuildData.from_argparse(args))
-        maze_w = MazeWidget(maze)
-        maze_w.draw_to(f"tmp/samples/{maze.seed}.png")
-
 
 if __name__ == '__main__':
-    main()
+    with CV2QTGuard():
+        main()

@@ -1,7 +1,8 @@
+import ast
+from abc import ABC
 from dataclasses import fields, dataclass
 from functools import lru_cache
 from typing import get_args, get_origin, Union, Annotated
-from abc import ABC
 
 
 @dataclass
@@ -21,22 +22,44 @@ class BaseBuildData(ABC):
         return [field for field in fields(cls) if
                 get_origin(field.type) is Annotated]
 
+    custom_classes = {}
+
     @classmethod
     def populate_argparser(cls, parser):
         prefix = cls.prefix()
         for field in cls.__fields():
             a_type = field.type.__args__[0]
             t_args = get_args(a_type)
-            if get_origin(a_type) is Union and type(None) in t_args:
+            f_type, str_type = a_type, None
+            default = field.default
+            action = 'store'
+
+            if (cls.custom_classes and
+                    (f := cls.custom_classes.get(a_type, None))):
+                f_type = getattr(f, 'type_parser', None) or f_type
+                str_type = getattr(f, 'type_name', None) or str_type
+                if (d := getattr(f, 'default', None)) is not None:
+                    default = d
+                action = getattr(f, 'action', None) or action
+
+            elif get_origin(a_type) is Union and type(None) in t_args:
                 f_type = t_args[0]
-            else:
-                f_type = a_type
+            elif a_type == bool:
+                f_type = ast.literal_eval
+                str_type = bool
+
+            if not str_type:
+                str_type = f_type
+
+            assert str_type, (f"Invalid user type {str_type} "
+                              f"(from {a_type=} {f_type=}")
 
             help_msg = \
                 f"{'.'.join(field.type.__metadata__)}" \
-                f" (default: {field.default}," \
-                f" type: {f_type})"
+                f" (default: {default}," \
+                f" type: {str_type.__name__})"
             parser.add_argument(f"--{prefix}-{field.name}",
+                                action=action,
                                 dest=f"{prefix}_{field.name}",
                                 default=None, metavar="V",
                                 type=f_type, help=help_msg)
@@ -47,13 +70,14 @@ class BaseBuildData(ABC):
         data = cls()
         for field in cls.__fields():
             f_name = f"{prefix}_{field.name}"
+            attr = None
             if hasattr(namespace, f_name) \
-                    and (attr := getattr(namespace, f_name)) is not None:
+                    and (maybe_attr := getattr(namespace, f_name)) is not None:
+                attr = maybe_attr
+            elif not set_defaults:
+                attr = cls.unset
+            if attr is not None:
                 setattr(data, field.name, attr)
-            elif set_defaults:
-                setattr(data, field.name, field.default)
-            else:
-                setattr(data, field.name, cls.unset)
         if hasattr(data, "__post_init__"):
             data.__post_init__()
         return data

@@ -1,12 +1,12 @@
 import json
 from enum import Enum
-from os import PathLike
 from pathlib import Path
 
 from amaze.simu.controllers.base import BaseController
 from amaze.simu.controllers.keyboard import KeyboardController
 from amaze.simu.controllers.random import RandomController
 from amaze.simu.controllers.tabular import TabularController
+from amaze.sb3.controller import SB3Controller
 
 
 class Controllers(Enum):
@@ -29,6 +29,10 @@ def dump(controller: BaseController, path: Path | str):
 
 
 def load(path: Path | str):
+    if isinstance(path, str):
+        path = Path(path)
+    if path.suffix == ".zip":
+        return SB3Controller.load(path)
     with open(path, 'r') as f:
         dct: dict = json.load(f)
         c_type = dct.pop("type")

@@ -8,8 +8,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 from matplotlib.transforms import Bbox
-from scipy.interpolate import make_interp_spline, make_lsq_spline, make_smoothing_spline
-from scipy.ndimage import gaussian_filter1d
+from scipy.interpolate import make_smoothing_spline
 
 if __name__ == "__main__":
     assert len(sys.argv) > 2, \
@@ -31,7 +30,7 @@ if __name__ == "__main__":
     indices = list(sorted(indices))
 
     def tolerant_mean(arrs):
-        lens = [len(i) for i in arrs]
+        lens = [len(i_) for i_ in arrs]
         arr = np.ma.empty((np.max(lens), len(arrs)))
         arr.mask = True
         for idx, l in enumerate(arrs):
@@ -77,7 +76,7 @@ if __name__ == "__main__":
         yc = .03
         t = ax.text(x_, yc, str(i),
                     horizontalalignment='center', verticalalignment='bottom',
-                    bbox=dict(facecolor='white', #edgecolor='None',
+                    bbox=dict(facecolor='white',  # edgecolor='None',
                               boxstyle=f"square,pad={bb_pad}"),
                     transform=ax.transAxes)
 

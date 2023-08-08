@@ -1,10 +1,13 @@
 from abc import ABCMeta
+from logging import getLogger
 
 from PyQt5.QtCore import QObject, Qt, QEvent
 from PyQt5.QtWidgets import QApplication
 
 from amaze.simu.controllers.base import BaseController
 from amaze.simu.pos import Vec
+
+logger = getLogger(__name__)
 
 
 class __Meta(type(QObject), ABCMeta):
@@ -39,16 +42,12 @@ class KeyboardController(QObject, BaseController, metaclass=__Meta):
     def reset(self):
         self.current_action = Vec.null()
 
-    def __call__(self, *_) -> Vec:
-        # if self.current_action is None:
-        #     return Vec.
-        # else:
-        #     a = self.current_action
-        #     self.current_action = None
-        #     return a
-        return self.current_action / l \
-                if (l := self.current_action.length()) > 0 \
-                else self.current_action
+    def __call__(self, _) -> Vec:
+        r = self.current_action / l \
+            if (l := self.current_action.length()) > 0 \
+            else self.current_action
+
+        return r.copy()
 
     def save(self):
         return {}

@@ -1,96 +1,158 @@
 import copy
-import math
+import os
+import pprint
 import sys
 from functools import cache
 from logging import getLogger
 from pathlib import Path
-from typing import List, Optional
+from typing import List, Tuple
 
 import numpy as np
-from PIL import Image
-from PyQt5.QtCore import Qt, QPoint, QRectF, QPointF
-from PyQt5.QtGui import QImage, QPainter, QPainterPath, QColor, QImage, QTransform
+from PyQt5.QtCore import Qt, QRectF, QPointF
+from PyQt5.QtGui import QPainter, QPainterPath, QColor, QImage, QTransform, QPolygonF
 
 logger = getLogger(__name__)
+
+
+# =============================================================================
+# Public API
+
+def default_builtin() -> str: return "arrow"
+def default_lightness() -> float: return .5
+def default_size() -> int: return 15
+
+
+class Sign:
+    sep = '-'
+
+    def __init__(self, name: str = default_builtin(),
+                 value: float = default_lightness()):
+        self.name: str | Path = name
+        self.value: float = value
+
+    def __iter__(self): return iter((self.name, self.value))
+
+    def __repr__(self): return f"Sign({self.name}, {self.value})"
+
+    def __eq__(self, other): return tuple(self) == tuple(other)
+
+    @classmethod
+    def from_string(cls, s: str):
+        tokens = s.split(cls.sep)
+        if len(tokens) == 1:
+            try:
+                val = float(tokens[0])
+                name = default_builtin()
+            except ValueError:
+                name = tokens[0]
+                val = .5
+        elif len(tokens) == 2:
+            name = tokens[0]
+            try:
+                val = float(tokens[1])
+            except ValueError:
+                raise ValueError(
+                    f"'{tokens[1]} is not a valid cue value")
+        else:
+            raise ValueError(f"Mis-formed sign: {tokens}")
+
+        p_name = Path(name)
+        if p_name.suffix:
+            if p_name.exists():
+                name = p_name
+            else:
+                raise ValueError(f"Path like argument '{p_name}' does not"
+                                 f" refer to an existing file")
+
+        elif name not in builtins():
+            raise ValueError(f"Unknown cue name '{name}'."
+                             f" Valid values are {pprint.pformat(builtins())}")
+
+        return cls(name, val)
+
+    def to_string(self) -> str:
+        s = []
+        if self.name != default_builtin():
+            s.append(self.name)
+        s.append(f"{self.value:.2}".lstrip('0'))
+        return self.sep.join(s)
+
+
+Signs = List[Sign]
+DataKey = Tuple[str, float, int]
+
+
+def resources_path(): return Path("cache/resources/")
+
 
 # =============================================================================
 # Image loader/generator
 
-
-def resources_path():
-    return Path("data/resources/")
+def _key_to_path(key: DataKey) -> str:
+    return f"{key[0]}_{key[1]:.2}_{key[2]}.png"
 
 
 @cache
 def _factories():
     factories = {}
-    for k, v in sys.modules[__name__].__dict__.items():
+    for k, v in sorted(sys.modules[__name__].__dict__.items()):
         if callable(v) and k.startswith("__generator__"):
             factories[k[13:]] = v
-    print(factories)
     return factories
 
 
 @cache
-def _get_image(name: str):
-    filename = resources_path().joinpath(name + ".png")
-    if filename.exists():
-        img = QImage(str(filename))
-        if not img.isNull():
-            return img
-        else:
-            logger.warning(f"Error loading file {filename}")
-            return __generator__error()
+def _get_image(key: DataKey):
+    filename = resources_path().joinpath(_key_to_path(key))
+
+    if False and not os.environ["KGD_AMAZE_NOCACHE"]:
+        if filename.exists():
+            img = QImage(str(filename))
+            if not img.isNull():
+                return img
+            else:
+                logger.warning(f"Error loading file {filename}")
+
+    img = _factories()[key[0]](*key[1:])
+    if not img.isNull():
+        filename.parent.mkdir(parents=True, exist_ok=True)
+        img.save(str(filename))
+        return img
     else:
-        tokens = name.split("_")
-        img = _factories()[tokens[0]](*tokens[1:])
-        if img.isNull():
-            logger.warning(f"Error generating {name}")
-            return __generator__error()
-        else:
-            filename.parent.mkdir(parents=True, exist_ok=True)
-            img.save(str(filename))
-            return img
+        logger.warning(f"Error generating {key}")
+        return __generator__error()
 
 
 # =============================================================================
 # Internals
 
-def signature(*args, **kwargs):
-    """Provide explicit type conversion (for image argument parsing)"""
-    def decorator(fn):
-        def wrapped(*fn_args, **fn_kwargs):
-            new_args = [t(raw) for t, raw in zip(args, fn_args)]
-            new_kwargs = dict([(k, kwargs[k](v)) for k, v in fn_kwargs.items()])
 
-            return fn(*new_args, **new_kwargs)
-
-        return wrapped
-
-    return decorator
-
-
-def _image(width: int, height: Optional[int] = None):
-    img = QImage(width, height if height else width, QImage.Format_ARGB32)
+def _image(width: int, lightness: float, multi=False):
+    img = QImage(width, 4 * width if multi else width, QImage.Format_ARGB32)
     img.fill(Qt.transparent)
-    return img, QPainter(img)
+    painter = QPainter(img)
+    pen = painter.pen()
+    pen.setColor(__pen_color(lightness))
+    pen.setWidthF(.1)
+    painter.setPen(pen)
+    painter.scale(width, width)
+    return img, painter
 
 
-def __generator__error():
-    error, painter = _image(10)
-    path = QPainterPath()
-    path.moveTo(0, 0)
-    path.lineTo(9, 9)
-    path.moveTo(0, 9)
-    path.lineTo(9, 0)
-    painter.drawPath(path)
+def __pen_color(lightness: float): return QColor.fromHslF(0, 0, lightness)
+
+
+def __generator__error(lightness: float = 0, size: int = 15):
+    img, painter = _image(size, lightness)
+    painter.drawLine(QPointF(0, 0), QPointF(1, 1))
+    painter.drawLine(QPointF(0, 1), QPointF(1, 0))
     painter.end()
-    return error
+
+    return img
 
 
-@signature(int, float)
-def __generator__arrow(size: int = 16, lightness: float = .5):
-    arrow, painter = _image(size)
+def __generator__arrow(lightness: float, size: int):
+    img, painter = _image(size, lightness)
     path = QPainterPath()
     path.moveTo(0., .4)
     path.lineTo(0., .6)
@@ -100,118 +162,119 @@ def __generator__arrow(size: int = 16, lightness: float = .5):
     path.lineTo(.6, .2)
     path.lineTo(.6, .4)
     path.closeSubpath()
-    painter.scale(size, size)
-    painter.fillPath(path, QColor.fromHslF(0, 0, lightness))
+    painter.fillPath(path, __pen_color(lightness))
     painter.end()
 
-    return arrow
+    return img
 
 
-def __generator__point():
-    point, painter = _image(5)
-    painter.setPen(Qt.gray)
-    painter.drawPoint(3, 2)
+def __generator__point(lightness: float, size: int):
+    img, painter = _image(size, lightness)
+    painter.drawPoint(QPointF(.75, .5))
     painter.end()
 
-    return point
+    return img
 
 
-@signature(int)
-def __generator__hat(size):
-    hat, painter = _image(4 * size, size)
-    pen = painter.pen()
-    pen.setColor(Qt.gray)
-    pen.setWidthF(0)
-    painter.setPen(pen)
-    painter.scale(size, size)
-    for i, a in enumerate([0, math.pi/2, math.pi, 3*math.pi/2]):
-        painter.save()
-        painter.translate(i+.5, .5)
-        painter.drawEllipse(QRectF(-.4, -.4, .8, .8))
-        painter.drawEllipse(QRectF(-.2, -.4, .4, .8))
-        painter.drawLine(QPointF(0, 0),
-                         .4*QPointF(math.cos(a), math.sin(a)))
-        painter.restore()
+def __generator__warning(lightness: float, size: int):
+    img, painter = _image(size, lightness)
+    painter.drawPolygon(
+        QPolygonF([QPointF(.05, .05), QPointF(.95, .5), QPointF(.05, .95)]))
+    painter.fillRect(QRectF(.3, .45, .4, .1), __pen_color(lightness))
+    path = QPainterPath()
+    path.addEllipse(QRectF(.15, .45, .1, .1))
+    painter.fillPath(path, __pen_color(lightness))
     painter.end()
 
-    return hat
+    return img
+
+
+def __generator__forbidden(lightness: float, size: int):
+    img, painter = _image(size, lightness, multi=True)
+    painter.translate(.5, .5)
+    for i in range(4):
+        painter.drawEllipse(QRectF(-.25, -.25, .5, .5))
+        painter.rotate(-45)
+        painter.drawLine(QPointF(-.25, 0), QPointF(.25, 0))
+        painter.rotate(45+i*90)
+        painter.drawLine(QPointF(.25, 0), QPointF(.4, 0))
+        painter.rotate(-i*90)
+        painter.translate(0, 1)
+
+    return img
 
 
 # =============================================================================
 # Public API
 
-
-_data = {
-    name: _get_image(name) for name in [
-        "point",
-        "arrow_15_.5", "arrow_31_.5", "arrow_15_.25",
-        "hat_16", "hat_32",
-        "error"
-    ]
-}
+def builtins(): return list(_factories().keys())
 
 
-def image(name: str) -> QImage:
-    if i := _data.get(name, None):
-        return i
-    else:
-        raise ValueError(f"'{name}' is not a built-in sign."
-                         f" See help (-h) for more information")
+def __extract_names():
+    nlist = []
+    for f in resources_path().glob("*.png"):
+        if f.name.count('_') == 0:  # Base (user-provided) file
+            nlist.append(f.name)
+    nlist.extend(builtins())
+    return nlist
 
 
-def qt_images(name: str, resolution: int) -> List[QImage]:
-    img: QImage = image(name)
-    w, h = img.width(), img.height()
-    tgt_w, tgt_h = resolution if w == h else 4*resolution, resolution
-    img = img.scaled(tgt_w, tgt_h, Qt.KeepAspectRatio, Qt.SmoothTransformation)
-
-    img_list = []
-    if w == h:
-        img_list.append(img)
-        for a in [90, 180, 270]:
-            img_list.append(img.transformed(QTransform().rotate(a)))
-    else:
-        assert w == 4*h
-        for i in range(4):
-            img_list.append(img.copy(i*resolution, 0, resolution, resolution))
-    return img_list
+_names = __extract_names()
 
 
-def np_images(name: str, resolution: int) -> List[np.ndarray]:
+def names(): return _names
+
+
+def image(sign: Sign, size: int) -> QImage:
+    key = (sign.name, sign.value, size)
+    return _get_image(key)
+
+
+def qt_images(signs: Signs, resolution: int) -> List[List[QImage]]:
+    images = []
+    for sign in signs:
+        img: QImage = image(sign, resolution)
+        w, h = img.width(), img.height()
+        tgt_w, tgt_h = resolution if w == h else resolution, 4*resolution
+        if w != tgt_w and h != tgt_h:
+            img = img.scaled(tgt_w, tgt_h,
+                             Qt.KeepAspectRatio, Qt.SmoothTransformation)
+
+        img_list = []
+        if w == h:
+            img_list.append(img)
+            for a in [90, 180, 270]:
+                img_list.append(img.transformed(QTransform().rotate(a)))
+        else:
+            assert 4*w == h
+            for i in range(4):
+                img_list.append(
+                    img.copy(0, i*resolution, resolution, resolution))
+        images.append(img_list)
+    return images
+
+
+def np_images(signs: Signs, resolution: int,
+              rgb_fill: int = 0) -> List[List[np.ndarray]]:
     def _scale(x): return x / 255.0
     _v_scale = np.vectorize(_scale)
-    _images = qt_images(name, resolution)
+    _images = qt_images(signs, resolution)
     arrays = []
-    for i, p in enumerate(_images):
-        img = QImage(p.size(), QImage.Format_Grayscale8)
-        img.fill(Qt.black)
-        painter = QPainter(img)
-        painter.drawImage(img.rect(), p, p.rect())
-        painter.end()
-        w, h = img.width(), img.height()
-        b = img.constBits().asstring(img.byteCount())
-        bw = img.bytesPerLine()
-        arr = np.ndarray(shape=(h, bw),
-                         buffer=b,
-                         dtype=np.uint8)[:, :w]
-        arrays.append(copy.deepcopy(_v_scale(np.flipud(arr))))
+    for i, p_list in enumerate(_images):
+        subarray = []
+        for j, p in enumerate(p_list):
+            img = QImage(p.size(), QImage.Format_Grayscale8)
+            img.fill(QColor.fromRgb(rgb_fill))
+            painter = QPainter(img)
+            painter.drawImage(img.rect(), p, p.rect())
+            painter.end()
+            w, h = img.width(), img.height()
+            b = img.constBits().asstring(img.byteCount())
+            bw = img.bytesPerLine()
+            arr = np.ndarray(shape=(h, bw),
+                             buffer=b,
+                             dtype=np.uint8)[:, :w]
+            subarray.append(copy.deepcopy(_v_scale(np.flipud(arr))))
+        arrays.append(subarray)
 
     return arrays
-
-
-def resources():
-    return _data.items()
-
-
-def builtins():
-    return list(_data.keys())
-
-
-def validate(arg) -> bool:
-    if Path(arg).exists():
-        return True
-    else:
-        if arg not in _data:
-            raise ValueError(
-                f"'{arg} is not a built-in sign."
-                f" See help for more information")

@@ -9,7 +9,7 @@ class Vec:
     def __repr__(self): return f"({self.x}, {self.y})"
     def __str__(self): return f"{self.x:.2g}, {self.y:.2g}"
 
-    def __bool__(self): return self.x == 0 and self.y == 0
+    def __bool__(self): return bool(self.x != 0 or self.y != 0)
 
     def __eq__(self, other):
         try:
@@ -34,6 +34,8 @@ class Vec:
         if i < 0 or 1 < i:
             raise IndexError
         return self.x if i == 0 else self.y
+
+    def __iter__(self): return iter((self.x, self.y))
 
     def is_null(self): return bool(self)
 

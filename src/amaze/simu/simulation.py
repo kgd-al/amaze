@@ -1,29 +1,26 @@
 from logging import getLogger
 from types import SimpleNamespace
-from typing import Union, TypeVar
+from typing import Union, TypeVar, Optional
 
 import numpy as np
 
-from amaze.simu.controllers.base import BaseController
+# from amaze.simu.controllers.base import BaseController
 from amaze.simu.env.maze import Maze
-from amaze.simu.pos import Pos
+from amaze.simu.pos import Pos, AlignedPos
 from amaze.simu.robot import Robot, InputType, OutputType, Action, State
 from amaze.visu import resources
 
 logger = getLogger(__name__)
 
-
-def _optimal_reward(): return 1
-
-
-def _compute_rewards(length, dt):
-    return SimpleNamespace(
-        timestep=-dt/(length-1),
-        backward=-1/100,
-        collision=-2/100,
-        finish=2,
+REWARDS = {
+    "optimal": lambda length, dt: length,
+    "compute": lambda length, dt: SimpleNamespace(
+        timestep=-dt,
+        backward=-1 / 10,
+        collision=-2 / 10,
+        finish=2*length-1,
     )
-
+}
 
 T = TypeVar('T')
 Resettable = Union[None, T]
@@ -32,15 +29,12 @@ Resettable = Union[None, T]
 class Simulation:
     def __init__(self,
                  maze: Resettable[Maze] = None,
-                 robot: Resettable[Robot.BuildData] = None,
-                 controller: Resettable[BaseController] = None):
+                 robot: Resettable[Robot.BuildData] = None):
 
         def test_valid_set_reset(o_, s_, a_):
             assert getattr(o_, s_, None) or a_, \
                 f"Cannot reuse attributes from {s_} as it was never set"
-        for o, s, a in [(self, 'maze', maze), (self, 'robot', robot),
-                        (getattr(self, 'robot', None),
-                         'controller', controller)]:
+        for o, s, a in [(self, 'maze', maze), (self, 'robot', robot)]:
             test_valid_set_reset(o, s, a)
 
         if maze:
@@ -50,10 +44,6 @@ class Simulation:
             self.data = robot
             self.robot = Robot()
 
-        if controller:
-            self.robot.controller = controller
-        self.robot.controller.reset()
-
         start = Pos(*self.maze.start) + Pos(.5, .5)
         self.robot.reset(start)
 
@@ -62,19 +52,20 @@ class Simulation:
 
         sl = len(self.maze.solution)
         self.deadline = 4 * sl / self.dt
-        self.rewards = _compute_rewards(sl, self.dt)
+        self.rewards = REWARDS["compute"](sl, self.dt)
+        self.optimal_reward = REWARDS["optimal"](sl, self.dt)
+        self.stats = SimpleNamespace(
+            steps=0, collisions=0, backsteps=0
+        )
 
         self.cues = None
         self.traps = None
 
         if self.data.inputs is InputType.CONTINUOUS:
-            inputs = np.zeros((self.data.vision, self.data.vision),
-                              dtype=float)
+            self.observations = np.zeros((self.data.vision, self.data.vision),
+                                         dtype=np.float32)
         else:
-            inputs = np.zeros(8)
-        self.robot.set_input_buffer(inputs)
-
-        self.robot.set_dt(self.dt)
+            self.observations = np.zeros(8, dtype=np.float32)
 
         self.visuals = np.full((self.maze.width, self.maze.height), np.nan,
                                dtype=object)
@@ -82,22 +73,29 @@ class Simulation:
         if self.data.inputs is InputType.CONTINUOUS:
 
             v = self.data.vision
-            cues = resources.np_images(self.maze.cue, v - 2) \
-                if self.maze.cue is not None else None
-            traps = resources.np_images(self.maze.trap, v - 2) \
-                if self.maze.trap is not None else None
+            clues = resources.np_images(self.maze.clues, v - 2) \
+                if self.maze.clues is not None else None
+            lures = resources.np_images(self.maze.lures, v - 2) \
+                if self.maze.clues is not None else None
+            traps = resources.np_images(self.maze.traps, v - 2) \
+                if self.maze.traps is not None else None
 
-            for lst, img_lst in [(self.maze.intersections, cues),
-                                 (self.maze.traps, traps)]:
+            for lst, img_lst in [(self.maze.clues_data, clues),
+                                 (self.maze.lures_data, lures),
+                                 (self.maze.traps_data, traps)]:
                 if lst is not None and img_lst is not None:
-                    for i, d in lst:
-                        self.visuals[self.maze.solution[i]] = img_lst[d.value]
+                    for v_index, sol_index, d in lst:
+                        self.visuals[self.maze.solution[sol_index]] = \
+                            img_lst[v_index][d.value]
 
         elif self.data.inputs is InputType.DISCRETE:
-            for lst in [self.maze.intersections, self.maze.traps]:
+            for lst, signs in [(self.maze.clues_data, self.maze.clues),
+                               (self.maze.lures_data, self.maze.lures),
+                               (self.maze.traps_data, self.maze.traps)]:
                 if lst is not None:
-                    for i, d in lst:
-                        self.visuals[self.maze.solution[i]] = d
+                    for v_index, sol_index, d in lst:
+                        self.visuals[self.maze.solution[sol_index]] = \
+                            (signs[v_index].value, d)
 
         self.generate_inputs()
 
@@ -107,42 +105,33 @@ class Simulation:
     def reset(self, *args, **kwargs):
         self.__init__(*args, **kwargs)
 
-    def action(self) -> Action:
-        action = self.robot.step()
-
-        if self.data.outputs == OutputType.DISCRETE:
-            if abs(action[0]) > abs(action[1]):
-                action = (action[0], 0)
-            else:
-                action = (0, action[1])
-
-        return action
-
-    def _discrete_collision_detection(self, action: Action):
+    def __move_discrete(self, action: Action) -> bool:
         x, y = self.robot.cell()
         if self.maze.wall_delta(x, y, action[0], action[1]):
-            return self.rewards.collision
+            return True
         else:
             self.robot.pos += action
-            return 0
+            return False
 
-    def _continuous_collision_detection(self, action: Action):
+    def __move_continuous(self, action: Action) -> bool:
         # noinspection PyPep8Naming
         EAST, NORTH, WEST, SOUTH = [d for d in Maze.Direction]
         w, h = self.maze.width, self.maze.height
-        pos = self.robot.pos
-        x, y = new_pos = pos.copy() + action
+
+        x, y = new_pos = self.robot.next_position(action, self.dt)
         x_, y_ = x, y
         i, j = new_pos.aligned()
         r = self.robot.RADIUS
 
         def wall(i_, j_, d_): return self.maze.wall(i_, j_, d_)
-        def chk(): return (x - i <= r), (i + 1 - x <= r), (y - j <= r), (j + 1 - y <= r)
+
+        def chk(): return (x - i <= r), (i + 1 - x <= r),\
+                          (y - j <= r), (j + 1 - y <= r)
 
         o_w, o_e, o_s, o_n = chk()
 
         #######################################################################
-        # Simple stay-in-the cell tests
+        # Simple stay-in-the cell sb3
 
         if o_w:
             if wall(i, j, WEST):
@@ -190,35 +179,46 @@ class Simulation:
             corner_case((i + 1, j, NORTH), (i, j + 1, EAST), (i+1, j+1))
 
         #######################################################################
-        # Also check next cells
 
         new_pos = Pos(x_, y_)
         self.robot.pos = new_pos
 
-        return ((x != x_) + (y != y_)) * self.rewards.collision
+        collision = ((x != x_) + (y != y_))
+        return collision
 
-    def take_action(self, action: Action) -> float:
+    def step(self, action: Action):
+        # logger.debug(f"{'-'*80}\n-- step {self.time()}")
+
+        if self.data.control == "KEYBOARD" and \
+                not action and not self.robot.vel:
+            return
+
         reward = 0
 
         prev_prev_cell = self.robot.prev_cell
 
-        if action != (0, 0):
-            prev_cell = self.robot.cell()
-            if self.data.outputs == OutputType.DISCRETE:
-                reward += self._discrete_collision_detection(action)
-            else:
-                reward += self._continuous_collision_detection(action)
+        prev_cell = self.robot.cell()
+        if self.data.outputs == OutputType.DISCRETE:
+            collision = self.__move_discrete(action)
+        else:
+            collision = self.__move_continuous(action)
 
-            if prev_cell != self.robot.cell():
-                self.robot.prev_cell = prev_cell
+        if collision:
+            reward += self.rewards.collision
+            self.stats.collisions += 1
+
+        if prev_cell != self.robot.cell():
+            self.robot.prev_cell = prev_cell
 
         reward += self.rewards.timestep
+        self.stats.steps += 1
 
         if self.done():
             reward += self.rewards.finish
 
         if prev_prev_cell == self.robot.cell():
             reward += self.rewards.backward
+            self.stats.backsteps += 1
 
         self.robot.reward += reward
         self.generate_inputs()
@@ -226,18 +226,8 @@ class Simulation:
 
         return reward
 
-    def step(self):
-        # logger.debug(f"{'-'*80}\n-- step {self.time()}")
-
-        action = self.action()
-
-        if self.data.control == "KEYBOARD" and action == (0, 0):
-            return
-
-        self.take_action(action)
-
     def generate_inputs(self) -> State:
-        i: State = self.robot.inputs
+        i: State = self.observations
         i.fill(0)
         cell = self.robot.cell()
         prev_cell = self.robot.prev_cell
@@ -251,10 +241,11 @@ class Simulation:
         if self.data.inputs is InputType.DISCRETE:
             i[:4] = [self.maze.wall(cell[0], cell[1], d) for d in Maze.Direction]
             if prev_dir:
-                i[prev_dir.value] = -1
+                i[prev_dir.value] = .5
 
-            if isinstance(d := self.visuals[cell], Maze.Direction):
-                i[4+d.value] = 1
+            if d := self.visuals[cell]:
+                if not isinstance(d, float) or not np.isnan(d):
+                    i[4+d[1].value] = d[0]
 
         else:
 
@@ -286,7 +277,9 @@ class Simulation:
 
         return i
 
-    def _fill_visual_buffer(self, buffer, cell, prev_dir):
+    def _fill_visual_buffer(self, buffer: np.ndarray,
+                            cell: AlignedPos,
+                            prev_dir: Optional[Maze.Direction]):
         # noinspection PyPep8Naming
         EAST, NORTH, WEST, SOUTH = [d for d in Maze.Direction]
         def _wall(d): return self.maze.wall(*cell, d)
@@ -318,12 +311,36 @@ class Simulation:
                  (np.s_[-1, ix])][prev_dir.value]
             buffer[s] = 1
 
-    @staticmethod
-    def optimal_reward():
-        return _optimal_reward()
+    def robot_dict(self) -> Optional[dict]:
+        if r := self.robot:
+            return dict(pos=r.pos, vel=r.vel, acc=r.acc)
+        else:
+            return None
 
     def success(self):
         return self.robot.cell() == self.maze.end
 
+    def failure(self):
+        return self.timestep >= self.deadline
+
     def done(self):
-        return self.success() or self.timestep >= self.deadline
+        return self.success() or self.failure()
+
+    def infos(self):
+        return dict(
+            time=self.timestep,
+            success=self.success(),
+            failure=self.failure(),
+            done=self.done(),
+            pretty_reward=
+            2 * int(self.success())
+            - self.stats.steps / (len(self.maze.solution) - 1)
+            - .01 * self.stats.backsteps
+            - .02 * self.stats.collisions,
+            len=len(self.maze.solution),
+            **self.stats.__dict__
+        )
+
+    @staticmethod
+    def discrete_actions():
+        return [(1, 0), (0, 1), (-1, 0), (0, -1)]

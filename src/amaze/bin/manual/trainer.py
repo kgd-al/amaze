@@ -26,7 +26,7 @@ from amaze.simu.robot import Robot
 from amaze.simu.simulation import Simulation
 from amaze.utils.tee import Tee
 from amaze.visu import resources
-from amaze.visu.maze import MazeWidget
+from amaze.visu.widgets.maze import MazeWidget
 from amaze.visu.plotters.stats import plot_stats
 from amaze.visu.plotters.tabular import plot_inputs_values
 
@@ -226,14 +226,14 @@ class Options:
         return log_level, tee
 
 
-def bellman_train(simulation, train):
+def bellman_train(simulation: Simulation, policy: TabularController, train):
     state = simulation.generate_inputs().copy()
-    action = simulation.action()
+    action = policy(state)
 
     while not simulation.done():
-        reward = simulation.take_action(action)
-        state_ = simulation.robot.inputs.copy()
-        action_ = simulation.action()
+        reward = simulation.step(action)
+        state_ = simulation.observations.copy()
+        action_ = policy(state)
         train(state, action, reward, state_, action_)
         state, action = state_, action_
 
@@ -252,12 +252,12 @@ def greedy_eval(prefix, simulation, policy, mazes, args):
         trajectory = []
 
         simulation.reset(maze=maze)
-        action = simulation.action()
+        action = policy(simulation.observations)
         while not simulation.done():
             pos = tuple(simulation.robot.pos)
-            reward = simulation.take_action(action)
+            reward = simulation.step(action)
             trajectory.append((pos, action, reward))
-            action = simulation.action()
+            action = policy(simulation.observations)
         rewards.append(simulation.robot.reward)
 
         if args.verbosity >= 2:
@@ -344,6 +344,7 @@ def main():
     )
     Options.populate(parser)
     parser.parse_args(namespace=args)
+    # noinspection PyUnusedLocal
     logging_level, tee = args.normalize()
 
     snapshot_steps = args.episodes / args.snapshots \
@@ -354,6 +355,7 @@ def main():
     robot = Robot.BuildData.from_argparse(args)
 
     if True:
+        # noinspection PyUnusedLocal
         app = QApplication([])
 
     if args.training in [TrainingType.SARSA, TrainingType.Q_LEARNING]:
@@ -362,7 +364,7 @@ def main():
 
         robot.control = _controller_types[args.training]
         robot.control_data = dict(
-            actions=Robot.discrete_actions(),
+            actions=Simulation.discrete_actions(),
             epsilon=args.epsilon, seed=args.seed
         )
         policy: TabularController = controller_factory(
@@ -374,7 +376,7 @@ def main():
         train_function = functools.partial(
             train_function,
             alpha=args.alpha, gamma=args.gamma)
-        simulation = Simulation(train_mazes[0], robot, policy)
+        simulation = Simulation(train_mazes[0], robot)
 
         stats = pd.DataFrame(columns=["R", "e"])
         test_stats = pd.DataFrame(
@@ -386,7 +388,7 @@ def main():
         for e in range(args.episodes):
             m = train_mazes[e % len(train_mazes)]
             simulation.reset(m)
-            reward = bellman_train(simulation, train_function)
+            reward = bellman_train(simulation, policy, train_function)
 
             if args.verbosity >= 1:
                 logger.info(f"Episode {e:0{e_digits}d}, reward={reward},"
@@ -404,7 +406,7 @@ def main():
                 dump(policy, args.run_folder.joinpath(s_name + ".ctrl"))
                 test_stats.loc[e] = [avg_reward, std_rewards, *rewards]
 
-                if math.isclose(avg_reward, Simulation.optimal_reward()):
+                if math.isclose(avg_reward, Simulation.optimal_reward):
                     optimal += 1
                 else:
                     optimal = 0

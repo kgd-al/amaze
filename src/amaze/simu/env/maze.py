@@ -2,16 +2,20 @@ import json
 import random
 import re
 import time
-from dataclasses import dataclass, fields, asdict
+from collections import namedtuple
+from dataclasses import dataclass, fields, asdict, field
 from enum import Enum
+from itertools import islice, cycle
 from logging import getLogger
 from pathlib import Path
+from types import SimpleNamespace
 from typing import Annotated, Tuple, Optional, List
 
 import numpy as np
 
 from amaze.utils.build_data import BaseBuildData
 from amaze.visu import resources
+from amaze.visu.resources import Sign
 
 logger = getLogger(__name__)
 
@@ -32,6 +36,8 @@ class StartLocation(int, Enum):
 
 
 class Maze:
+    FIELD_SEP = '_'
+
     @dataclass
     class BuildData(BaseBuildData):
         width: Annotated[int, "number of horizontal cells"] = 10
@@ -41,23 +47,53 @@ class Maze:
 
         start: Annotated[StartLocation, "location of the initial position"] = \
             StartLocation.SOUTH_WEST
-        # end: Annotated[Optional[Tuple[int, int]],
-        #                "coordinate of the target position"] = None
+        rotated: Annotated[bool,
+                           ("Are mazes obtained by different start points or"
+                            " rotating SW version")] = True
 
         unicursive: Annotated[bool, "Single path?"] = False
 
-        cue: Annotated[Optional[str],
-                       "image name for (helpful) cues"] = None
+        Signs = List[resources.Sign]
+        custom_classes = {
+            Signs: SimpleNamespace(
+                type_parser=str,
+                type_name=str,
+                default=[],
+                action='append'
+            )
+        }
+
+        clue: Annotated[Signs, "image name for (helpful) clues"] = \
+            field(default_factory=list)
+
+        lure: Annotated[Signs, "image name for (unhelpful) lures"] = \
+            field(default_factory=list)
+
+        p_lure: Annotated[Optional[float],
+                          "probability of generating a lure (per-cell)"] = None
+
+        trap: Annotated[Signs, "image name for (harmful) traps"] = \
+            field(default_factory=list)
 
         p_trap: Annotated[Optional[float],
                           "probability of generating a trap (per-cell)"] = None
 
-        trap: Annotated[Optional[str],
-                        "image name for (unhelpful) traps"] = None
-
         def __post_init__(self):
             if self.seed is None:
-                self.seed = round(time.time() * 1000)
+                self.seed = round(time.time() * 1000) % (2**31)
+
+            for k in ["clue", "lure", "trap"]:
+                attr = getattr(self, k)
+                if isinstance(attr, list):
+                    setattr(self, k,
+                            [resources.Sign.from_string(s)
+                             if isinstance(s, str) else s for s in attr])
+                elif not isinstance(attr, BaseBuildData.Unset):
+                    raise ValueError(
+                        f"Incompatible value {attr} ({type(attr)}) for"
+                        f" field {k}")
+
+    Signs = BuildData.Signs
 
     class Direction(Enum):
         EAST = 0
@@ -83,39 +119,39 @@ class Maze:
 
     __private_key = object()
 
+    PlacedSign = namedtuple(
+        'PlacedSign',
+        ['visual_index', 'solution_index', 'direction'])
+
     def __init__(self, data: BuildData, key=None):
         if key is not self.__private_key:
             raise AssertionError("Cannot create maze directly")
 
         self.width, self.height = data.width, data.height
-        self.walls = np.ones((data.width, data.height, 4), dtype=int)
+        self.walls = np.ones((data.width, data.height, 4), dtype=bool)
         self.e_start = data.start
-        self.start = {
-            StartLocation.SOUTH_WEST: (0, 0),
-            StartLocation.SOUTH_EAST: (self.width-1, 0),
-            StartLocation.NORTH_EAST: (self.width-1, self.height-1),
-            StartLocation.NORTH_WEST: (0, self.height-1),
-        }[self.e_start]
-        self.end = (self.width - self.start[0] - 1,
-                    self.height - self.start[1] - 1)
+        self.start = (0, 0)
+        self.end = (self.width - 1, self.height - 1)
 
         self.seed = data.seed
         self.solution: Optional[List[Tuple[int, int]]] = None
-        self.intersections: Optional[List[Tuple[int, Maze.Direction]]] = None
+        self._intersections: int = 0
 
-        self.cue: Optional[str] = None
-        self.p_trap: float = 0
-        self.trap: Optional[str] = None
-        self.traps: Optional[List[Tuple[int, Maze.Direction]]] = None
+        self.clues: Maze.Signs = data.clue
+        self.lures: Maze.Signs = data.lure
+        self.p_lure: float = data.p_lure
+        self.traps: Maze.Signs = data.trap
+        self.p_trap: float = data.p_trap
+        self.clues_data: List[Maze.PlacedSign] = []
+        self.lures_data: List[Maze.PlacedSign] = []
+        self.traps_data: List[Maze.PlacedSign] = []
 
-    def __repr__(self):
-        return f"{self.width}x{self.height} maze"
+    def __repr__(self): return self.to_string()
 
-    def valid(self, i, j):
-        return 0 <= i < self.width and 0 <= j < self.height
+    def intersections(self): return self._intersections
+    def unicursive(self): return self.intersections() == 0
 
-    def unicursive(self):
-        return len(self.intersections) == 0
+    def valid(self, i, j): return 0 <= i < self.width and 0 <= j < self.height
 
     def wall(self, i: int, j: int, d: Direction):
         return self.walls[i, j, d.value]
@@ -137,10 +173,21 @@ class Maze:
     @classmethod
     def generate(cls, data: BuildData):
         maze = Maze(data, cls.__private_key)
-        rng = random.Random(maze.seed)
+        def _reset_rng(): return random.Random(maze.seed)
+        rng = _reset_rng()
+
+        w, h = maze.width, maze.height
+        if not data.rotated:
+            maze.start = {
+                StartLocation.SOUTH_WEST: (0, 0),
+                StartLocation.SOUTH_EAST: (w - 1, 0),
+                StartLocation.NORTH_EAST: (w - 1, h - 1),
+                StartLocation.NORTH_WEST: (0, h - 1),
+            }[maze.e_start]
+            maze.end = (w - maze.start[0] - 1, h - maze.start[1] - 1)
 
         stack = [maze.start]
-        visited = np.full((maze.width, maze.height), False)
+        visited = np.full((w, h), False)
         visited[maze.start] = True
 
         walls = []
@@ -164,17 +211,39 @@ class Maze:
         for (i, j), d in walls:
             maze._set_wall(i, j, d, False)
 
+        if data.rotated and data.start is not StartLocation.SOUTH_WEST:
+            # Rotate cells
+            maze.walls = np.rot90(maze.walls, -data.start.value, axes=(1, 0))
+            # Rotate walls inside the cells
+            maze.walls = np.roll(maze.walls, data.start.value, axis=2)
+
+            maze.width, maze.height = maze.walls.shape[:-1]
+            w, h = maze.width, maze.height
+            rotate = {
+                StartLocation.SOUTH_WEST: lambda _i, _j: (_i, _j),
+                StartLocation.SOUTH_EAST: lambda _i, _j: (w-1-_j, _i),
+                StartLocation.NORTH_WEST: lambda _i, _j: (_j, h-1-_i),
+                StartLocation.NORTH_EAST: lambda _i, _j: (w-1-_i, h-1-_j),
+            }[data.start]
+
+            # Rotate start/end
+            maze.start, maze.end = rotate(*maze.start), rotate(*maze.end)
+
+            # Rotate the solution
+            maze.solution = [rotate(i, j) for i, j in maze.solution]
+
+        # Extract intersections
         intersections = []
         for i, (c_i, c_j) in enumerate(maze.solution[1:-1]):
+            assert sum(maze.walls[c_i, c_j]) > 0, "Three-way intersection"
             if sum(maze.walls[c_i, c_j]) < 2:
                 nc_i, nc_j = maze.solution[i + 2]
                 d_i, d_j = nc_i - c_i, nc_j - c_j
                 intersections.append((i + 1, cls._offsets_inv[(d_i, d_j)]))
-        maze.intersections = intersections
 
-        # maze.unicursive = data.unicursive
+        # Wall off intersections in unicursive mode
         if data.unicursive:
-            for i, d in maze.intersections:
+            for i, d in intersections:
                 c0_i, c0_j = maze.solution[i-1]
                 c1_i, c1_j = maze.solution[i]
                 di, dj = c0_i - c1_i, c0_j - c1_j
@@ -183,7 +252,7 @@ class Maze:
                 dirs.pop(cls._offsets[d])
                 for _, d_ in dirs.items():
                     maze._set_wall(c1_i, c1_j, d_, True)
-            maze.intersections = []
+            intersections = []
 
             # Check last cell
             c_i, c_j = maze.end
@@ -195,29 +264,70 @@ class Maze:
                 for _, d_ in dirs.items():
                     maze._set_wall(c_i, c_j, d_, True)
 
-        maze.cue = data.cue
-        if maze.cue:
-            resources.validate(maze.cue)
+        maze._intersections = len(intersections)
 
-        if data.p_trap is not None and data.p_trap > 0 and \
-                data.trap is not None:
-            maze.p_trap = data.p_trap
-            maze.trap = data.trap
-            resources.validate(maze.trap)
+        def rng_indices(a, n):
+            lst = list(islice(cycle(range(len(a))), n))
+            rng.shuffle(lst)
+            return lst
 
+        # Generate clues (always but see below)
+        maze.clues_data = []
+        if maze.clues:
+            rng = _reset_rng()
+            clues_sign_indices = rng_indices(maze.clues, maze._intersections)
+        else:
+            clues_sign_indices = [-1] * maze._intersections
+        for i, (sol_index, direction) in enumerate(intersections):
+            maze.clues_data.append(
+                (clues_sign_indices[i], sol_index, direction))
+
+        # Add un-helpful signs
+        if maze.p_lure and maze.lures:
+            rng = _reset_rng()
             candidates = \
                 set(range(len(maze.solution)-1))\
-                - {i[0] for i in maze.intersections}
-            maze.traps = []
-            for i in rng.sample(candidates,
-                                round(data.p_trap * len(candidates) / 100)):
-                c_i, c_j = maze.solution[i]
-                nc_i, nc_j = maze.solution[i+1]
+                - {i[0] for i in intersections}
+            nl = round(data.p_lure * len(candidates))
+            lure_indices = rng_indices(maze.lures, nl)
+            maze.lures_data = []
+            for vix, six in zip(lure_indices, rng.sample(list(candidates), nl)):
+                c_i, c_j = maze.solution[six]
+                nc_i, nc_j = maze.solution[six+1]
                 dirs = cls._offsets_inv.copy()
                 dirs.pop((nc_i - c_i, nc_j - c_j))
-                maze.traps.append((i, rng.choice(list(dirs.values()))))
+                maze.lures_data.append(
+                    (vix, six, rng.choice(list(dirs.values()))))
 
-        if not data.unicursive and maze.cue is None:
+        # Transform helpful signs into harmful ones
+        if maze.p_trap and maze.traps:
+            rng = _reset_rng()
+            nt = round(data.p_trap * len(maze.clues_data))
+            trap_indices = sorted(rng.sample(range(maze._intersections), nt))
+            trap_signs_indices = rng_indices(maze.traps, nt)
+
+            for i in reversed(trap_indices):
+                vix, six, d = maze.clues_data.pop(i)
+                pos = maze.solution[six]
+                new_d = None
+                for d_ in Maze.Direction:
+                    if d == d_:
+                        continue
+                    if maze.wall(pos[0], pos[1], d_):
+                        continue
+                    if (maze.solution[six-1] ==
+                            tuple(sum(t) for t in zip(pos, maze._offsets[d_]))):
+                        continue
+                    new_d = d_
+                    break
+                assert new_d
+                maze.traps_data.append((trap_signs_indices.pop(), six, new_d))
+
+        # Forget about cues if not needed
+        if not maze.clues:
+            maze.clues_data = []
+
+        if not data.unicursive and maze.clues is None:
             logger.warning("Mazes with intersections and no clues are"
                            " practically unsolvable")
 
@@ -229,8 +339,11 @@ class Maze:
             seed=self.seed,
             start=self.e_start,
             unicursive=self.unicursive(),
-            cue=self.cue,
-            p_trap=self.p_trap, trap=self.trap
+            clue=self.clues,
+            p_lure=self.p_lure,
+            lure=self.lures,
+            p_trap=self.p_trap,
+            trap=self.traps
         )
 
     def save(self, path: Path):
@@ -242,38 +355,44 @@ class Maze:
 
     @staticmethod
     def bd_to_string(bd: BuildData):
+        sep = Maze.FIELD_SEP
         default = Maze.BuildData()
-        f = f"m{bd.seed}_{bd.width}x{bd.height}"
+        f = f"M{bd.seed}{sep}{bd.width}x{bd.height}"
         if bd.start != default.start:
-            f += "_" + bd.start.shorthand()
+            f += sep + bd.start.shorthand()
         if bd.unicursive:
-            f += "_U"
-        if bd.cue:
-            f += f"_C{bd.cue.replace('_', '-')}"
-        if bd.trap:
-            f += f"_p{bd.p_trap}_T{bd.trap.replace('_', '-')}"
+            f += sep + "U"
+        f += ''.join(f"{sep}C{Sign.to_string(s)}" for s in bd.clue)
+        if bd.p_lure:
+            f += f"{sep}l{bd.p_lure}".lstrip('0')
+        f += ''.join(f"{sep}L{Sign.to_string(s)}" for s in bd.lure)
+        if bd.p_trap:
+            f += f"{sep}t{bd.p_trap}".lstrip('0')
+        f += ''.join(f"{sep}T{Sign.to_string(s)}" for s in bd.trap)
         return f
 
-    def to_string(self):
-        return self.bd_to_string(self._build_data())
-
     @classmethod
-    def from_string(cls, s, overrides: Optional[BuildData] = None) -> 'Maze':
+    def bd_from_string(cls, s, overrides: Optional[BuildData] = None) \
+            -> BuildData:
         d_re = re.compile("[SN][WE]")
         s_re = re.compile("[0-9]+x[0-9]+")
         bd = cls.BuildData()
-        for token in s.split('_'):
+        for token in s.split(cls.FIELD_SEP):
             t, tail = token[0], token[1:]
-            if t == 'm':
+            if t == 'M':
                 bd.seed = int(tail)
             elif t == 'U':
                 bd.unicursive = True
             elif t == 'C':
-                bd.cue = tail.replace('-', '_')
+                bd.clue.append(Sign.from_string(tail))
+            elif t == 'l':
+                bd.p_lure = float(tail) if tail else bd.p_lure
+            elif t == 'L':
+                bd.lure.append(Sign.from_string(tail))
+            elif t == 't':
+                bd.p_trap = float(tail) if tail else bd.p_trap
             elif t == 'T':
-                bd.trap = tail.replace('-', '_')
-            elif t == 'p':
-                bd.p_trap = float(tail)
+                bd.trap.append(Sign.from_string(tail))
             elif s_re.match(token):
                 bd.width, bd.height = [int(x) for x in token.split('x')]
             elif d_re.match(token):
@@ -282,9 +401,16 @@ class Maze:
                 raise ValueError(f"Unknown or malformed token '{token}'")
 
         if overrides:
-            for field in fields(bd):
-                if not isinstance(v := getattr(overrides, field.name),
+            for _field in fields(bd):
+                if not isinstance(v := getattr(overrides, _field.name),
                                   BaseBuildData.Unset):
-                    setattr(bd, field.name, v)
+                    setattr(bd, _field.name, v)
 
-        return cls.generate(bd)
+        return bd
+
+    def to_string(self):
+        return self.bd_to_string(self._build_data())
+
+    @classmethod
+    def from_string(cls, s, overrides: Optional[BuildData] = None) -> 'Maze':
+        return cls.generate(cls.bd_from_string(s, overrides))

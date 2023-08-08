@@ -1,8 +1,4 @@
-import json
-import pprint
-from pathlib import Path
 from random import Random
-from typing import Tuple
 
 import numpy as np
 import pandas as pd
@@ -59,7 +55,7 @@ class TabularController(BaseController):
         _update('max_value', value, max)
         _update('min_value', value, min)
 
-    def __call__(self, _, state: State):
+    def __call__(self, state: State):
         # Use epsilon-greedy policy
         if self.epsilon > 0 and self._rng.random() < self.epsilon:
             return self._rng.choice(self._actions)

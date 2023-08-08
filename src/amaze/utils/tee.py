@@ -1,4 +1,5 @@
 import sys
+from io import TextIOBase
 from pathlib import Path
 from typing import Optional, Callable
 
@@ -9,7 +10,7 @@ class Tee:
     """Ensure that everything that's printed is also saved
     """
 
-    class PassthroughStream:
+    class PassthroughStream(TextIOBase):
         """Forwards received messages to log/file"""
         def __init__(self, parent: 'Tee'):  self.tee = parent
         def write(self, msg):   self.tee.write(msg)
