@@ -4,7 +4,7 @@ set -euo pipefail
 shopt -s inherit_errexit
 export LC_ALL=C
 
-datafile=/home/kgd/work/VU/latex/tmp/annexes/mazes/classes/classes
+datafile=$(dirname $0)/mazes.dat
 if [ ! -f "$datafile" ]
 then
     echo "Could not find class specifications file at '$datafile'" >&2
