@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import os.path
+import pprint
 import sys
 import time
 from collections import defaultdict
@@ -9,6 +10,7 @@ from typing import Optional
 
 import humanize.time
 import matplotlib.pyplot as plt
+import numpy as np
 import pandas as pd
 import seaborn as sns
 from matplotlib.axes import Axes
@@ -16,10 +18,28 @@ from tensorboard.backend.event_processing.event_accumulator \
     import EventAccumulator
 
 
+def __to_km_string(v):
+    if v >= 1_000_000:
+        return f"{v // 1_000_000:.0f}M"
+    elif v >= 1_000:
+        return f"{v // 1_000:.0f}K"
+    else:
+        return str(v)
+
+
 def __to_print_string(df, quantiles, header=None):
+    min_v = np.min(quantiles.loc[0.0])
+
+    if min_v >= 1_000_000:
+        scale = 1_000_000
+    elif min_v >= 1_000:
+        scale = 1_000
+    else:
+        scale = 1
+
     def w_max(c):
-        return max(*(len(str(v_)) for v_ in df[c]),
-                   *(len(str(v_)) for v_ in quantiles[c]),
+        return max(*(len(str(v_ // scale)) for v_ in df[c]),
+                   *(len(str(v_ // scale)) for v_ in quantiles[c]),
                    len(c))
 
     w_idx = max(*(len(str(i)) for i in df.index),
@@ -29,10 +49,14 @@ def __to_print_string(df, quantiles, header=None):
     formats = [lambda v_, w=w: f"{v_:{w}}" for w in widths]
     df_str = formats[0]('')
     for i, c in enumerate(df.columns):
-        df_str += " " + formats[i + 1](c)
+        df_str += " " + f"{c:^{widths[i+1]}}"
     df_str += "\n"
     df_midrule = "-" * len(df_str) + "\n"
 
+    if scale > 1:
+        if header:
+            header += " "
+        header += f"(x{scale})"
     if header:
         df_str = f"{header:^{len(df_midrule)}}\n{df_midrule}{df_str}"
 
@@ -40,13 +64,13 @@ def __to_print_string(df, quantiles, header=None):
     for j, row in quantiles.iterrows():
         df_str += formats[0](j)
         for i, v in enumerate(row):
-            df_str += " " + formats[i + 1](v)
+            df_str += " " + formats[i + 1](v // scale)
         df_str += "\n"
     df_str += df_midrule
     for j, row in df.iterrows():
         df_str += formats[0](j)
         for i, v in enumerate(row):
-            df_str += " " + formats[i + 1](v)
+            df_str += " " + formats[i + 1](v // scale)
         df_str += "\n"
     return df_str
 
@@ -57,13 +81,18 @@ def find_events(root: Path):
                     key=os.path.getmtime, reverse=True)
     grouped_events = defaultdict(lambda: defaultdict(list))
     for e in events:
-        e = e.relative_to(root)
-        e_tokens = str(e).split('/')
+        e_ = e.relative_to(root)
+        e_tokens = str(e_).split('/')
+        group = '/'.join(e_tokens[:-3])
+        maze, run, file = e_tokens[-3:]
 
-        grouped_events['/'.join(e_tokens[:-3])][e_tokens[-3]].append(
-            (e_tokens[-2], e_tokens[-1]))
+        if group:
+            grouped_events[group][maze].append((run, e))
+        else:
+            grouped_events[maze][run[-2]].append((run[-1], e))
 
     # pprint.pprint(grouped_events)
+
     fig, axes = plt.subplots(len(grouped_events), 1,
                              sharey='all')
 
@@ -79,10 +108,7 @@ def find_events(root: Path):
 
         for g, events in groups.items():
             summary_iterators = \
-                [EventAccumulator(
-                    str(root.joinpath(t).joinpath(g).joinpath(r).joinpath(e))
-                ).Reload()
-                 for r, e in events]
+                [EventAccumulator(str(e)).Reload() for r, e in events]
             tags = summary_iterators[0].Tags()['scalars']
             timesteps[g] = (
                 [r for r, _ in events],
@@ -99,7 +125,7 @@ def find_events(root: Path):
         df = pd.DataFrame(dict([(k, pd.Series(v, index=i))
                                 for k, (i, v) in timesteps.items()]),
                           index=time_order)
-        quantiles = df.quantile([0, .25, .5, .75, 1])
+        quantiles = df.quantile([0, .25, .5, .75, 1]).astype(df.dtypes)
 
         # print(df)
         # print(quantiles)
@@ -117,12 +143,7 @@ def find_events(root: Path):
         ax: Axes = ax
         for i, median in enumerate(q.loc[.5]):
             x = i+.1
-            if median >= 1_000_000:
-                median_str = f"{median//1_000_000:.0f}M"
-            elif median >= 1_000:
-                median_str = f"{median//1_000:.0f}K"
-            else:
-                median_str = str(median)
+            median_str = __to_km_string(median)
             # ax.plot((i, x), (median, median), color='gray')
             # ax.text(x, median, median_str,
             #         )

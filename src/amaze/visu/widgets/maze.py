@@ -72,7 +72,7 @@ class MazeWidget(QLabel):
                  simulation: Simulation,
                  config: Optional[dict[str, Any]] = None,
                  resolution: int = 15,
-                 size: Tuple[int, int] = None):
+                 width: Optional[int] = None):
         super().__init__("Generate a maze\n"
                          "using controls\n"
                          "on the right >>>")
@@ -90,8 +90,8 @@ class MazeWidget(QLabel):
         self._clues, self._lures, self._traps = None, None, None
         self.set_resolution(resolution)
 
-        if size:
-            self.setFixedSize(*size)
+        if width:
+            self.setFixedSize(*self.__compute_size(simulation.maze, width))
 
         self._compute_scale()
 
@@ -136,6 +136,10 @@ class MazeWidget(QLabel):
         self._compute_scale()
         super().update()
 
+    @staticmethod
+    def __compute_size(maze, width):
+        return width, width * maze.height // maze.width
+
     def _compute_scale(self):
         maze = self._simulation.maze
         self._scale = round(min(self.width() / maze.width,
@@ -162,7 +166,7 @@ class MazeWidget(QLabel):
     def draw_to(self, path):
         img, painter = self._image_drawer()
         self._render(painter)
-        self._save_image(path, img, painter)
+        return self._save_image(path, img, painter)
 
     @classmethod
     def __render(cls, painter: QPainter, maze: Maze,
@@ -227,10 +231,12 @@ class MazeWidget(QLabel):
 
         path = Path(path)
         path.parent.mkdir(parents=True, exist_ok=True)
-        if img.save(str(path)):
+        ok = img.save(str(path))
+        if ok:
             logger.debug(f"Wrote to {path}")
         else:
             logger.error(f"Error writing to {path}")
+        return ok
 
     @classmethod
     def plot_trajectory(cls, simulation: Simulation,
@@ -260,8 +266,7 @@ class MazeWidget(QLabel):
                                as_index=False).size()
 
         maze = simulation.maze
-        width = size
-        height = width * maze.height // maze.width
+        width, height = cls.__compute_size(maze, size)
         scale = width / maze.width
 
         duplicates = (len(shortened_trajectory) < len(trajectory))
@@ -273,7 +278,7 @@ class MazeWidget(QLabel):
         dark = config.get("dark", False)
         fill = cls.__background_color(dark)
         img, painter = cls.__static_image_drawer(
-            width, height, fill, img_format=img_format)
+            width + 2, height + 2, fill, img_format=img_format)
 
         if duplicates:
             # Reserve 1/5 of the width
@@ -369,7 +374,8 @@ class MazeWidget(QLabel):
                 ts = min(sx, sy)
                 text_data.append([u, cb_y, text, ts])
 
-            text_scale = min(sl[-1] for sl in text_data)
+            text_scale = min(*(sl[-1] for sl in text_data), 1)
+            print("text scale:", text_scale)
             for u, cb_y, text, _ in text_data:
                 x_, y_ = tick_x, u * cb_h + m
                 painter.drawLine(QLineF(x_, y_, x_ + tick_x_w, y_))

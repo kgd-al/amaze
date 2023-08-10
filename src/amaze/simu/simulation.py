@@ -3,6 +3,7 @@ from types import SimpleNamespace
 from typing import Union, TypeVar, Optional
 
 import numpy as np
+import pandas as pd
 
 # from amaze.simu.controllers.base import BaseController
 from amaze.simu.env.maze import Maze
@@ -29,7 +30,8 @@ Resettable = Union[None, T]
 class Simulation:
     def __init__(self,
                  maze: Resettable[Maze] = None,
-                 robot: Resettable[Robot.BuildData] = None):
+                 robot: Resettable[Robot.BuildData] = None,
+                 save_trajectory=False):
 
         def test_valid_set_reset(o_, s_, a_):
             assert getattr(o_, s_, None) or a_, \
@@ -97,12 +99,17 @@ class Simulation:
                         self.visuals[self.maze.solution[sol_index]] = \
                             (signs[v_index].value, d)
 
+        self.trajectory = pd.DataFrame(columns=["px", "py", "ax", "ay", "r"]) \
+            if save_trajectory else None
+
         self.generate_inputs()
 
     def time(self):
         return self.timestep * self.dt
 
     def reset(self, *args, **kwargs):
+        if "save_trajectory" not in kwargs:
+            kwargs["save_trajectory"] = (self.trajectory is not None)
         self.__init__(*args, **kwargs)
 
     def __move_discrete(self, action: Action) -> bool:
@@ -197,6 +204,7 @@ class Simulation:
 
         prev_prev_cell = self.robot.prev_cell
 
+        pos = self.robot.pos.copy()
         prev_cell = self.robot.cell()
         if self.data.outputs == OutputType.DISCRETE:
             collision = self.__move_discrete(action)
@@ -223,6 +231,9 @@ class Simulation:
         self.robot.reward += reward
         self.generate_inputs()
         self.timestep += 1
+
+        if self.trajectory is not None:
+            self.trajectory.loc[len(self.trajectory)] = [*pos, *action, reward]
 
         return reward
 

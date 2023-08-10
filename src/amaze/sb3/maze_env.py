@@ -78,7 +78,8 @@ class MazeEnv(Env):
 
         self.name = Maze.bd_to_string(maze)
 
-        self._simulation = Simulation(Maze.generate(maze), robot)
+        self._simulation = Simulation(Maze.generate(maze), robot,
+                                      save_trajectory=log_trajectory)
         _pretty_rewards = \
             ', '.join(f'{k}: {v:.2g}'
                       for k, v in self._simulation.rewards.__dict__.items())
@@ -111,8 +112,6 @@ class MazeEnv(Env):
 
         self.widget, self.app = None, None
 
-        self.trajectory = pd.DataFrame(columns=["px", "py", "ax", "ay", "r"])\
-            if log_trajectory else None
         self.prev_trajectory = None
 
         self.last_infos = None
@@ -122,6 +121,8 @@ class MazeEnv(Env):
 
     def reset(self, seed=None, options=None, full_reset=False):
         self.last_infos = self.infos()
+        if self._simulation.trajectory is not None:
+            self.prev_trajectory = self._simulation.trajectory.copy(True)
 
         super().reset(seed=seed)
         self._simulation.reset()
@@ -134,14 +135,9 @@ class MazeEnv(Env):
             self.resets += 1
             logger.debug(f"Reset {self.resets} for {maze_str}")
 
-        if self.trajectory is not None:
-            self.prev_trajectory = self.trajectory.copy(True)
-            self.trajectory = pd.DataFrame(columns=self.trajectory.columns)
-
         return self._observations(), self.infos()
 
     def step(self, action):
-        pos = self._simulation.robot.pos.copy()
         vec_action = self.mapper.map_action(action)
 
         reward = self._simulation.step(vec_action)
@@ -149,10 +145,6 @@ class MazeEnv(Env):
         terminated = self._simulation.success()
         truncated = self._simulation.failure()
         info = self._simulation.infos()
-
-        if self.trajectory is not None:
-            self.trajectory.loc[len(self.trajectory)] = \
-                [*pos, *vec_action, reward]
 
         # done = terminated or truncated
         # logger.debug(f"Step {self._simulation.timestep:03d} ({done=})"

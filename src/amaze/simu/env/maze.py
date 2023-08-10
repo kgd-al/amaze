@@ -380,7 +380,7 @@ class Maze:
         for token in s.split(cls.FIELD_SEP):
             t, tail = token[0], token[1:]
             if t == 'M':
-                bd.seed = int(tail)
+                bd.seed = s if (s := int(tail)) >= 0 else bd.seed
             elif t == 'U':
                 bd.unicursive = True
             elif t == 'C':
