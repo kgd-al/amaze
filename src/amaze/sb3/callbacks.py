@@ -103,9 +103,8 @@ class TensorboardCallback(BaseCallback):
         return True
 
     def log_step(self, final: bool):
-        # logger.info(f"Logging tensorboard data at time"
-        #             f" {self.num_timesteps} ({final=})")
-        # logger.info(f"{self.model.num_timesteps=}")
+        logger.info(f"Logging tensorboard data at time"
+                    f" {self.num_timesteps} ({final=})")
 
         assert isinstance(self.parent, EvalCallback)
         env = self.parent.eval_env

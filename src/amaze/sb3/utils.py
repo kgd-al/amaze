@@ -24,12 +24,16 @@ class CV2QTGuard:
         self.qta_path = None
 
     def __enter__(self):
-        self.qta_path = os.environ[self.QPA_NAME]
+        if path := os.environ.get(self.QPA_NAME, None):
+            self.qta_path = path
         os.environ[self.QPA_NAME] = \
             QLibraryInfo.location(QLibraryInfo.PluginsPath)
 
     def __exit__(self, *_):
-        os.environ[self.QPA_NAME] = self.qta_path
+        if self.qta_path:
+            os.environ[self.QPA_NAME] = self.qta_path
+        else:
+            os.environ.pop(self.QPA_NAME)
         return False
 
 

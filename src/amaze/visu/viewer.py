@@ -631,7 +631,7 @@ class MainWindow(QMainWindow):
         viewer_options = {}
         for k in MazeWidget.config_keys():
             k_ = "show_" + k
-            b = _try(k_, functools.partial(restore_bool, k_=k_))
+            b = _try(k_, functools.partial(restore_bool, k__=k_))
             viewer_options[k] = b
 
         self._restore_from_robot_build_data(

@@ -1,4 +1,5 @@
 import logging
+import os
 from typing import Optional
 
 import numpy as np
@@ -7,14 +8,15 @@ import torch
 from PyQt5 import QtWidgets
 from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QImage, QPainter
+from PyQt5.QtWidgets import QApplication
 from gymnasium import spaces, Env
 from stable_baselines3.common.torch_layers import BaseFeaturesExtractor
 from torch import nn
 
+from amaze.sb3.utils import CV2QTGuard, IOMapper
 from amaze.simu.env.maze import Maze
 from amaze.simu.robot import Robot, OutputType, InputType
 from amaze.simu.simulation import Simulation
-from amaze.sb3.utils import CV2QTGuard, IOMapper
 from amaze.visu.widgets.maze import MazeWidget
 
 logger = logging.getLogger(__name__)
@@ -114,19 +116,23 @@ class MazeEnv(Env):
         self.prev_trajectory = None
 
         self.last_infos = None
-
         self.length = len(self._simulation.maze.solution)
 
         self.resets = 0
 
-    def reset(self, seed=None, options=None):
+    def reset(self, seed=None, options=None, full_reset=False):
         self.last_infos = self.infos()
 
         super().reset(seed=seed)
         self._simulation.reset()
-        self.resets += 1
-        logger.debug(f"Reset {self.resets}"
-                     f" for {self._simulation.maze.to_string()}")
+
+        maze_str = self._simulation.maze.to_string()
+        if full_reset:
+            self.resets = 0
+            logger.debug(f"Initial reset for {maze_str}")
+        else:
+            self.resets += 1
+            logger.debug(f"Reset {self.resets} for {maze_str}")
 
         if self.trajectory is not None:
             self.prev_trajectory = self.trajectory.copy(True)
@@ -179,17 +185,27 @@ class MazeEnv(Env):
     def name(self): return self.name
     def atomic_rewards(self): return self._simulation.rewards
     def optimal_reward(self): return self._simulation.optimal_reward
-    def duration(self): return self.length
+    def maximal_duration(self): return self._simulation.deadline
 
     def io_types(self): return (self._simulation.data.inputs,
                                 self._simulation.data.outputs)
 
     def plot_trajectory(self) -> np.ndarray:
-        with CV2QTGuard():
-            return self._qimage_to_numpy(
-                self._create_widget(256, show_robot=False)
-                .plot_trajectory(self.prev_trajectory,
-                                 img_format=QImage.Format_RGBA8888))
+        os.environ["QT_QPA_PLATFORM"] = "offscreen"
+        app = QApplication([])
+        img = self._qimage_to_numpy(
+            MazeWidget.plot_trajectory(
+                simulation=self._simulation,
+                size=256, trajectory=self.prev_trajectory,
+                config=dict(
+                    solution=True,
+                    robot=False,
+                    dark=True
+                ),
+                img_format=QImage.Format_RGBA8888,
+                path=None
+            ))
+        return img
 
     def _create_widget(self, size, show_robot=True):
         if self.widget:

@@ -60,8 +60,7 @@ def main():
     window.reset()
 
     if args.render:
-        window.maze_w.update_config("robot", False)
-        window.maze_w.update_config("dark", True)
+        window.maze_w.update_config(robot=False, dark=True)
         window.save_on_exit = False
         window.maze_w.draw_to(args.render)
 

@@ -12,7 +12,7 @@ from dataclasses import dataclass, fields, field
 from datetime import timedelta
 from enum import Enum, auto
 from pathlib import Path
-from typing import Optional
+from typing import Optional, Union
 
 import humanize
 import numpy as np
@@ -55,7 +55,7 @@ TRAINERS = {
 
 @dataclass
 class Options:
-    id: Optional[str | int] = None
+    id: Optional[Union[str, int]] = None
     base_folder: Path = Path("tmp/sb3/")
     run_folder: Path = None  # automatically filled in
     overwrite: OverwriteModes = OverwriteModes.ABORT
@@ -314,6 +314,7 @@ def main():
         env = MazeEnv(maze=env_list.pop(0), robot=robot,
                       log_trajectory=log_trajectory)
         check_env(env)
+        env.reset(full_reset=True)
         return env
 
     train_env = make_vec_env(
@@ -328,19 +329,31 @@ def main():
         n_envs=n_eval_envs, seed=args.seed)
     logger.info(f"{eval_env=}")
 
-    def agg(f_, f__): return f_(eval_env.env_method(f__))
-    def avg(f_): return agg(np.average, f_)
+    def agg(e, f_, f__): return f_(e.env_method(f__))
 
     # Periodically evaluate agent
     trajectories_freq = args.trajectories
-    eval_freq = args.budget // (args.evals * n_eval_envs)
-    if eval_freq < (avg_duration := agg(np.sum, "duration")):
-        eval_freq = avg_duration
-        logger.warning(f"Not enough budget for {args.evals} evaluations,"
-                       f" clamping to"
-                       f" {args.budget // (avg_duration * n_eval_envs)}")
+    train_duration = agg(train_env, np.sum, "maximal_duration")
+    if args.evals == -1:
+        eval_freq = train_duration
+        logger.info(f"Evaluating after every full training"
+                    f" ({eval_freq} timesteps)")
     else:
-        logger.info(f"Evaluating every {eval_freq} call to env.step()")
+        eval_freq = args.budget // args.evals
+        if eval_freq < train_duration:
+            eval_freq = train_duration
+            logger.warning(f"Not enough budget for {args.evals} evaluations:\n"
+                           f" train duration={train_duration}"
+                           f" budget={args.budget}, evals={args.evals};"
+                           f" {args.evals} > {args.budget / train_duration}\n"
+                           f" Clamping to"
+                           f" {int(args.budget // train_duration)}")
+        else:
+            logger.info(f"Evaluating every {eval_freq} call to env.step()"
+                        f" (across {n_train_envs} evaluation environments)")
+    optimal_reward = agg(eval_env, np.average, "optimal_reward")
+    logger.info(f"Training will stop upon reaching average reward of"
+                f" {optimal_reward}")
     tb_callback = TensorboardCallback(
         log_trajectory_every=trajectories_freq,
         max_timestep=args.budget
@@ -348,11 +361,12 @@ def main():
     eval_callback = EvalCallback(
         eval_env,
         best_model_save_path=run_folder, log_path=run_folder,
-        eval_freq=eval_freq, n_eval_episodes=n_eval_envs,
+        eval_freq=max(1, eval_freq // n_eval_envs),
+        n_eval_episodes=n_eval_envs,
         deterministic=True, render=False, verbose=args.verbosity,
         callback_after_eval=tb_callback,
         callback_on_new_best=StopTrainingOnRewardThreshold(
-            reward_threshold=avg("optimal_reward"),
+            reward_threshold=optimal_reward,
             verbose=1)
     )
 
@@ -408,7 +422,8 @@ def main():
         columns=["Resets", "Length"],
         data=[(r, l)
               for env in [train_env, eval_env]
-              for r, l in zip(*[env.get_attr(a) for a in ["resets", "length"]])],
+              for r, l in zip(*[env.get_attr(a)
+                                for a in ["resets", "length"]])],
         index=pd.MultiIndex.from_tuples([
             (name, env_name)
             for name, env in [("train", train_env), ("eval", eval_env)]

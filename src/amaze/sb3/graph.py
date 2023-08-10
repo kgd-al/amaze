@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import Tuple, List
+from typing import Tuple, List, Union
 
 import graphviz
 from stable_baselines3.common.policies import BasePolicy, ActorCriticCnnPolicy
@@ -52,7 +52,8 @@ class SubGraph(Module):
                 c.pretty(indent+1)
 
 
-def __edge(graph: graphviz.Digraph, lhs: Module | str, rhs: Module | str):
+def __edge(graph: graphviz.Digraph,
+           lhs: Union[Module, str], rhs: Union[Module, str]):
     if isinstance(lhs, str):
         lhs_name, lhs_arity = lhs, -1
     else:

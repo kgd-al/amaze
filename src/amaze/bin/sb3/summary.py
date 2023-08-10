@@ -1,10 +1,13 @@
 #!/usr/bin/env python3
-
+import os.path
 import sys
+import time
 from collections import defaultdict
+from datetime import timedelta
 from pathlib import Path
 from typing import Optional
 
+import humanize.time
 import matplotlib.pyplot as plt
 import pandas as pd
 import seaborn as sns
@@ -13,27 +16,52 @@ from tensorboard.backend.event_processing.event_accumulator \
     import EventAccumulator
 
 
-def print_df(df: pd.DataFrame, header: Optional[str] = None):
-    if not header:
-        print(df)
-    else:
-        df_str = df.to_string()
-        df_str_w = len(df_str.split('\n')[0])
-        df_header_deco = "=" * ((df_str_w - len(header) - 2) // 2)
-        print(df_header_deco, header, df_header_deco)
-        print(df_str)
+def __to_print_string(df, quantiles, header=None):
+    def w_max(c):
+        return max(*(len(str(v_)) for v_ in df[c]),
+                   *(len(str(v_)) for v_ in quantiles[c]),
+                   len(c))
+
+    w_idx = max(*(len(str(i)) for i in df.index),
+                *(len(str(i)) for i in quantiles.index))
+
+    widths = [w_idx, *(w_max(c) for c in df.columns)]
+    formats = [lambda v_, w=w: f"{v_:{w}}" for w in widths]
+    df_str = formats[0]('')
+    for i, c in enumerate(df.columns):
+        df_str += " " + formats[i + 1](c)
+    df_str += "\n"
+    df_midrule = "-" * len(df_str) + "\n"
+
+    if header:
+        df_str = f"{header:^{len(df_midrule)}}\n{df_midrule}{df_str}"
+
+    df_str += df_midrule
+    for j, row in quantiles.iterrows():
+        df_str += formats[0](j)
+        for i, v in enumerate(row):
+            df_str += " " + formats[i + 1](v)
+        df_str += "\n"
+    df_str += df_midrule
+    for j, row in df.iterrows():
+        df_str += formats[0](j)
+        for i, v in enumerate(row):
+            df_str += " " + formats[i + 1](v)
+        df_str += "\n"
+    return df_str
 
 
 def find_events(root: Path):
     # print(root)
-    events = sorted(list(root.glob("**/events.out.*")))
+    events = sorted(list(root.glob("**/events.out.*")),
+                    key=os.path.getmtime, reverse=True)
     grouped_events = defaultdict(lambda: defaultdict(list))
     for e in events:
         e = e.relative_to(root)
         e_tokens = str(e).split('/')
 
         grouped_events['/'.join(e_tokens[:-3])][e_tokens[-3]].append(
-            e_tokens[-2] + "/" + e_tokens[-1])
+            (e_tokens[-2], e_tokens[-1]))
 
     # pprint.pprint(grouped_events)
     fig, axes = plt.subplots(len(grouped_events), 1,
@@ -42,28 +70,52 @@ def find_events(root: Path):
     if len(grouped_events) == 1:
         axes = [axes]
 
+    dfs = {}
+    df_strings = []
+
     # out = defaultdict(lambda: defaultdict(pd.DataFrame))
-    for ax, (t, groups) in zip(axes, grouped_events.items()):
+    for t, groups in grouped_events.items():
         timesteps = {}
 
         for g, events in groups.items():
             summary_iterators = \
-                [EventAccumulator(str(root.joinpath(t).joinpath(g).joinpath(e))).Reload()
-                 for e in events]
+                [EventAccumulator(
+                    str(root.joinpath(t).joinpath(g).joinpath(r).joinpath(e))
+                ).Reload()
+                 for r, e in events]
             tags = summary_iterators[0].Tags()['scalars']
-            timesteps[g] = [i.Scalars(tags[0])[-1].step for i in summary_iterators]
-    # pprint.pprint(timesteps)
+            timesteps[g] = (
+                [r for r, _ in events],
+                [i.Scalars(tags[0])[-1].step for i in summary_iterators]
+            )
+        # pprint.pprint(timesteps)
 
-        df = pd.DataFrame(dict([(k, pd.Series(v)) for k, v in timesteps.items()]))
-        print_df(df, "Raw data")
+        time_order = []
+        for runs, _ in timesteps.values():
+            for r in runs:
+                if r not in time_order:
+                    time_order.append(r)
+
+        df = pd.DataFrame(dict([(k, pd.Series(v, index=i))
+                                for k, (i, v) in timesteps.items()]),
+                          index=time_order)
         quantiles = df.quantile([0, .25, .5, .75, 1])
-        print_df(quantiles, "Quantiles")
-        # print(quantiles.loc[.5])
 
+        # print(df)
+        # print(quantiles)
+        df_strings.append(__to_print_string(df, quantiles, t))
+        dfs[t] = (df, quantiles)
+
+    for ax, (t, (df, q)) in zip(axes, sorted(dfs.items())):
+        # Restore lexicographic order
+        df = df.reindex(sorted(df.columns), axis=1)
+        q = q.reindex(sorted(q.columns), axis=1)
+
+        # Plot
         sns.violinplot(ax=ax, data=df, cut=0, scale='width')
 
         ax: Axes = ax
-        for i, median in enumerate(quantiles.loc[.5]):
+        for i, median in enumerate(q.loc[.5]):
             x = i+.1
             if median >= 1_000_000:
                 median_str = f"{median//1_000_000:.0f}M"
@@ -81,8 +133,7 @@ def find_events(root: Path):
                         verticalalignment='center',
                         bbox=dict(facecolor='white', alpha=0.5),
                         arrowprops=dict(arrowstyle='-', linestyle='dotted'),
-                        size='small'
-                        )
+                        size='small')
 
         ax.set(yscale="log")
         if ax == axes[-1]:
@@ -97,6 +148,10 @@ def find_events(root: Path):
         ax2.set_ylabel(t)
 
     fig.savefig(root.joinpath("timesteps.png"), bbox_inches='tight')
+
+    max_w = max(*[len(line) for s in df_strings for line in s.split("\n")])
+    for elems in zip(*[s.split("\n") for s in df_strings]):
+        print("\t".join(f"{e:{max_w}}" for e in elems))
 
 #
 # def tabulate_events(root, group, events, out):
@@ -136,4 +191,8 @@ def find_events(root: Path):
 
 
 if __name__ == '__main__':
+    start = time.perf_counter()
     find_events(Path(sys.argv[1]))
+    print("Computed in",
+          humanize.precisedelta(
+            timedelta(seconds=time.perf_counter() - start)))

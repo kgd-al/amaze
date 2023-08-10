@@ -4,6 +4,9 @@ set -euo pipefail
 shopt -s inherit_errexit
 export LC_ALL=C
 
+outfolder=$1
+[ -z "$outfolder" ] && outfolder=stash/dd
+
 datafile=$(dirname $0)/mazes.dat
 if [ ! -f "$datafile" ]
 then
@@ -13,17 +16,16 @@ fi
 
 while read name maze
 do
-    [ $name == "#" ] && continue
+    [[ $name =~ "#" ]] && continue
     echo "$name: $maze"
 
-    for trainer in A2C DQN PPO
+    for j in {0..9}
     do
-        basedir=stash/dd/$trainer/$name
-#         basedir=tmp/dd/$trainer/$name
-        for j in {0..0}
+        for i in {0..9}
         do
-            for i in {0..9}
+            for trainer in A2C # DQN PPO
             do
+                basedir=$outfolder/$trainer/$name
                 id=run$j$i
                 odir=$basedir/$id
                 [ -d "$odir" ] && continue

@@ -1,7 +1,10 @@
-Class_0 M16_10x10_U
-# Class_1 M16_10x10
-Class_2 M16_10x10_C1
-Class_3 M16_10x10_C1_l.25_L1
-# Class_4 M16_10x10_C1_l.25_L1_t.5_T.5
-# Inverted M16_10x10_t1_T1
-# Too_hard M16_10x10_C.1_l.25_Lwarning-.5_Lwarning-1_t.5_Tforbidden-.25_Tforbidden-.75
+## Name Maze_string
+0_Trivial M16_10x10_U
+# 1_Ambiguous M16_10x10
+2_Simple M16_10x10_C1
+3_Lures M16_10x10_C1_l.25_L1
+# 4_Traps_a M16_10x10_C1_l.25_L1_t.5_T.5
+# 4_Traps_b M16_10x10_C1_l.25_L.5_t.5_T.5
+# 4_Traps_c M16_10x10_C1_l.25_L.75_t.5_T.5
+# 5_Inverted M16_10x10_t1_T1
+# 6_Too_hard M16_10x10_C.1_l.25_Lwarning-.5_Lwarning-1_t.5_Tforbidden-.25_Tforbidden-.75
