@@ -9,10 +9,11 @@ from PyQt5.QtGui import QPainter, QColor, QPainterPath, QImage, QLinearGradient
 from PyQt5.QtWidgets import QLabel
 
 from amaze.simu.env.maze import Maze
-from amaze.simu.robot import InputType
+from amaze.simu.robot import InputType, OutputType
 from amaze.simu.simulation import Simulation
 from amaze.visu import resources
 from amaze.visu.maze import MazePainter, Color, logger
+from amaze.visu.widgets import _trajectory_plotter
 
 
 class QtPainter(MazePainter):
@@ -169,6 +170,22 @@ class MazeWidget(QLabel):
         return self._save_image(path, img, painter)
 
     @classmethod
+    def static_draw_to(cls, maze, path, size=None, **kwargs):
+        width, height = cls.__compute_size(maze, size or maze.width * 15)
+        scale = width / maze.width
+        config = dict(
+            scale=scale,
+            outputs=OutputType.DISCRETE,
+            solution=True, robot=None, dark=True)
+        config.update(kwargs)
+        fill = cls.__background_color(config["dark"])
+        img, painter = cls.__static_image_drawer(width + 2, height + 2, fill)
+        clues, lures, traps = cls.__qt_images(maze=maze, size=32)
+        config.update(dict(clues=clues, lures=lures, traps=traps))
+        cls.__render(painter=painter, maze=maze, height=height, config=config)
+        return cls._save_image(path, img, painter)
+
+    @classmethod
     def __render(cls, painter: QPainter, maze: Maze,
                  height: float, config: dict):
         painter.translate(1, height)
@@ -244,6 +261,7 @@ class MazeWidget(QLabel):
                         trajectory: pd.DataFrame,
                         config: dict,
                         path: Optional[Path] = None,
+                        verbose: bool = True,
                         img_format: QImage.Format = QImage.Format_RGB32) \
             -> Optional[QImage]:
         """
@@ -259,140 +277,21 @@ class MazeWidget(QLabel):
         :param config: kw configuration values (see config_keys())
         """
 
-        _trajectory = []
+        funcs = dict(
+            background=cls.__background_color,
+            foreground=cls.__foreground_color,
+            size=cls.__compute_size,
+            image_painter=cls.__static_image_drawer,
+            qt_images=cls.__qt_images,
+            render=cls.__render,
+            save=cls._save_image
+        )
 
-        shortened_trajectory = \
-            trajectory.groupby(trajectory.columns.tolist()[:-1],
-                               as_index=False).size()
-
-        maze = simulation.maze
-        width, height = cls.__compute_size(maze, size)
-        scale = width / maze.width
-
-        duplicates = (len(shortened_trajectory) < len(trajectory))
-        cb_r = .2 if duplicates else 0
-        cb_width = int(cb_r * width)
-        # cb_height = int(cb_r * self.height())
-        cb_margin = .1 * cb_width
-
-        dark = config.get("dark", False)
-        fill = cls.__background_color(dark)
-        img, painter = cls.__static_image_drawer(
-            width + 2, height + 2, fill, img_format=img_format)
-
-        if duplicates:
-            # Reserve 1/5 of the width
-            painter.save()
-            painter.scale(1-cb_r, 1-cb_r)
-            painter.translate(0,
-                              .5 * (height / (1-cb_r) - height))
-
-        clues, lures, traps = cls.__qt_images(maze=maze, size=32)
-        cls.__render(painter=painter, maze=maze, height=height,
-                     config=dict(
-                         scale=scale,
-                         clues=clues, lures=lures, traps=traps,
-                         outputs=simulation.data.outputs,
-                         solution=config["solution"],
-                         robot=simulation.robot_dict()
-                         if config["robot"] else None,
-                         dark=config["dark"]))
-
-        min_count, max_count = \
-            np.quantile(shortened_trajectory.iloc[:, -1], [0, 1])
-        dif_count = max_count - min_count
-
-        rotations = {(1, 0): 0, (0, 1): 90, (-1, 0): 180, (0, -1): 270}
-
-        if duplicates:
-            if dif_count == 0:
-                def color(_): return Qt.red
-            else:
-                def colormap(v): return QColor.fromRgbF(v, 1-v, 0)
-                def color(n_): return colormap((n_ - min_count) / dif_count)
-        else:
-            def color(_): return cls.__foreground_color(dark)
-
-        for x, y, i, j, n in shortened_trajectory.itertuples(index=False):
-            _trajectory.append(((x, y), rotations[int(i), int(j)],
-                                color(n)))
-
-        s = scale
-        arrow = QPainterPath()
-        arrow.moveTo(0, -.1 * s)
-        arrow.lineTo(0, .1 * s)
-        arrow.lineTo(.3 * s, .1 * s)
-        arrow.lineTo(.3 * s, .2 * s)
-        arrow.lineTo(.5 * s, .0 * s)
-        arrow.lineTo(.3 * s, -.2 * s)
-        arrow.lineTo(.3 * s, -.1 * s)
-        arrow.lineTo(0, -.1 * s)
-        arrow.closeSubpath()
-
-        for (x_, y_), a, c in _trajectory:
-            painter.save()
-            painter.translate(x_ * s, y_ * s)
-            painter.rotate(a)
-            painter.fillPath(arrow, c)
-            painter.setPen(QColor(c).darker())
-            painter.drawPath(arrow)
-            painter.restore()
-
-        if duplicates:
-            painter.restore()  # to before the space saved for the color bar
-            painter.setPen(cls.__foreground_color(dark))
-
-            w, h = maze.width, maze.height
-            m = cb_margin
-            cb_h = s * h - 2 * cb_margin
-            cb_w = .25 * cb_width
-            painter.translate((1 - cb_r) * s * w, 0)
-            gradient = QLinearGradient(0, 0, 0, 1)
-            gradient.setColorAt(0, Qt.green)
-            gradient.setColorAt(1, Qt.red)
-            gradient.setCoordinateMode(QLinearGradient.ObjectMode)
-            cb_box = QRectF(m, m, cb_w, cb_h)
-            painter.fillRect(cb_box, gradient)
-            painter.drawRect(cb_box)
-
-            cb_ticks = min(5, max(dif_count, 2))
-            tick_x, tick_x_w = cb_w + m, .1 * cb_width
-            text_offset = .05 * cb_width
-            text_rect = QRectF(tick_x + tick_x_w + text_offset, 0,
-                               cb_width - tick_x - tick_x_w - text_offset - m,
-                               img.height() / 5)
-
-            fm = painter.fontMetrics()
-            text_data = []
-            for i_ in range(cb_ticks):
-                u = i_ / (cb_ticks - 1)
-                cb_y = dif_count * u + min_count
-                cb_y = round(cb_y)
-                text = str(cb_y)
-                sx = text_rect.width() / fm.width(text)
-                sy = img.height() / (5 * fm.height())
-                ts = min(sx, sy)
-                text_data.append([u, cb_y, text, ts])
-
-            text_scale = min(*(sl[-1] for sl in text_data), 1)
-            print("text scale:", text_scale)
-            for u, cb_y, text, _ in text_data:
-                x_, y_ = tick_x, u * cb_h + m
-                painter.drawLine(QLineF(x_, y_, x_ + tick_x_w, y_))
-
-                text_rect.moveCenter(QPointF(text_rect.center().x(), y_))
-
-                painter.save()
-                painter.translate(text_rect.center())
-                painter.scale(text_scale, text_scale)
-                painter.translate(-text_rect.center())
-                painter.drawText(text_rect, Qt.AlignLeft | Qt.AlignVCenter,
-                                 text)
-                painter.restore()
-                # painter.drawRect(text_rect)
-
-        painter.end()
-        if path:
-            cls._save_image(path, img)
-        else:
-            return img
+        return _trajectory_plotter.plot_trajectory(
+            simulation=simulation,
+            size=size,
+            trajectory=trajectory,
+            config=config,
+            functions=funcs,
+            path=path,
+            img_format=img_format)

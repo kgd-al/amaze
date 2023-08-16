@@ -151,6 +151,12 @@ class Maze:
     def intersections(self): return self._intersections
     def unicursive(self): return self.intersections() == 0
 
+    def iter_cells(self): return ((i, j)
+                                  for i in range(self.width)
+                                  for j in range(self.height))
+
+    def iter_solutions(self): return (s for s in self.solution)
+
     def valid(self, i, j): return 0 <= i < self.width and 0 <= j < self.height
 
     def wall(self, i: int, j: int, d: Direction):
@@ -235,7 +241,7 @@ class Maze:
         # Extract intersections
         intersections = []
         for i, (c_i, c_j) in enumerate(maze.solution[1:-1]):
-            assert sum(maze.walls[c_i, c_j]) > 0, "Three-way intersection"
+            # assert sum(maze.walls[c_i, c_j]) > 0, "Three-way intersection"
             if sum(maze.walls[c_i, c_j]) < 2:
                 nc_i, nc_j = maze.solution[i + 2]
                 d_i, d_j = nc_i - c_i, nc_j - c_j
@@ -291,13 +297,15 @@ class Maze:
             nl = round(data.p_lure * len(candidates))
             lure_indices = rng_indices(maze.lures, nl)
             maze.lures_data = []
+            dirs = list(cls._offsets_inv.values())
+            if data.start is not StartLocation.SOUTH_WEST:
+                dirs = list(np.roll(dirs, -data.start.value))
             for vix, six in zip(lure_indices, rng.sample(list(candidates), nl)):
                 c_i, c_j = maze.solution[six]
                 nc_i, nc_j = maze.solution[six+1]
-                dirs = cls._offsets_inv.copy()
-                dirs.pop((nc_i - c_i, nc_j - c_j))
-                maze.lures_data.append(
-                    (vix, six, rng.choice(list(dirs.values()))))
+                dirs_ = dirs.copy()
+                dirs_.remove(maze._offsets_inv[(nc_i - c_i, nc_j - c_j)])
+                maze.lures_data.append((vix, six, rng.choice(dirs_)))
 
         # Transform helpful signs into harmful ones
         if maze.p_trap and maze.traps:
@@ -364,11 +372,11 @@ class Maze:
             f += sep + "U"
         f += ''.join(f"{sep}C{Sign.to_string(s)}" for s in bd.clue)
         if bd.p_lure:
-            f += f"{sep}l{bd.p_lure}".lstrip('0')
-        f += ''.join(f"{sep}L{Sign.to_string(s)}" for s in bd.lure)
+            f += f"{sep}l{bd.p_lure:.2g}".lstrip('0')
+            f += ''.join(f"{sep}L{Sign.to_string(s)}" for s in bd.lure)
         if bd.p_trap:
-            f += f"{sep}t{bd.p_trap}".lstrip('0')
-        f += ''.join(f"{sep}T{Sign.to_string(s)}" for s in bd.trap)
+            f += f"{sep}t{bd.p_trap:.2g}".lstrip('0')
+            f += ''.join(f"{sep}T{Sign.to_string(s)}" for s in bd.trap)
         return f
 
     @classmethod

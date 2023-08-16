@@ -1,6 +1,7 @@
 import json
 from enum import Enum
 from pathlib import Path
+from typing import Union
 
 from amaze.simu.controllers.base import BaseController
 from amaze.simu.controllers.keyboard import KeyboardController
@@ -19,7 +20,7 @@ def controller_factory(c_type: Controllers, c_data: dict):
     return c_type.value(**c_data)
 
 
-def dump(controller: BaseController, path: Path | str):
+def dump(controller: BaseController, path: Union[Path, str]):
     reverse_map = {c.value: c.name.lower() for c in Controllers}
     j = dict(type=reverse_map[type(controller)])
     j.update(controller.to_json())
@@ -28,7 +29,7 @@ def dump(controller: BaseController, path: Path | str):
         json.dump(j, f)
 
 
-def load(path: Path | str):
+def load(path: Union[Path, str]):
     if isinstance(path, str):
         path = Path(path)
     if path.suffix == ".zip":

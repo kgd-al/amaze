@@ -21,7 +21,7 @@ base=$user@$host:data/amaze
 
 info=""
 # info=--info=progress2
-rsync -avzh $info $base/ remote/dd -f '+ */' -f '+ *.png' -f '+ *.zip' -f '+ *.csv' -f '+ events.out.*' -f '- *'
+rsync -avzh $info $base/ remote/dd -f '+ */' -f '+ *.png' -f '+ *.zip' -f '+ *.csv' -f '+ events.out.*' -f '+ log' -f '- *'
 
 # [ -z ${VIRTUAL_ENV+x} ] && source ~/work/code/vu/venv/bin/activate
 # ./bin/tools/retina_summary.py

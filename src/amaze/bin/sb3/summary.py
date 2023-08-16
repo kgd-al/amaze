@@ -13,9 +13,18 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import seaborn as sns
+from PyQt5.QtGui import QImage, QPainter
+from PyQt5.QtWidgets import QApplication
 from matplotlib.axes import Axes
 from tensorboard.backend.event_processing.event_accumulator \
     import EventAccumulator
+
+from amaze.simu.env.maze import Maze
+from amaze.simu.robot import InputType
+from amaze.simu.simulation import Simulation
+from amaze.visu import resources
+from amaze.visu.widgets.labels import InputsLabel
+from amaze.visu.widgets.maze import MazeWidget
 
 
 def __to_km_string(v):
@@ -93,8 +102,10 @@ def find_events(root: Path):
 
     # pprint.pprint(grouped_events)
 
-    fig, axes = plt.subplots(len(grouped_events), 1,
-                             sharey='all')
+    n_rows = len(grouped_events)
+    fig, axes = plt.subplots(n_rows, 1,
+                             sharey='all',
+                             figsize=(10, n_rows * 2))
 
     if len(grouped_events) == 1:
         axes = [axes]
@@ -214,6 +225,7 @@ def find_events(root: Path):
 if __name__ == '__main__':
     start = time.perf_counter()
     find_events(Path(sys.argv[1]))
+
     print("Computed in",
           humanize.precisedelta(
             timedelta(seconds=time.perf_counter() - start)))

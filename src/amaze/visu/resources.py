@@ -74,7 +74,7 @@ class Sign:
         s = []
         if self.name != default_builtin():
             s.append(self.name)
-        s.append(f"{self.value:.2}".lstrip('0'))
+        s.append(f"{self.value:.2g}".lstrip('0'))
         return self.sep.join(s)
 
 

@@ -17,19 +17,24 @@ logger = logging.getLogger(__name__)
 
 class TensorboardCallback(BaseCallback):
     def __init__(self, log_trajectory_every: int = 0, verbose: int = 0,
-                 max_timestep: int = 0):
+                 max_timestep: int = 0, prefix: str = "",
+                 multi_env: bool = False):
         super().__init__(verbose=verbose)
         self.log_trajectory_every = log_trajectory_every
         fmt = "{:d}" if max_timestep == 0 \
             else "{:0" + str(math.ceil(math.log10(max_timestep-1))) + "d}"
+        if prefix:
+            if not prefix.endswith("_"):
+                prefix += "_"
+            fmt = prefix + fmt
+        self.prefix = prefix
         self.img_format = fmt
+        self.multi_env = multi_env
 
-    def _on_training_start(self) -> None:
-        policy = self.model.policy
-
+    @staticmethod
+    def _rewards(env):
         dd_rewards = defaultdict(list)
-        for d in [e.__dict__ for e
-                  in self.training_env.env_method('atomic_rewards')]:
+        for d in [e.__dict__ for e in env.env_method('atomic_rewards')]:
             for key, value in d.items():
                 dd_rewards[key].append(value)
         reward_strings = []
@@ -39,21 +44,44 @@ class TensorboardCallback(BaseCallback):
             if s != 0:
                 rs += f"+/-{s:g}"
             reward_strings.append(rs)
-        rewards_str = " ".join(reward_strings)
+        return " ".join(reward_strings)
 
+    def _on_training_start(self) -> None:
+        assert isinstance(self.parent, EvalCallback)
+
+        output_formats = self.logger.output_formats
+        # Save reference to tensorboard formatter object
+        # note: the failure case (not formatter found) is not handled here,
+        # should be done with try/except.
+        self.tb_formatter = next(
+            formatter for formatter in output_formats
+            if isinstance(formatter, TensorBoardOutputFormat))
+
+        writer = self.tb_formatter.writer
         io_types = set(
             i.name[0] + o.name[0] for i, o in
             self.training_env.env_method('io_types')
         )
         assert len(io_types) == 1, "Non-uniform I/O types"
 
+        if self.multi_env:
+            writer.add_text(f"train/rewards",
+                            self.prefix + ": " + self._rewards(self.training_env))
+            writer.add_text(f"eval/rewards",
+                            self.prefix + ":" + self._rewards(self.parent.eval_env))
+
+        if self.num_timesteps > 0:
+            return
+
+        policy = self.model.policy
         hparam_dict = {
             "algorithm": self.model.__class__.__name__,
             "policy": policy.__class__.__name__,
             "learning rate": self.model.learning_rate,
             "type": next(iter(io_types)),
-            "rewards": rewards_str
         }
+        if not self.multi_env:
+            hparam_dict["rewards"] = self._rewards(self.training_env)
 
         metric_dict = {
             "infos/pretty_reward": 0.0,
@@ -71,23 +99,14 @@ class TensorboardCallback(BaseCallback):
         with open(folder.joinpath("policy.str"), 'w') as f:
             f.write(str(policy) + "\n")
 
-        output_formats = self.logger.output_formats
-        # Save reference to tensorboard formatter object
-        # note: the failure case (not formatter found) is not handled here,
-        # should be done with try/except.
-        self.tb_formatter = next(
-            formatter for formatter in output_formats
-            if isinstance(formatter, TensorBoardOutputFormat))
-
-        writer = self.tb_formatter.writer
         writer.add_text(
             "policy",
             str(policy).replace('\n', '<br/>')
             .replace(' ', '&nbsp;'))
 
-        dummy_inputs = \
-            policy.obs_to_tensor(policy.observation_space.sample())[0]
-        writer.add_graph(policy, dummy_inputs, use_strict_trace=False)
+        # dummy_inputs = \
+        #     policy.obs_to_tensor(policy.observation_space.sample())[0]
+        # writer.add_graph(policy, dummy_inputs, use_strict_trace=False)
 
         graph = to_dot(policy)
         graph.render(folder.joinpath("policy"), format='pdf', cleanup=True)
@@ -117,7 +136,7 @@ class TensorboardCallback(BaseCallback):
             (self.log_trajectory_every > 0
              and (self.n_calls % self.log_trajectory_every) == 0)
         if print_trajectory:
-            t_str = "final" if final else\
+            t_str = f"{self.prefix}final" if final else \
                 self.img_format.format(self.num_timesteps)
             images = env.env_method("plot_trajectory")
 

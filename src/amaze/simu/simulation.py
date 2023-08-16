@@ -5,6 +5,7 @@ from typing import Union, TypeVar, Optional
 import numpy as np
 import pandas as pd
 
+from amaze.simu import _maze_complexity
 # from amaze.simu.controllers.base import BaseController
 from amaze.simu.env.maze import Maze
 from amaze.simu.pos import Pos, AlignedPos
@@ -69,35 +70,8 @@ class Simulation:
         else:
             self.observations = np.zeros(8, dtype=np.float32)
 
-        self.visuals = np.full((self.maze.width, self.maze.height), np.nan,
-                               dtype=object)
-
-        if self.data.inputs is InputType.CONTINUOUS:
-
-            v = self.data.vision
-            clues = resources.np_images(self.maze.clues, v - 2) \
-                if self.maze.clues is not None else None
-            lures = resources.np_images(self.maze.lures, v - 2) \
-                if self.maze.clues is not None else None
-            traps = resources.np_images(self.maze.traps, v - 2) \
-                if self.maze.traps is not None else None
-
-            for lst, img_lst in [(self.maze.clues_data, clues),
-                                 (self.maze.lures_data, lures),
-                                 (self.maze.traps_data, traps)]:
-                if lst is not None and img_lst is not None:
-                    for v_index, sol_index, d in lst:
-                        self.visuals[self.maze.solution[sol_index]] = \
-                            img_lst[v_index][d.value]
-
-        elif self.data.inputs is InputType.DISCRETE:
-            for lst, signs in [(self.maze.clues_data, self.maze.clues),
-                               (self.maze.lures_data, self.maze.lures),
-                               (self.maze.traps_data, self.maze.traps)]:
-                if lst is not None:
-                    for v_index, sol_index, d in lst:
-                        self.visuals[self.maze.solution[sol_index]] = \
-                            (signs[v_index].value, d)
+        self.visuals = self.generate_visuals_map(self.maze, self.data.inputs,
+                                                 self.data.vision)
 
         self.trajectory = pd.DataFrame(columns=["px", "py", "ax", "ay", "r"]) \
             if save_trajectory else None
@@ -111,6 +85,40 @@ class Simulation:
         if "save_trajectory" not in kwargs:
             kwargs["save_trajectory"] = (self.trajectory is not None)
         self.__init__(*args, **kwargs)
+
+    @staticmethod
+    def generate_visuals_map(maze: Maze, inputs: InputType, vision: int = 15):
+        visuals = np.full((maze.width, maze.height),
+                          np.nan, dtype=object)
+
+        if inputs is InputType.CONTINUOUS:
+
+            v = vision - 2
+            clues = resources.np_images(maze.clues, v - 2) \
+                if maze.clues is not None else None
+            lures = resources.np_images(maze.lures, v - 2) \
+                if maze.clues is not None else None
+            traps = resources.np_images(maze.traps, v - 2) \
+                if maze.traps is not None else None
+
+            for lst, img_lst in [(maze.clues_data, clues),
+                                 (maze.lures_data, lures),
+                                 (maze.traps_data, traps)]:
+                if lst is not None and img_lst is not None:
+                    for v_index, sol_index, d in lst:
+                        visuals[maze.solution[sol_index]] = \
+                            img_lst[v_index][d.value]
+
+        elif inputs is InputType.DISCRETE:
+            for lst, signs in [(maze.clues_data, maze.clues),
+                               (maze.lures_data, maze.lures),
+                               (maze.traps_data, maze.traps)]:
+                if lst is not None:
+                    for v_index, sol_index, d in lst:
+                        visuals[maze.solution[sol_index]] = \
+                            (signs[v_index].value, d)
+
+        return visuals
 
     def __move_discrete(self, action: Action) -> bool:
         x, y = self.robot.cell()
@@ -355,3 +363,8 @@ class Simulation:
     @staticmethod
     def discrete_actions():
         return [(1, 0), (0, 1), (-1, 0), (0, -1)]
+
+    @classmethod
+    def compute_complexity(cls, maze: Maze, inputs: InputType, vision: int):
+        return _maze_complexity.complexity(
+            maze, cls.generate_visuals_map(maze, inputs, vision))

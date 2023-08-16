@@ -74,7 +74,7 @@ class Options:
                             help="Plot trajectory of provided agent to"
                                  " provided path")
 
-        parser.add_argument("--width", dest="width", type=Path,
+        parser.add_argument("--width", dest="width", type=int,
                             help="Offscreen rendering target width")
 
 
@@ -105,16 +105,12 @@ def main():
         print("Cannot plot trajectory without a controller")
         exit(1)
 
-    pprint.pprint(args)
-
     if args.eval:
         if args.render and len(args.render.parts) == 1:
             args.render = args.eval.joinpath(args.render)
         if args.plot and len(args.plot.parts) == 1:
             args.plot = args.eval.joinpath(args.plot)
         args.eval.mkdir(parents=True, exist_ok=True)
-
-    pprint.pprint(args)
 
     simulate = args.eval or args.plot
     window = not (args.render or simulate)
@@ -145,7 +141,7 @@ def main():
                 simulation.step(controller(simulation.observations))
             reward = simulation.robot.reward
             print(f"Cumulative reward: {reward} "
-                  f"{100 * reward / simulation.optimal_reward:.2f}%")
+                  f"{simulation.infos()['pretty_reward']}")
             if args.plot:
                 MazeWidget.plot_trajectory(
                     simulation=simulation,

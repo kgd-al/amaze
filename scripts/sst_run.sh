@@ -19,7 +19,7 @@ do
     [[ $name =~ "#" ]] && continue
     echo "$name: $maze"
 
-    for j in {0..9}
+    for j in 0 #{0..9}
     do
         for i in {0..9}
         do
