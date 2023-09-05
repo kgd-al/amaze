@@ -1,18 +1,37 @@
 import logging
 import math
 from collections import defaultdict
-from io import BytesIO
 from pathlib import Path
+from typing import Optional, List, Dict
 
 import PIL.Image
 import numpy as np
 from stable_baselines3.common.callbacks import BaseCallback, EvalCallback
+from stable_baselines3.common.evaluation import evaluate_policy
 from stable_baselines3.common.logger import Image, HParam, TensorBoardOutputFormat
 from stable_baselines3.common.vec_env.base_vec_env import tile_images
 
-from amaze.sb3.graph import to_dot
-
 logger = logging.getLogger(__name__)
+
+
+def recurse_avg_dict(dicts: List[Dict], root_key=""):
+    avg_dict = defaultdict(list)
+    for d in dicts:
+        for k, v in recurse_dict(d, root_key):
+            avg_dict[k].append(v)
+    return {
+        k: np.average(v) for k, v in avg_dict.items()
+    }
+
+
+def recurse_dict(dct, root_key):
+    for k, v in dct.items():
+        current_key = f"{root_key}/{k}" if root_key else k
+        if isinstance(v, dict):
+            for k_, v_ in recurse_dict(v, current_key):
+                yield k_, v_
+        else:
+            yield current_key, v
 
 
 class TensorboardCallback(BaseCallback):
@@ -30,6 +49,8 @@ class TensorboardCallback(BaseCallback):
         self.prefix = prefix
         self.img_format = fmt
         self.multi_env = multi_env
+
+        self.last_stats: Optional = None
 
     @staticmethod
     def _rewards(env):
@@ -107,47 +128,76 @@ class TensorboardCallback(BaseCallback):
         # dummy_inputs = \
         #     policy.obs_to_tensor(policy.observation_space.sample())[0]
         # writer.add_graph(policy, dummy_inputs, use_strict_trace=False)
-
-        graph = to_dot(policy)
-        graph.render(folder.joinpath("policy"), format='pdf', cleanup=True)
-        graph.render(folder.joinpath("policy"), format='png', cleanup=True)
-        # noinspection PyTypeChecker
-        writer.add_image(
-            "policy",
-            np.asarray(PIL.Image.open(BytesIO(graph.pipe(format='jpg')))),
-            dataformats="HWC", global_step=0)
+        #
+        # graph = to_dot(policy)
+        # graph.render(folder.joinpath("policy"), format='pdf', cleanup=True)
+        # graph.render(folder.joinpath("policy"), format='png', cleanup=True)
+        # # noinspection PyTypeChecker
+        # writer.add_image(
+        #     "policy",
+        #     np.asarray(PIL.Image.open(BytesIO(graph.pipe(format='jpg')))),
+        #     dataformats="HWC", global_step=0)
 
     def _on_step(self) -> bool:
         self.log_step(False)
         return True
 
+    def _print_trajectory(self, env, key, name):
+        images = env.env_method("plot_trajectory",
+                                verbose=True, cb_side=0, square=True)
+
+        big_image = tile_images(images)
+
+        self.logger.record(f"infos/{key}_traj",
+                           Image(big_image, "HWC"),
+                           exclude=("stdout", "log", "json", "csv"))
+        folder = Path(self.logger.dir).joinpath("trajectories")
+        folder.mkdir(exist_ok=True)
+        pil_img = PIL.Image.fromarray(big_image)
+        pil_img.save(folder.joinpath(f"{key}_{name}.png"))
+
     def log_step(self, final: bool):
-        logger.info(f"Logging tensorboard data at time"
-                    f" {self.num_timesteps} ({final=})")
+        # logger.info(f"[kgd-debug] Logging tensorboard data at time"
+        #             f" {self.num_timesteps} {self.model.num_timesteps} ({final=})")
 
         assert isinstance(self.parent, EvalCallback)
         env = self.parent.eval_env
 
-        for d in env.get_attr('last_infos'):
-            for k, v in d.items():
-                self.logger.record_mean("infos/" + k, v)
+        eval_infos = env.get_attr('last_infos')
+        for key, value in recurse_avg_dict(eval_infos, "infos").items():
+            self.logger.record_mean(key, value)
 
-        print_trajectory = final or \
-            (self.log_trajectory_every > 0
-             and (self.n_calls % self.log_trajectory_every) == 0)
+        print_trajectory = \
+            (final or (self.log_trajectory_every > 0
+                       and (self.n_calls % self.log_trajectory_every) == 0))
+
         if print_trajectory:
-            t_str = f"{self.prefix}final" if final else \
+            t_str = f"final" if final else \
                 self.img_format.format(self.num_timesteps)
-            images = env.env_method("plot_trajectory")
-
-            big_image = tile_images(images)
-
-            self.logger.record(f"infos/traj_{t_str}",
-                               Image(big_image, "HWC"),
-                               exclude=("stdout", "log", "json", "csv"))
-            folder = Path(self.logger.dir).joinpath("trajectories")
-            folder.mkdir(exist_ok=True)
-            pil_img = PIL.Image.fromarray(big_image)
-            pil_img.save(folder.joinpath(t_str + ".png"))
+            self._print_trajectory(env, "eval", t_str)
 
         self.logger.dump(self.model.num_timesteps)
+
+        if final:
+            train_env = self.training_env
+            train_env.env_method('log_trajectory', True)
+
+            logger.info(f"Final log step. Storing performance on training env")
+            r = evaluate_policy(model=self.model, env=train_env)
+
+            train_env.env_method('log_trajectory', False)
+
+            t_str = f"final" if final else \
+                self.img_format.format(self.num_timesteps)
+            self._print_trajectory(train_env, "train", t_str)
+
+            eval_infos = recurse_avg_dict(eval_infos, "eval")
+            train_infos = recurse_avg_dict(train_env.get_attr('last_infos'),
+                                            "train")
+
+            self.last_stats = {
+                "train/reward": np.average(r),
+                "eval/reward": self.parent.best_mean_reward,
+            }
+            self.last_stats.update(eval_infos)
+            self.last_stats.update(train_infos)

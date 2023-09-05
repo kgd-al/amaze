@@ -297,7 +297,7 @@ def process_mazes(args):
     assert len(set(maze_names)) == len(maze_names), \
         f"Duplicate mazes are not allowed:{mazes_list}"
 
-    if len(args.test_mazes) == 0:
+    if len(args.test_makers) == 0:
         test_mazes = mazes
     else:
         test_mazes = [Maze.from_string(s) for s in args.train_mazes]

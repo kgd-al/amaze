@@ -1,4 +1,3 @@
-import pprint
 from pathlib import Path
 from typing import Optional
 
@@ -6,6 +5,7 @@ import numpy as np
 import pandas as pd
 from PyQt5.QtCore import Qt, QRectF, QLineF, QPointF
 from PyQt5.QtGui import QImage, QColor, QPainterPath, QLinearGradient, QFontMetrics
+from PyQt5.QtWidgets import QApplication
 
 from amaze.simu.simulation import Simulation
 
@@ -183,16 +183,21 @@ def _plot_trajectory_value(
         trajectory: pd.DataFrame,
         config: dict, functions: dict,
         path: Optional[Path] = None,
-        verbose=True,
+        verbose: bool = True, side: int = 0,
+        square: bool = False,
         img_format: QImage.Format = QImage.Format_RGB32) \
             -> Optional[QImage]:
+
+    assert QApplication.instance(), "ERROR: No existing QApplication"
+
+    # verbose = 10
+    # side = -1
 
     maze = simulation.maze
     rewards = simulation.rewards
 
-
-    duplicates = len(trajectory.groupby(trajectory.columns.tolist()[:-1])) < len(trajectory)
-    print("One-liner cycle detection:", duplicates)
+    if side == 0:
+        side = -1 if maze.start[0] == 0 else 1
 
     # First look for cycles
     data = pd.DataFrame(columns=["i", "j", "cr", "steps", "value"])
@@ -200,16 +205,17 @@ def _plot_trajectory_value(
     values = []
     solution_index = 0
     backtrack_stack = []
-    visited = set()
     state_action = set()
     cycle = None
     for i, px, py, ax, ay, r in trajectory.itertuples():
-        print("===")
+        if verbose > 1:
+            print("===")
         # Detect cycles
         k = ((px, py), (ax, ay))
         if k in state_action:
             cycle = i
-            print("Cycle detected")
+            if verbose > 1:
+                print("Cycle detected")
             break
         state_action.add(k)
 
@@ -221,37 +227,49 @@ def _plot_trajectory_value(
 
         cell = (int(px), int(py))
         next_cell = (int(px+ax), int(py+ay))
-        print(f"{cell=}, {next_cell=}")
+        if verbose > 1:
+            print(f"{cell=}, {next_cell=}")
         if next_cell == maze.solution[solution_index+1]:
-            print("Still on track")
+            if verbose > 1:
+                print("Still on track")
             solution_index += 1
         elif next_cell == maze.solution[solution_index]:
-            print("Backward")
+            if verbose > 1:
+                print("Backward")
             solution_index -= 1
         else:
-            print("Off track")
+            if verbose > 1:
+                print("Off track")
             steps += len(backtrack_stack)
             if backtrack_stack and next_cell == backtrack_stack[-1]:
                 backtrack_stack.pop()
             # elif cell != maze.solution[solution_index]:
             else:
                 backtrack_stack.append(cell)
-        print(len(backtrack_stack), backtrack_stack)
+        if verbose > 1:
+            print(len(backtrack_stack), backtrack_stack)
         steps += (len(maze.solution) - solution_index - 1)
 
         v += steps * rewards.timestep
         v /= len(maze.solution)
         data.loc[len(data)] = [*cell, c_reward, steps, v]
         values.append(v)
-    print(trajectory.merge(data, left_index=True, right_index=True))
+    if verbose > 1:
+        print(trajectory.merge(data, left_index=True, right_index=True))
 
-    print(f"Cycle: [0:{cycle}]")
+    if verbose > 1:
+        print(f"Cycle: [0:{cycle}]")
+    trivial_trajectory = (len(set(values)) == 1)
+    needs_color_bar = cycle and not trivial_trajectory
+    needs_overlay = cycle or needs_color_bar
+    if verbose > 1:
+        print(f"{trivial_trajectory=} {needs_color_bar=}")
     # pprint.pprint(values)
 
-    width, height = functions['size'](maze, size)
-    scale = width / maze.width
+    width, height = functions['size'](maze, size, square)
+    scale = min(width / maze.width, height / maze.height)
 
-    cb_r = .2 if cycle else 0
+    cb_r = .2 if needs_overlay else 0
     cb_width = int(cb_r * width)
     # cb_height = int(cb_r * self.height())
     cb_margin = .1 * cb_width
@@ -261,42 +279,56 @@ def _plot_trajectory_value(
     img, painter = functions['image_painter'](
         width + 2, height + 2, fill, img_format=img_format)
 
-    if cycle:
+    x_offset = 0
+    if needs_overlay:
         # Reserve 1/5 of the width
         painter.save()
         painter.scale(1 - cb_r, 1 - cb_r)
-        painter.translate(0,
-                          .5 * (height / (1 - cb_r) - height))
+        x_offset = 0 if side > 0 else cb_width / (1 - cb_r)
+        y_offset = .5 * (height / (1 - cb_r) - height)
+        painter.translate(x_offset, y_offset)
+
+    if square and maze.width != maze.height:
+        painter.save()
+        m_x_offset, m_y_offset = 0, 0
+        if maze.start[0] == 0 and (dx := maze.height - maze.width) > 0:
+            m_x_offset = dx
+        if maze.start[1] == 0 and (dy := maze.width - maze.height) > 0:
+            m_y_offset = dy
+        painter.translate(m_x_offset * scale, -m_y_offset * scale)
 
     clues, lures, traps = functions['qt_images'](maze=maze, size=32)
     functions['render'](painter=painter, maze=maze, height=height,
                         config=dict(
-                             scale=scale,
-                             clues=clues, lures=lures, traps=traps,
-                             outputs=simulation.data.outputs,
-                             solution=config["solution"],
-                             robot=simulation.robot_dict()
-                             if config["robot"] else None,
-                             dark=config["dark"]))
+                            scale=scale,
+                            clues=clues, lures=lures, traps=traps,
+                            outputs=simulation.data.outputs,
+                            solution=config["solution"],
+                            robot=simulation.robot_dict()
+                            if config["robot"] else None,
+                            dark=config["dark"]))
 
     min_v, max_v = np.quantile(values, [0, 1])
     diff_v = max_v - min_v
-    assert diff_v > 0
-    print("Value range:", min_v, max_v, diff_v)
-    #
+    if verbose > 1:
+        print("Value range:", min_v, max_v, diff_v)
+
     rotations = {(1, 0): 0, (0, 1): 90, (-1, 0): 180, (0, -1): 270}
 
-    if cycle:
-        def colormap(v_): return QColor.fromRgbF(1 - v_, .5 * v_, 0)
+    if needs_overlay:
+        if trivial_trajectory:
+            def color(_): return Qt.red
+        else:
+            def colormap(v_): return QColor.fromHsvF(v_ / 6, 1, 1)
 
-        def color(v_):
-            return Qt.green if v_ == max_v \
-                else colormap((v_ - min_v) / diff_v)
+            def color(v_):
+                return Qt.green if v_ == max_v \
+                    else colormap((v_ - min_v) / diff_v)
     else:
         def color(_): return Qt.green
 
     assert not cycle or len(values) == cycle, f"{len(values)} != {cycle}"
-    assert cycle or len(values) == len(trajectory),\
+    assert cycle or len(values) == len(trajectory), \
         f"{len(values)} != {len(trajectory)}"
 
     _trajectory = []
@@ -327,7 +359,7 @@ def _plot_trajectory_value(
         painter.drawPath(arrow)
         painter.restore()
 
-    if cycle:
+    if needs_overlay:
         (x_, y_), a, c = _trajectory[-1]
         painter.save()
         painter.translate(x_ * s, y_ * s)
@@ -335,27 +367,39 @@ def _plot_trajectory_value(
         painter.fillRect(QRectF(.4 * s, -.5 * s + 1, .1*s, s - 2), Qt.red)
         painter.restore()
 
+        if square and maze.width != maze.height:
+            painter.restore()
+
         painter.restore()  # to before the space saved for the color bar
         painter.setPen(functions['foreground'](dark))
 
         if verbose:
-            painter.drawText(QRectF(0, 0, width - cb_width, .5*cb_width),
+            painter.drawText(QRectF(x_offset, 0, width - cb_width, .5 * cb_width),
                              Qt.AlignCenter, "Expected return")
-            painter.drawText(QRectF(0, height-.5*cb_width,
-                                    width - cb_width, .5*cb_width),
+            painter.drawText(QRectF(x_offset, height - .5 * cb_width,
+                                    width - cb_width, .5 * cb_width),
                              Qt.AlignCenter,
-                             f"First cycle ({100*cycle/len(trajectory):.2g}%)")
+                             f"First cycle ({100 * cycle / len(trajectory):.2g}%)")
 
-        w, h = maze.width, maze.height
+    if needs_color_bar:
+        # w, h = maze.width, maze.height
+        w, h = width, height
         m = cb_margin
-        cb_h = s * h - 2 * cb_margin
+        # cb_h = s * h - 2 * cb_margin
+        cb_h = h - 2 * cb_margin
         cb_w = .25 * cb_width
-        painter.translate((1 - cb_r) * s * w, 0)
+
+        if side == 1:
+            painter.translate((1 - cb_r) * w, 0)
+        else:
+            painter.translate(cb_width, 0)
+            painter.scale(-1, 1)
+
         gradient = QLinearGradient(0, 0, 0, 1)
         gradient.setColorAt(0, Qt.green)
         gradient.setColorAt((max_v - sorted(set(values))[-2]) / diff_v,
-                            Qt.darkGreen)
-        gradient.setColorAt(1, Qt.red)
+                            colormap(1))
+        gradient.setColorAt(1, colormap(0))
         gradient.setCoordinateMode(QLinearGradient.ObjectMode)
         cb_box = QRectF(m, m, cb_w, cb_h)
         painter.fillRect(cb_box, gradient)
@@ -375,7 +419,8 @@ def _plot_trajectory_value(
             cb_y = diff_v * u + min_v
             # cb_y = round(cb_y)
             text = f"{cb_y:.2g}"
-            print(cb_y, text, fm.width(text))
+            if verbose > 1:
+                print(cb_y, text, fm.width(text))
             bb = fm.tightBoundingRect(text)
             text_rect.setHeight(max(text_rect.height(), bb.height()))
             sx = text_rect.width() / max(bb.width(), fm.width(text))
@@ -388,7 +433,9 @@ def _plot_trajectory_value(
             -.5 * text_rect.height() / text_scale,
             text_rect.width() / text_scale,
             text_rect.height() / text_scale,
-        )
+            )
+        text_align = ((Qt.AlignRight if side < 0 else Qt.AlignLeft)
+                      | Qt.AlignVCenter)
         for u, cb_y, text, _ in text_data:
             x_, y_ = tick_x, (1 - u) * cb_h + m
             painter.drawLine(QLineF(x_, y_, x_ + tick_x_w, y_))
@@ -401,14 +448,14 @@ def _plot_trajectory_value(
 
             painter.save()
             painter.translate(text_rect.center())
-            painter.scale(text_scale, text_scale)
-            painter.drawText(text_scaled_rect, Qt.AlignLeft | Qt.AlignVCenter,
-                             text)
+            painter.scale(side * text_scale, text_scale)
+            painter.drawText(text_scaled_rect, text_align, text)
             # painter.drawRect(text_scaled_rect)
             painter.restore()
             # painter.drawRect(text_rect)
 
     painter.end()
+
     if path:
         functions['save'](path, img)
     else:

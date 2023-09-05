@@ -1,11 +1,9 @@
-import math
 from pathlib import Path
 from typing import Optional, Tuple, Union, Any
 
-import numpy as np
 import pandas as pd
-from PyQt5.QtCore import Qt, QPointF, QRectF, QSize, QLineF
-from PyQt5.QtGui import QPainter, QColor, QPainterPath, QImage, QLinearGradient
+from PyQt5.QtCore import Qt, QPointF, QRectF, QSize
+from PyQt5.QtGui import QPainter, QColor, QPainterPath, QImage
 from PyQt5.QtWidgets import QLabel
 
 from amaze.simu.env.maze import Maze
@@ -13,6 +11,7 @@ from amaze.simu.robot import InputType, OutputType
 from amaze.simu.simulation import Simulation
 from amaze.visu import resources
 from amaze.visu.maze import MazePainter, Color, logger
+from amaze.visu.resources import SignType
 from amaze.visu.widgets import _trajectory_plotter
 
 
@@ -103,8 +102,9 @@ class MazeWidget(QLabel):
 
     @staticmethod
     def __qt_images(size, maze):
-        return (resources.qt_images(v, size) if v is not None else None
-                for v in [maze.clues, maze.lures, maze.traps])
+        return (resources.qt_images(v, size)
+                if (v := maze.signs[t]) is not None else None
+                for t in SignType)
 
     def set_resolution(self, r: int):
         self._vision = r
@@ -138,8 +138,11 @@ class MazeWidget(QLabel):
         super().update()
 
     @staticmethod
-    def __compute_size(maze, width):
-        return width, width * maze.height // maze.width
+    def __compute_size(maze, width, square: bool = False):
+        if square:
+            return width, width
+        else:
+            return width, width * maze.height // maze.width
 
     def _compute_scale(self):
         maze = self._simulation.maze
@@ -262,6 +265,8 @@ class MazeWidget(QLabel):
                         config: dict,
                         path: Optional[Path] = None,
                         verbose: bool = True,
+                        side: int = 0,
+                        square: bool = False,
                         img_format: QImage.Format = QImage.Format_RGB32) \
             -> Optional[QImage]:
         """
@@ -273,6 +278,9 @@ class MazeWidget(QLabel):
         :param size: the width of the generated image (height is deduced)
         :param trajectory: the trajectory (in dataframe format)
         :param path: where to save the trajectory to (or None to get the image)
+        :param verbose: whether to provide additional information
+        :param side: where to put the color bar (<0: left, >0: right, 0: auto)
+        :param square: whether to generate a square image of size max(w,h)^2
         :param img_format: QImage.Format to use for the underlying QImage
         :param config: kw configuration values (see config_keys())
         """
@@ -293,5 +301,8 @@ class MazeWidget(QLabel):
             trajectory=trajectory,
             config=config,
             functions=funcs,
+            verbose=verbose,
+            side=side,
+            square=square,
             path=path,
             img_format=img_format)

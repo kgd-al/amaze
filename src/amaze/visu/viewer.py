@@ -1,10 +1,11 @@
 import functools
-from enum import IntFlag
+import pprint
+from enum import IntFlag, Enum
 from logging import getLogger
 from pathlib import Path
 from typing import Optional, Union
 
-from PyQt5.QtCore import QSettings, QTimer, Qt
+from PyQt5.QtCore import QSettings, QTimer, Qt, QSignalBlocker, QObject, pyqtSignal
 from PyQt5.QtWidgets import (QMainWindow, QHBoxLayout, QWidget, QLabel,
                              QVBoxLayout, QToolButton, QSpinBox, QGroupBox,
                              QStyle, QAbstractButton, QCheckBox, QComboBox,
@@ -18,6 +19,7 @@ from amaze.simu.env.maze import Maze, StartLocation
 from amaze.simu.robot import Robot, InputType, OutputType
 from amaze.simu.simulation import Simulation
 from amaze.utils.build_data import BaseBuildData
+from amaze.visu.resources import SignType
 from amaze.visu.widgets.collapsible import CollapsibleBox
 from amaze.visu.widgets.labels import (InputsLabel, OutputsLabel, ValuesLabel,
                                        ElidedLabel)
@@ -27,7 +29,17 @@ from amaze.visu.widgets.maze import MazeWidget
 logger = getLogger(__name__)
 
 
-class MainWindow(QMainWindow):
+class MainWindow(QWidget):
+    maze_changed = pyqtSignal()
+
+    class Sections(Enum):
+        ROBOT = "Robot"
+        RENDER = "Render"
+        CONFIG = "Config"
+        CONTROLLER = "Controller"
+        STATISTICS = "Statistics"
+        CONTROLS = "Controls"
+
     class Reset(IntFlag):
         NONE = 0
         MAZE = 1
@@ -35,31 +47,36 @@ class MainWindow(QMainWindow):
         CONTROL = 4
         ALL = 7
 
-    def __init__(self, args: Optional = None):
+    def __init__(self, args: Optional = None, runnable=True):
         super().__init__()
 
-        holder = QWidget()
+        # holder = QWidget()
         layout = QHBoxLayout()
 
-        self.sections: dict[str, CollapsibleBox] = {}
+        self.runnable = runnable
+
+        self.sections: dict[MainWindow.Sections, CollapsibleBox] = {}
         self.buttons: dict[str, QAbstractButton] = {}
         self.config, self.stats = {}, {}
-        self.visu: dict[str, InputsLabel | OutputsLabel | ValuesLabel] = {}
+        self.visu: dict[str, Union[InputsLabel, OutputsLabel, ValuesLabel]] = \
+            {}
 
         self.save_on_exit = True
 
         controls = self._build_controls()
 
-        holder.setLayout(layout)
-        self.setCentralWidget(holder)
+        # holder.setLayout(layout)
+        # self.setCentralWidget(holder)
+        self.setLayout(layout)
 
-        self.playing = False
-        self.speed = 1
-        self.timer_dt = .1
+        if runnable:
+            self.playing = False
+            self.speed = 1
+            self.timer_dt = .1
 
-        self.timer = QTimer()
+            self.timer = QTimer()
 
-        self.next_action = None
+            self.next_action = None
         self.controller = None
 
         maze_w_options = {}
@@ -78,9 +95,11 @@ class MainWindow(QMainWindow):
         layout.addWidget(controls)
         layout.setStretch(1, 0)
 
-        self._generate_controller(args.controller)
+        if runnable:
+            if args:
+                self._generate_controller(args.controller)
 
-        self.timer.timeout.connect(self._step)
+            self.timer.timeout.connect(self._step)
 
         self._connect_signals()
 
@@ -90,6 +109,11 @@ class MainWindow(QMainWindow):
     # =========================================================================
     # == Miscellaneous controllers
     # =========================================================================
+
+    def set_maze(self, bd: Maze.BuildData):
+        assert isinstance(bd, Maze.BuildData)
+        self._restore_from_maze_build_data(bd)
+        self.reset(self.Reset.ALL)
 
     def save(self):
         folder = Path(f"tmp/autosaves/{self.simulation.maze.seed}/")
@@ -126,18 +150,27 @@ class MainWindow(QMainWindow):
             self._generate_maze() if flags & reset.MAZE else None,
             self._robot_data() if flags & reset.ROBOT else None
         )
-        if flags & reset.CONTROL:
+        if self.controller and flags & reset.CONTROL:
             self.controller.reset()
 
         self.maze_w.set_resolution(self.simulation.data.vision)
         self.simulation.generate_inputs()
-        self.sections["config"].setEnabled(True)
-        self.next_action = self._think()
+        self.sections[self.Sections.CONFIG].setEnabled(True)
+        if self.runnable:
+            self.next_action = self._think()
         self._update()
 
-        print(self.simulation.maze.to_string())
-        self.setWindowTitle(f"{self.simulation.maze.to_string()} | "
-                            f"{self.controller.name()}")
+        complexity = Simulation.compute_complexity(
+                        self.simulation.maze, self.simulation.data.inputs,
+                        self.simulation.data.vision)
+        complexity_str = (
+            ', '.join([f'{v:.2g}' for v in complexity['entropy'].values()]))
+        self.stats["m_complexity"].setText(f"[{complexity_str}]")
+
+        title = self.simulation.maze.to_string()
+        if self.controller:
+            title += f" | {self.controller.name()}"
+        self.setWindowTitle(title)
 
     # =========================================================================
     # == Private control
@@ -156,8 +189,6 @@ class MainWindow(QMainWindow):
             icon = QStyle.SP_MediaPlay
             self.timer.stop()
 
-        self.sections["config"].setEnabled(False)
-
         self.buttons["play"].setIcon(self.style().standardIcon(icon))
 
     def _think(self):
@@ -167,16 +198,22 @@ class MainWindow(QMainWindow):
         return next_action
 
     def _step(self):
+        self.sections[self.Sections.CONFIG].setEnabled(False)
         self.simulation.step(self.next_action)
         if self.simulation.done():
-            print(f"reward = {self.simulation.robot.reward}"
-                  f" (pretty: {self.simulation.infos()['pretty_reward']})")
+            print(f"reward = {self.simulation.robot.reward}. Infos:\n"
+                  f"{pprint.pformat(self.simulation.infos())}")
             self.stop()
         else:
             self.next_action = self._think()
             self._update()
 
     def _update(self):
+        self.maze_w.update()
+
+        if not self.runnable:
+            return
+
         def update(k, v, fmt="{}"): self.stats[k].setText(fmt.format(v))
         update("s_step", f"{self.simulation.time():g}s "
                          f"({self.simulation.timestep} timesteps)")
@@ -190,28 +227,31 @@ class MainWindow(QMainWindow):
                                      self.simulation.data.inputs)
             lbl("outputs").set_outputs(self.next_action,
                                        self.simulation.data.outputs)
-
             lbl("values").set_values(self.controller,
                                      self.simulation.observations)
-
-        self.maze_w.update()
 
     # =========================================================================
     # == Config collectors
     # =========================================================================
 
     def _generate_maze(self):
-        maze = Maze.generate(self._maze_data())
+        maze = Maze.generate(self.maze_data())
+        stats = maze.stats()
         self.stats["m_size"].setText(
-            f"{maze.width} x {maze.height} ({maze.width * maze.height} cells)")
-        self.stats["m_path"].setText(str(len(maze.solution)))
-        self.stats["m_intersections"].setText(str(maze.intersections()))
-        self.stats["m_traps"].setText(
-            str(len(maze.traps_data)) if maze.traps_data is not None else "/")
+            f"{stats['size']} ({maze.width * maze.height} cells)")
+        self.stats["m_path"].setText(str(stats['path']))
+        self.stats["m_intersections"].setText(str(stats['intersections']))
+        for t in [SignType.LURE, SignType.TRAP]:
+            key = t.value.lower() + "s"
+            data = stats[key]
+            self.stats[f"m_{key}"].setText(
+                str(data) if data is not None else "/")
+
+        self.maze_changed.emit()
 
         return maze
 
-    def _maze_data(self):
+    def maze_data(self):
         def _sbv(name): return self.config[name].value()
         def _cbv(name): return self.config[name].currentText()
         def _cbb(name): return self.config[name].isChecked()
@@ -297,7 +337,7 @@ class MainWindow(QMainWindow):
             if o_t := c.outputs_type():
                 self.config['outputs'].setCurrentText(o_t.name.lower())
 
-        self.sections["controller"].setVisible(not simple)
+        self.sections[self.Sections.CONTROLLER].setVisible(not simple)
         if not simple:
             self.stats["c_path"].setText(str(new_value))
             l: QFormLayout = self.stats["c_layout"]
@@ -323,12 +363,6 @@ class MainWindow(QMainWindow):
     # =========================================================================
 
     def _build_controls(self):
-        def container(name, contents, *args, **kwargs):
-            c = CollapsibleBox(name, *args, **kwargs)
-            c.setLayout(contents)
-            self.sections[name.lower()] = c
-            return c
-
         holder = QWidget()
         scroll = QScrollArea()
         # scroll.setMinimumWidth(250)
@@ -340,16 +374,23 @@ class MainWindow(QMainWindow):
 
         layout = QVBoxLayout()
 
-        layout.addWidget(container("Robot", self._build_robot_observers()))
-        layout.addWidget(container("Render", self._build_rendering_config()))
+        def container(key, contents, *args, **kwargs):
+            c = CollapsibleBox(key.value, *args, **kwargs)
+            c.setLayout(contents)
+            self.sections[key] = c
+            layout.addWidget(c)
+            return c
 
-        layout.addWidget(container("Config", self._build_config_controls()))
+        container(self.Sections.ROBOT, self._build_robot_observers())
+        container(self.Sections.RENDER, self._build_rendering_config())
 
-        layout.addWidget(container("Controller", self._build_controller_label()))
+        container(self.Sections.CONFIG, self._build_config_controls())
 
-        layout.addWidget(container("Statistics", self._build_stats_labels()))
+        container(self.Sections.CONTROLLER, self._build_controller_label())
 
-        layout.addWidget(container("Controls", self._build_control_buttons()))
+        container(self.Sections.STATISTICS, self._build_stats_labels())
+
+        container(self.Sections.CONTROLS, self._build_control_buttons())
 
         layout.addStretch(1)
 
@@ -368,7 +409,7 @@ class MainWindow(QMainWindow):
                         ("Outputs", OutputsLabel, (1, 0, 1, 1)),
                         ("Values", ValuesLabel, (1, 1, 1, 1))]:
             i, j, si, sj = c
-            layout.addLayout(self._section(n), 2*i, j, si, sj)
+            layout.addWidget(self._section(n), 2*i, j, si, sj)
             layout.addWidget(widget(n, t), 2*i+1, j, si, sj)
 
         return layout
@@ -461,7 +502,7 @@ class MainWindow(QMainWindow):
         w.setRange(0, 100)
         layout.addWidget(sign_section("traps", {"p_trap": w}))
 
-        layout.addLayout(self._section("Robot"))
+        layout.addWidget(self._section("Robot"))
         w = widget(QSpinBox, "vision")
         row("Vision", w)
         w.setRange(5, 31)
@@ -480,13 +521,6 @@ class MainWindow(QMainWindow):
                                          Controllers.KEYBOARD.name,
                                          "Autonomous"]])
         row("Control", cb)
-
-        # layout.addLayout(self._section("Noise"))
-        # for k in ["Inputs", "Outputs"]:
-        #     w = widget(QDoubleSpinBox, "noise_" + k.lower())
-        #     row(k, w)
-        #     w.setRange(0, 1)
-        #     w.setSingleStep(.01)
 
         return layout
 
@@ -519,7 +553,8 @@ class MainWindow(QMainWindow):
                 self.stats[name] = lbl
 
         layout.addRow(self._section("Maze"))
-        add_fields(["m_size", "m_path", "m_intersections", "m_traps"])
+        add_fields(["m_size", "m_path", "m_intersections",
+                    "m_lures", "m_traps", "m_complexity"])
         layout.addRow(self._section("Simulation"))
         add_fields(["s_step"])
         layout.addRow(self._section("Robot"))
@@ -539,6 +574,10 @@ class MainWindow(QMainWindow):
         b(layout, "fast", sp.SP_MediaSeekForward)
         return layout
 
+    @classmethod
+    def section_header(cls, name):
+        return cls._section(name)
+
     @staticmethod
     def _section(name_):
         def frame():
@@ -546,14 +585,18 @@ class MainWindow(QMainWindow):
             f.setFrameStyle(QFrame.HLine | QFrame.Raised)
             return f
 
+        holder = QWidget()
         layout = QHBoxLayout()
         layout.addWidget(frame())
-        layout.addWidget(QLabel(name_))
-        layout.addWidget(frame())
-        for i, s in enumerate([1, 0, 1]):
-            layout.setStretch(i, s)
+        layout.setContentsMargins(0, 0, 0, 0)
+        if name_:
+            layout.addWidget(QLabel(name_))
+            layout.addWidget(frame())
+            for i, s in enumerate([1, 0, 1]):
+                layout.setStretch(i, s)
+        holder.setLayout(layout)
 
-        return layout
+        return holder
 
     def __button(self, layout, name, icon, shortcut=None):
         button = QToolButton()
@@ -566,7 +609,7 @@ class MainWindow(QMainWindow):
 
     def _connect_signals(self):
         reset_maze = functools.partial(self.reset, MainWindow.Reset.MAZE)
-        for k in ["width", "height", "seed", "vision", "p_trap"]:
+        for k in ["width", "height", "seed", "vision", "p_lure", "p_trap"]:
             self.config[k].valueChanged.connect(reset_maze)
         for k in ["traps", "lures", "clues"]:
             c = self.config[k]
@@ -635,20 +678,21 @@ class MainWindow(QMainWindow):
             viewer_options[k] = b
 
         self._restore_from_robot_build_data(
-            Robot.BuildData(**_try("robot", default={})),
-            Robot.BuildData.from_argparse(args, set_defaults=False))
+            Robot.BuildData(**_try("robot", default={}))
+            .override_with(
+                Robot.BuildData.from_argparse(args, set_defaults=False)))
 
         overrides = Maze.BuildData.from_argparse(args, set_defaults=False)
-        argv_maze = overrides if args.maze is None \
-            else Maze.bd_from_string(args.maze, overrides)
+        if args.maze is not None:
+            overrides = Maze.bd_from_string(args.maze, overrides)
         self._restore_from_maze_build_data(
-            Maze.BuildData(**_try("maze", default={})),
-            argv_maze)
+            Maze.BuildData(**_try("maze", default={}))
+            .override_with(overrides))
 
         config.beginGroup("sections")
         for k, v in self.sections.items():
             self.sections[k].set_collapsed(
-                bool(int(config.value(k, False))))
+                bool(int(config.value(k.value.lower(), False))))
         config.endGroup()
 
         return viewer_options
@@ -661,7 +705,7 @@ class MainWindow(QMainWindow):
         config.setValue('pos', self.pos())
         config.setValue('size', self.size())
 
-        config.setValue('maze', self._maze_data().__dict__)
+        config.setValue('maze', self.maze_data().__dict__)
         config.setValue('robot', self._robot_data().__dict__)
 
         config.beginGroup("show")
@@ -671,7 +715,7 @@ class MainWindow(QMainWindow):
 
         config.beginGroup("sections")
         for k, v in self.sections.items():
-            config.setValue(k, int(v.collapsed()))
+            config.setValue(k.value.lower(), int(v.collapsed()))
         config.endGroup()
 
         config.sync()
@@ -683,46 +727,39 @@ class MainWindow(QMainWindow):
     # == Argv/Storage parsing
     # =========================================================================
 
-    def _restore_from_maze_build_data(self,
-                                      save_data: Maze.BuildData,
-                                      argv_data: Maze.BuildData):
-        logger.debug(f"{save_data=}")
-        logger.debug(f"{argv_data=}")
+    def _restore_from_maze_build_data(self, data: Maze.BuildData):
+        def val(k): return getattr(data, k)
 
-        def val(k):
-            return v \
-                if (v := getattr(argv_data, k)) is not BaseBuildData.unset \
-                else getattr(save_data, k)
+        def _set(f, *args, **kwargs):
+            assert isinstance(f.__self__, QObject)
+            _ = QSignalBlocker(f.__self__)
+            f(*args, **kwargs)
 
         for name in ["width", "height", "seed"]:
             if value := val(name):
-                self.config[name].setValue(value)
+                _set(self.config[name].setValue, value)
 
         for name in ["p_lure", "p_trap"]:
             if value := val(name):
-                self.config[name].setValue(value * 100)
+                _set(self.config[name].setValue, value * 100)
 
         for name in ["clue", "lure", "trap"]:
-            self.config[name + "s"].set_signs(val(name))
+            _set(self.config[name + "s"].set_signs, val(name))
 
-        for name, val_ in [("with_clues", val("clue") is not None),
-                           ("with_lures", val("lure") is not None),
-                           ("with_traps", val("trap") is not None),
+        for name, val_ in [("with_clues", val("clue")),
+                           ("with_lures", val("lure")),
+                           ("with_traps", val("trap")),
                            ("unicursive", val("unicursive")),
                            ("rotated", val("rotated"))]:
-            self.config[name].setChecked(val_)
+            _set(self.config[name].setChecked, bool(val_))
 
-        self.config["start"].setCurrentText(val("start").name.lower())
+        for name in ["clues", "lures", "traps"]:
+            self.config[name].hide(not self.config["with_" + name].isChecked())
 
-    def _restore_from_robot_build_data(self,
-                                       save_data: Robot.BuildData,
-                                       argv_data: Robot.BuildData):
+        _set(self.config["start"].setCurrentText, val("start").name.lower())
 
-        logger.debug(f"{save_data=}")
-        logger.debug(f"{argv_data=}")
-
-        def val(k):
-            return v if (v := getattr(argv_data, k)) else getattr(save_data, k)
+    def _restore_from_robot_build_data(self, data: Robot.BuildData):
+        def val(k): return getattr(data, k)
 
         for name in ["vision"]:
             self.config[name].setValue(val(name))

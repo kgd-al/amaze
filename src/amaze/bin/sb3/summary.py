@@ -12,6 +12,7 @@ import humanize.time
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+import seaborn
 import seaborn as sns
 from PyQt5.QtGui import QImage, QPainter
 from PyQt5.QtWidgets import QApplication
@@ -185,46 +186,67 @@ def find_events(root: Path):
     for elems in zip(*[s.split("\n") for s in df_strings]):
         print("\t".join(f"{e:{max_w}}" for e in elems))
 
-#
-# def tabulate_events(root, group, events, out):
-#     summary_iterators = \
-#         [EventAccumulator(str(root.joinpath(group).joinpath(e))).Reload()
-#          for e in events]
-#
-#     tags = summary_iterators[0].Tags()['scalars']
-#     for it in summary_iterators:
-#         assert it.Tags()['scalars'] == tags
-#
-#     # print(f"{group}: {list(i.Scalars(tags[0])[-1].step for i in summary_iterators)}")
-#
-#     for tag in tags:
-#         for events in zip(*[acc.Scalars(tag) for acc in summary_iterators]):
-#             assert len(set(e.step for e in events)) == 1
-#             out[tag][group].append([e.value for e in events])
-#
-#     return out
 
-#
-# def write_combined_events(dpath, d_combined, dname='combined'):
-#
-#     fpath = os.path.join(dpath, dname)
-#     writer = tf.summary.FileWriter(fpath)
-#
-#     tags, values = zip(*d_combined.items())
-#
-#     timestep_mean = np.array(values).mean(axis=-1)
-#
-#     for tag, means in zip(tags, timestep_mean):
-#         for i, mean in enumerate(means):
-#             summary = tf.Summary(value=[tf.Summary.Value(tag=tag, simple_value=mean)])
-#             writer.add_summary(summary, global_step=i)
-#
-#         writer.flush()
+def process(training_type, folders, df):
+    if df is None:
+        df = pd.DataFrame(columns=["Trainer", "Algo", "Replicate",
+                                   "Time", "Reward"])
+    for f in folders:
+        paths = None
+        if tt == 'direct':
+            paths = f.glob("*events*")
+
+        elif tt == 'interpolation':
+            paths = f.glob("*events*")
+
+        elif tt == 'edhucat':
+            paths = f.glob("timeline/*events*")
+
+        last = sorted(list(paths), key=os.path.getmtime, reverse=False)[-1]
+        tokens = str(last).split('/')
+        algo = tokens[1].split('-')[1]
+        e = (EventAccumulator(str(last)).Reload()
+             .Scalars('infos/pretty_reward'))[-1]
+        df = pd.concat([
+            pd.DataFrame([[tt, algo, tokens[2], e.step, e.value]],
+                         columns=df.columns),
+            df])
+    return df
 
 
 if __name__ == '__main__':
     start = time.perf_counter()
-    find_events(Path(sys.argv[1]))
+
+    # training_types = ["edhucat"]
+    training_types = ["direct", "interpolation", "edhucat"]
+
+    out_folder = Path("results/train_summary/")
+    dataframe_file = out_folder.joinpath("stats.csv")
+    if False and dataframe_file.exists():
+        dataframe = pd.read_csv(dataframe_file)
+    else:
+        dataframe = None
+        for tt in training_types:
+            dataframe = (
+                process(tt, sorted(list(Path(".").glob(f"results/{tt}*/**/run*"))),
+                        dataframe))
+        print(dataframe)
+        dataframe.to_csv(dataframe_file, index=False)
+
+    common_args = dict(x="Trainer", y="Reward", hue="Algo",
+                       order=training_types,)
+    g = seaborn.catplot(data=dataframe, **common_args,
+                        kind='swarm',
+                        aspect=5)
+    g.map_dataframe(seaborn.violinplot, **common_args,
+                    split=True, cut=0, scale='width',
+                    palette='pastel')
+
+    seaborn.move_legend(g, "upper center", ncol=3, title=None)
+    g.figure.tight_layout()
+    g.figure.savefig(out_folder.joinpath('stats.pdf'))
+
+    # find_events(Path(sys.argv[1]))
 
     print("Computed in",
           humanize.precisedelta(

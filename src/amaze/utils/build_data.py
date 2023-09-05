@@ -1,8 +1,13 @@
 import ast
+import logging
+import pprint
 from abc import ABC
 from dataclasses import fields, dataclass
 from functools import lru_cache
 from typing import get_args, get_origin, Union, Annotated
+
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -11,6 +16,17 @@ class BaseBuildData(ABC):
         def __bool__(self): return False
         def __repr__(self): return "Unset"
     unset = Unset()
+
+    def override_with(self, other):
+        assert isinstance(other, self.__class__)
+        # logger.debug(f"Overriding: {self}\n"
+        #              f"      with: {other}")
+
+        for lhs, rhs in zip(self.__fields(), other.__fields()):
+            assert lhs.name == rhs.name
+            if (v := getattr(other, rhs.name)) != self.unset:
+                setattr(self, lhs.name, v)
+        return self
 
     @classmethod
     @lru_cache(maxsize=1)

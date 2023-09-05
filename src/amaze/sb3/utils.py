@@ -18,22 +18,37 @@ class CV2QTGuard:
      QLibraryInfo.location(QLibraryInfo.PluginsPath)
      """
 
-    QPA_NAME = "QT_QPA_PLATFORM_PLUGIN_PATH"
+    QPA_PATH_NAME = "QT_QPA_PLATFORM_PLUGIN_PATH"
+    QPA_PLATFORM_NAME = "QT_QPA_PLATFORM"
 
-    def __init__(self):
-        self.qta_path = None
+    def __init__(self, platform=True, path=True):
+        self.qta_platform = platform
+        self.qta_path = path
+
+    @staticmethod
+    def _save_and_replace(key, override):
+        value = os.environ.get(key, None)
+        os.environ[key] = override
+        return value
 
     def __enter__(self):
-        if path := os.environ.get(self.QPA_NAME, None):
-            self.qta_path = path
-        os.environ[self.QPA_NAME] = \
-            QLibraryInfo.location(QLibraryInfo.PluginsPath)
+        if self.qta_platform:
+            self.qta_platform = self._save_and_replace(
+                self.QPA_PLATFORM_NAME, "offscreen")
+        if self.qta_path:
+            self.qta_path = self._save_and_replace(
+                self.QPA_PATH_NAME, QLibraryInfo.location(QLibraryInfo.PluginsPath))
+
+    @staticmethod
+    def _restore_or_clean(key, saved_value):
+        if isinstance(saved_value, str):
+            os.environ[key] = saved_value
+        elif saved_value:
+            os.environ.pop(key)
 
     def __exit__(self, *_):
-        if self.qta_path:
-            os.environ[self.QPA_NAME] = self.qta_path
-        else:
-            os.environ.pop(self.QPA_NAME)
+        self._restore_or_clean(self.QPA_PLATFORM_NAME, self.qta_platform)
+        self._restore_or_clean(self.QPA_PATH_NAME, self.qta_path)
         return False
 
 

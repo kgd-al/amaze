@@ -46,6 +46,8 @@ class SignList(QWidget):
                 for i in range(self.inner_layout.count())]
 
     def set_signs(self, signs: Signs):
+        while self.count():
+            self.remove_row(self.inner_layout.itemAt(0).widget())
         for sign in signs:
             self.add_row(sign)
 
@@ -58,7 +60,8 @@ class SignList(QWidget):
         return Sign(cb.currentText(), sb.value())
 
     def hide(self, hide: bool = True):
-        self.setMaximumHeight(0 if hide else self._original_max_height)
+        # self.setMaximumHeight(0 if hide else self._original_max_height)
+        self.setVisible(not hide)
 
     def add_row(self, sign=Sign()):
         w = QWidget()

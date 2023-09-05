@@ -81,22 +81,20 @@ def main():
             maze = Maze.generate(bd)
             mazes.append((i, maze))
 
-    ids = list(set(m.seed for _, m in mazes))
-
     with open(base_path.joinpath("mazes"), 'w') as f:
-        f.write("Set Name Complexity\n")
+        f.write("Set ID Name Complexity\n")
         for i, maze in mazes:
-            set_id = ids.index(maze.seed)
+            train = int(maze.seed == bd_0.seed)
 
             name = maze.to_string()
             path = base_path.joinpath(
-                f"{set_id}_{i:0{m_id_digits}d}_{name}.png")
+                f"{train}_{i:0{m_id_digits}d}_{name}.png")
             MazeWidget.static_draw_to(maze, path, size=256)
 
             complexity = Simulation.compute_complexity(
-                maze, InputType.DISCRETE, 15)[1]
-            complexity = ' '.join(f"{c:.2}" for c in complexity)
-            line = f"{set_id} {i} {maze.to_string()} {complexity}"
+                maze, InputType.DISCRETE, 15)['entropy']
+            complexity = ' '.join(f"{c:.2}" for c in complexity.values())
+            line = f"{train} {i} {maze.to_string()} {complexity}"
             print(line)
             f.write(f"{line}\n")
 

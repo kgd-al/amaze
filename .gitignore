@@ -5,6 +5,8 @@ cache/
 data/
 obsolete/
 remote/
+results/
+backup_results/
 stash/
 tmp/
 

@@ -43,8 +43,8 @@ class SB3Controller(BaseController):
         self._mapper = IOMapper(observation_space=model.observation_space,
                                 action_space=model.action_space)
 
-        print(f"[kgd-debug] policy={self.policy.__class__.__name__}"
-              f" {self._i_type=} {self._o_type=} {self._vision=}")
+        # print(f"[kgd-debug] policy={self.policy.__class__.__name__}"
+        #       f" {self._i_type=} {self._o_type=} {self._vision=}")
 
     def __call__(self, inputs: State) -> Vec:
         return self._mapper.map_action(
@@ -78,8 +78,6 @@ class SB3Controller(BaseController):
 
     @staticmethod
     def load(path, model_class: Optional[type[BaseAlgorithm]] = None):
-        print("Loading", path)
-
         if model_class is None:
             path = Path(path)
             model_class_path = path.with_suffix(".class")

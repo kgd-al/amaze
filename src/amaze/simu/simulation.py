@@ -1,3 +1,4 @@
+import pprint
 from logging import getLogger
 from types import SimpleNamespace
 from typing import Union, TypeVar, Optional
@@ -11,6 +12,7 @@ from amaze.simu.env.maze import Maze
 from amaze.simu.pos import Pos, AlignedPos
 from amaze.simu.robot import Robot, InputType, OutputType, Action, State
 from amaze.visu import resources
+from amaze.visu.resources import Sign, SignType
 
 logger = getLogger(__name__)
 
@@ -61,9 +63,6 @@ class Simulation:
             steps=0, collisions=0, backsteps=0
         )
 
-        self.cues = None
-        self.traps = None
-
         if self.data.inputs is InputType.CONTINUOUS:
             self.observations = np.zeros((self.data.vision, self.data.vision),
                                          dtype=np.float32)
@@ -73,8 +72,12 @@ class Simulation:
         self.visuals = self.generate_visuals_map(self.maze, self.data.inputs,
                                                  self.data.vision)
 
-        self.trajectory = pd.DataFrame(columns=["px", "py", "ax", "ay", "r"]) \
-            if save_trajectory else None
+        self.trajectory, self.errors = None, None
+        if save_trajectory:
+            self.trajectory = (
+                pd.DataFrame(columns=["px", "py", "ax", "ay", "r"]))
+            if self.data.inputs is InputType.DISCRETE:
+                self.errors = {t: [0, 0] for t in SignType}
 
         self.generate_inputs()
 
@@ -94,29 +97,26 @@ class Simulation:
         if inputs is InputType.CONTINUOUS:
 
             v = vision - 2
-            clues = resources.np_images(maze.clues, v - 2) \
-                if maze.clues is not None else None
-            lures = resources.np_images(maze.lures, v - 2) \
-                if maze.clues is not None else None
-            traps = resources.np_images(maze.traps, v - 2) \
-                if maze.traps is not None else None
+            images = {
+                t: resources.np_images(signs, v)
+                if (signs := maze.signs[t]) is not None else None
+                for t in SignType
+            }
 
-            for lst, img_lst in [(maze.clues_data, clues),
-                                 (maze.lures_data, lures),
-                                 (maze.traps_data, traps)]:
-                if lst is not None and img_lst is not None:
-                    for v_index, sol_index, d in lst:
+            for t in SignType:
+                lst, img_list = maze.signs_data[t], images[t]
+                if lst is not None and img_list is not None:
+                    for v_index, sol_index, d, _ in lst:
                         visuals[maze.solution[sol_index]] = \
-                            img_lst[v_index][d.value]
+                            img_list[v_index][d.value]
 
         elif inputs is InputType.DISCRETE:
-            for lst, signs in [(maze.clues_data, maze.clues),
-                               (maze.lures_data, maze.lures),
-                               (maze.traps_data, maze.traps)]:
+            for t in SignType:
+                lst, signs = maze.signs_data[t], maze.signs[t]
                 if lst is not None:
-                    for v_index, sol_index, d in lst:
+                    for v_index, sol_index, sign_dir, true_dir in lst:
                         visuals[maze.solution[sol_index]] = \
-                            (signs[v_index].value, d)
+                            (signs[v_index].value, sign_dir, t, true_dir)
 
         return visuals
 
@@ -223,8 +223,18 @@ class Simulation:
             reward += self.rewards.collision
             self.stats.collisions += 1
 
-        if prev_cell != self.robot.cell():
+        cell = self.robot.cell()
+        if prev_cell != cell:
             self.robot.prev_cell = prev_cell
+
+        if self.errors and (v := self._discrete_visual(prev_cell)):
+            diff = (cell[0] - prev_cell[0], cell[1] - prev_cell[1])
+            if not any(diff):
+                diff = action
+            d = self.maze.direction_from_offset(*diff)
+            s_type = v[2]
+            error = (d != v[3])
+            self.errors[s_type][int(error)] += 1
 
         reward += self.rewards.timestep
         self.stats.steps += 1
@@ -262,9 +272,8 @@ class Simulation:
             if prev_dir:
                 i[prev_dir.value] = .5
 
-            if d := self.visuals[cell]:
-                if not isinstance(d, float) or not np.isnan(d):
-                    i[4+d[1].value] = d[0]
+            if d := self._discrete_visual(cell):
+                i[4+d[1].value] = d[0]
 
         else:
 
@@ -295,6 +304,10 @@ class Simulation:
                     i[:] = buffer[v-dpy:2*v-dpy, v+dpx:2*v+dpx]
 
         return i
+
+    def _discrete_visual(self, cell):
+        v = self.visuals[cell]
+        return v if not isinstance(v, float) or not np.isnan(v) else None
 
     def _fill_visual_buffer(self, buffer: np.ndarray,
                             cell: AlignedPos,
@@ -346,7 +359,7 @@ class Simulation:
         return self.success() or self.failure()
 
     def infos(self):
-        return dict(
+        infos = dict(
             time=self.timestep,
             success=self.success(),
             failure=self.failure(),
@@ -359,6 +372,13 @@ class Simulation:
             len=len(self.maze.solution),
             **self.stats.__dict__
         )
+        if self.errors:
+            infos['errors'] = {
+                t.value.lower(): 100 * v[1] / total
+                if (total := sum(v)) > 0 else 0
+                for t, v in self.errors.items()
+            }
+        return infos
 
     @staticmethod
     def discrete_actions():
@@ -367,4 +387,5 @@ class Simulation:
     @classmethod
     def compute_complexity(cls, maze: Maze, inputs: InputType, vision: int):
         return _maze_complexity.complexity(
-            maze, cls.generate_visuals_map(maze, inputs, vision))
+            maze, cls.generate_visuals_map(maze, inputs, vision), inputs
+        )

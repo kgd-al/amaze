@@ -1,3 +1,4 @@
+import copy
 import json
 import random
 import re
@@ -9,13 +10,13 @@ from itertools import islice, cycle
 from logging import getLogger
 from pathlib import Path
 from types import SimpleNamespace
-from typing import Annotated, Tuple, Optional, List
+from typing import Annotated, Tuple, Optional, List, Dict
 
 import numpy as np
 
 from amaze.utils.build_data import BaseBuildData
 from amaze.visu import resources
-from amaze.visu.resources import Sign
+from amaze.visu.resources import Sign, SignType
 
 logger = getLogger(__name__)
 
@@ -93,6 +94,16 @@ class Maze:
                         f"Incompatible value {attr} ({type(attr)}) for"
                         f" field {k}")
 
+        def all_permutations(self):
+            def start_from(s: StartLocation):
+                m_ = copy.deepcopy(self)
+                m_.start = s
+                return m_
+
+            sl = [StartLocation.NORTH_WEST, StartLocation.NORTH_EAST,
+                  StartLocation.SOUTH_WEST, StartLocation.SOUTH_EAST]
+            return [start_from(s) for s in sl]
+
     Signs = BuildData.Signs
 
     class Direction(Enum):
@@ -121,7 +132,7 @@ class Maze:
 
     PlacedSign = namedtuple(
         'PlacedSign',
-        ['visual_index', 'solution_index', 'direction'])
+        ['visual_index', 'solution_index', 'direction', 'truth'])
 
     def __init__(self, data: BuildData, key=None):
         if key is not self.__private_key:
@@ -137,19 +148,34 @@ class Maze:
         self.solution: Optional[List[Tuple[int, int]]] = None
         self._intersections: int = 0
 
-        self.clues: Maze.Signs = data.clue
-        self.lures: Maze.Signs = data.lure
+        self.signs: dict[SignType, Maze.Signs] = {
+            SignType.CLUE: data.clue,
+            SignType.LURE: data.lure,
+            SignType.TRAP: data.trap,
+        }
         self.p_lure: float = data.p_lure
-        self.traps: Maze.Signs = data.trap
         self.p_trap: float = data.p_trap
-        self.clues_data: List[Maze.PlacedSign] = []
-        self.lures_data: List[Maze.PlacedSign] = []
-        self.traps_data: List[Maze.PlacedSign] = []
+        self.signs_data: Dict[SignType, List[Maze.PlacedSign]] = {
+            t: [] for t in SignType
+        }
 
     def __repr__(self): return self.to_string()
 
     def intersections(self): return self._intersections
     def unicursive(self): return self.intersections() == 0
+
+    def clues(self): return self.signs[SignType.CLUE]
+    def lures(self): return self.signs[SignType.LURE]
+    def traps(self): return self.signs[SignType.TRAP]
+
+    def stats(self):
+        return dict(
+            size=f"{self.width}x{self.height}",
+            path=len(self.solution), intersections=self._intersections,
+            clues=len(self.signs_data[SignType.CLUE]),
+            lures=len(self.signs_data[SignType.LURE]),
+            traps=len(self.signs_data[SignType.TRAP]),
+        )
 
     def iter_cells(self): return ((i, j)
                                   for i in range(self.width)
@@ -178,6 +204,8 @@ class Maze:
 
     @classmethod
     def generate(cls, data: BuildData):
+        assert isinstance(data, Maze.BuildData), \
+            f"Wrong argument type {type(data)} instead of Maze.BuildData"
         maze = Maze(data, cls.__private_key)
         def _reset_rng(): return random.Random(maze.seed)
         rng = _reset_rng()
@@ -278,25 +306,27 @@ class Maze:
             return lst
 
         # Generate clues (always but see below)
-        maze.clues_data = []
-        if maze.clues:
+        clues_data = maze.signs_data[SignType.CLUE]
+        clues = maze.signs[SignType.CLUE]
+        if clues:
             rng = _reset_rng()
-            clues_sign_indices = rng_indices(maze.clues, maze._intersections)
+            clues_sign_indices = rng_indices(clues, maze._intersections)
         else:
             clues_sign_indices = [-1] * maze._intersections
         for i, (sol_index, direction) in enumerate(intersections):
-            maze.clues_data.append(
-                (clues_sign_indices[i], sol_index, direction))
+            clues_data.append(
+                (clues_sign_indices[i], sol_index, direction, direction))
 
         # Add un-helpful signs
-        if maze.p_lure and maze.lures:
+        lures = maze.signs[SignType.LURE]
+        if maze.p_lure and lures:
             rng = _reset_rng()
             candidates = \
                 set(range(len(maze.solution)-1))\
                 - {i[0] for i in intersections}
             nl = round(data.p_lure * len(candidates))
-            lure_indices = rng_indices(maze.lures, nl)
-            maze.lures_data = []
+            lure_indices = rng_indices(lures, nl)
+            lures_data = maze.signs_data[SignType.LURE]
             dirs = list(cls._offsets_inv.values())
             if data.start is not StartLocation.SOUTH_WEST:
                 dirs = list(np.roll(dirs, -data.start.value))
@@ -304,22 +334,25 @@ class Maze:
                 c_i, c_j = maze.solution[six]
                 nc_i, nc_j = maze.solution[six+1]
                 dirs_ = dirs.copy()
-                dirs_.remove(maze._offsets_inv[(nc_i - c_i, nc_j - c_j)])
-                maze.lures_data.append((vix, six, rng.choice(dirs_)))
+                d = maze._offsets_inv[(nc_i - c_i, nc_j - c_j)]
+                dirs_.remove(d)
+                lures_data.append((vix, six, rng.choice(dirs_), d))
 
         # Transform helpful signs into harmful ones
-        if maze.p_trap and maze.traps:
+        traps = maze.signs[SignType.TRAP]
+        if maze.p_trap and traps:
             rng = _reset_rng()
-            nt = round(data.p_trap * len(maze.clues_data))
+            nt = round(data.p_trap * len(clues_data))
             trap_indices = sorted(rng.sample(range(maze._intersections), nt))
-            trap_signs_indices = rng_indices(maze.traps, nt)
+            trap_signs_indices = rng_indices(traps, nt)
+            traps_data = maze.signs_data[SignType.TRAP]
 
             for i in reversed(trap_indices):
-                vix, six, d = maze.clues_data.pop(i)
+                vix, six, sign_dir, true_dir = clues_data.pop(i)
                 pos = maze.solution[six]
                 new_d = None
                 for d_ in Maze.Direction:
-                    if d == d_:
+                    if true_dir == d_:
                         continue
                     if maze.wall(pos[0], pos[1], d_):
                         continue
@@ -329,13 +362,14 @@ class Maze:
                     new_d = d_
                     break
                 assert new_d
-                maze.traps_data.append((trap_signs_indices.pop(), six, new_d))
+                traps_data.append((trap_signs_indices.pop(), six,
+                                   new_d, true_dir))
 
         # Forget about cues if not needed
-        if not maze.clues:
-            maze.clues_data = []
+        if not clues:
+            maze.signs_data[SignType.CLUE] = []
 
-        if not data.unicursive and maze.clues is None:
+        if not data.unicursive and clues is None:
             logger.warning("Mazes with intersections and no clues are"
                            " practically unsolvable")
 
@@ -347,11 +381,11 @@ class Maze:
             seed=self.seed,
             start=self.e_start,
             unicursive=self.unicursive(),
-            clue=self.clues,
+            clue=self.clues(),
             p_lure=self.p_lure,
-            lure=self.lures,
+            lure=self.lures(),
             p_trap=self.p_trap,
-            trap=self.traps
+            trap=self.traps()
         )
 
     def save(self, path: Path):
@@ -372,10 +406,10 @@ class Maze:
             f += sep + "U"
         f += ''.join(f"{sep}C{Sign.to_string(s)}" for s in bd.clue)
         if bd.p_lure:
-            f += f"{sep}l{bd.p_lure:.2g}".lstrip('0')
+            f += f"{sep}l" + f"{bd.p_lure:.2g}".lstrip('0')
             f += ''.join(f"{sep}L{Sign.to_string(s)}" for s in bd.lure)
         if bd.p_trap:
-            f += f"{sep}t{bd.p_trap:.2g}".lstrip('0')
+            f += f"{sep}t" + f"{bd.p_trap:.2g}".lstrip('0')
             f += ''.join(f"{sep}T{Sign.to_string(s)}" for s in bd.trap)
         return f
 
@@ -385,6 +419,7 @@ class Maze:
         d_re = re.compile("[SN][WE]")
         s_re = re.compile("[0-9]+x[0-9]+")
         bd = cls.BuildData()
+        s = s.split('__')[-1]
         for token in s.split(cls.FIELD_SEP):
             t, tail = token[0], token[1:]
             if t == 'M':

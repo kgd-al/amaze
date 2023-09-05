@@ -99,8 +99,9 @@ class OutputsLabel(TinyLabel):
             painter.drawLine(0, -1, 0, 1)
             pen.setColor(Qt.red)
             painter.setPen(pen)
-            painter.drawLine(QPointF(0, 0),
-                             QPointF(*self.action))
+            if self.action:
+                painter.drawLine(QPointF(0, 0),
+                                 QPointF(*self.action))
 
 
 class ValuesLabel(TinyLabel):

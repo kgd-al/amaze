@@ -2,6 +2,7 @@ import copy
 import os
 import pprint
 import sys
+from enum import Enum
 from functools import cache
 from logging import getLogger
 from pathlib import Path
@@ -22,8 +23,18 @@ def default_lightness() -> float: return .5
 def default_size() -> int: return 15
 
 
+class SignType(Enum):
+    CLUE = "Clue"
+    LURE = "Lure"
+    TRAP = "Trap"
+
+
 class Sign:
     sep = '-'
+
+    CLUE = SignType.CLUE
+    LURE = SignType.LURE
+    TRAP = SignType.TRAP
 
     def __init__(self, name: str = default_builtin(),
                  value: float = default_lightness()):
@@ -151,8 +162,7 @@ def __generator__error(lightness: float = 0, size: int = 15):
     return img
 
 
-def __generator__arrow(lightness: float, size: int):
-    img, painter = _image(size, lightness)
+def arrow_path():
     path = QPainterPath()
     path.moveTo(0., .4)
     path.lineTo(0., .6)
@@ -162,7 +172,12 @@ def __generator__arrow(lightness: float, size: int):
     path.lineTo(.6, .2)
     path.lineTo(.6, .4)
     path.closeSubpath()
-    painter.fillPath(path, __pen_color(lightness))
+    return path
+
+
+def __generator__arrow(lightness: float, size: int):
+    img, painter = _image(size, lightness)
+    painter.fillPath(arrow_path(), __pen_color(lightness))
     painter.end()
 
     return img

@@ -210,7 +210,7 @@ def process_mazes(args):
     with open(args.mazes_file, 'r') as f:
         f.readline()  # Discard header
         while line := f.readline():
-            s_id, m_str = line.replace('\n', '').split(' ')[:2]
+            s_id, _, m_str = line.replace('\n', '').split(' ')[:3]
             train = (s_id == '0')
             mazes[train].append(all_permutations([Maze.bd_from_string(m_str)]))
     pprint.pprint(mazes)

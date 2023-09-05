@@ -8,7 +8,7 @@ import pprint
 import warnings
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Optional
+from typing import Optional, List, Sequence
 
 from PyQt5.QtGui import QImage
 from PyQt5.QtWidgets import QApplication
@@ -91,11 +91,11 @@ def __make_simulation(args, trajectory=False):
     )
 
 
-def main():
+def main(sys_args: Optional[Sequence[str]] = None):
     args = Options()
     parser = argparse.ArgumentParser(description="2D Maze environment")
     Options.populate(parser)
-    parser.parse_args(namespace=args)
+    parser.parse_args(args=sys_args, namespace=args)
 
     if args.eval and not args.controller:
         print("Cannot evaluate without a controller")
@@ -172,5 +172,5 @@ def main():
 
 
 if __name__ == '__main__':
-    with CV2QTGuard():
+    with CV2QTGuard(platform=False):
         main()

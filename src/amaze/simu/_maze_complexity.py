@@ -1,4 +1,5 @@
 import math
+import pprint
 from collections import defaultdict
 from pathlib import Path
 
@@ -15,7 +16,7 @@ def __inputs(c, r, maze, visuals):
     i = np.zeros(8)
     i[:4] = [maze.wall(c, r, d) for d in Maze.Direction]
 
-    if d := visuals[r, c]:
+    if d := visuals[c, r]:
         if not isinstance(d, float) or not np.isnan(d):
             i[4 + d[1].value] = d[0]
 
@@ -30,7 +31,7 @@ def __all_inputs(maze: Maze, visuals):
     inputs[tuple(i)] += 1
 
     for c, r in cells():
-        i = __inputs(r=r, c=c, maze=maze, visuals=visuals)
+        i = __inputs(c=c, r=r, maze=maze, visuals=visuals)
 
         for j in range(4):
             if not i[j]:
@@ -44,7 +45,7 @@ def __all_inputs(maze: Maze, visuals):
 def __solution_path(maze, visuals):
     inputs = defaultdict(lambda: 0)
     for j, (c, r) in enumerate(maze.solution):
-        i = __inputs(r=r, c=c, maze=maze, visuals=visuals)
+        i = __inputs(c=c, r=r, maze=maze, visuals=visuals)
         if j > 0:
             c0_i, c0_j = maze.solution[j - 1]
             c1_i, c1_j = maze.solution[j]
@@ -64,6 +65,36 @@ def __entropy_bits(inputs):
     return entropy
 
 
+# noinspection PyPep8Naming
+def __mutual_information(maze: Maze):
+    c, t = maze.clues(), maze.traps()
+    if len(c) + len(t) == 0:
+        return 0
+
+    TRUTH = {s.value: v for signs, v in [(c, True), (t, False)] for s in signs}
+    X = set(TRUTH.keys())
+    Y = set(TRUTH.values())
+    P_XY = {(x.value, y): y == v for signs, v in [(c, True), (t, False)]
+            for x in signs for y in Y}
+    P_X = 1 / len(X)
+    P_Y = {y: 0 for y in Y}
+
+    X_ = sorted(list(X))
+    for i, (s, v) in enumerate(sorted(TRUTH.items())):
+        left = 0 if i == 0 else .5 * (s + X_[i-1])
+        right = 1 if i == len(X)-1 else .5 * (X_[i+1] + s)
+        P_Y[v] += right - left
+
+    mi = 0
+    for y in Y:
+        for x in X:
+            p_xy, mp = P_XY[(x, y)], P_X * P_Y[y]
+            if mp and p_xy:
+                mi += p_xy * math.log2(p_xy / mp)
+
+    return mi
+
+
 def __debug_draw_inputs(inputs, name):
     app = QApplication([])
     label = InputsLabel()
@@ -80,7 +111,11 @@ def __debug_draw_inputs(inputs, name):
         img.save(str(folder.joinpath(f"{str_i}.png")))
 
 
-def complexity(maze: Maze, visuals: np.ndarray):
+def complexity(maze: Maze, visuals: np.ndarray, inputs: InputType):
+    if inputs is not InputType.DISCRETE:
+        return dict(inputs=dict(min=np.nan, max=np.nan),
+                    entropy=dict(min=np.nan, max=np.nan),
+                    mutual_information=np.nan)
 
     inputs = []
     entropy = []
@@ -90,7 +125,11 @@ def complexity(maze: Maze, visuals: np.ndarray):
         inputs.append(len(i))
         entropy.append(__entropy_bits(i))
 
-        __debug_draw_inputs(i, maze.to_string())
+        # __debug_draw_inputs(i, maze.to_string())
+
+    mutual_info = __mutual_information(maze)
 
     # print(f"{inputs=} {entropy=}")
-    return inputs, entropy
+    return dict(inputs=dict(zip(["min", "max"], inputs)),
+                entropy=dict(zip(["min", "max"], entropy)),
+                mutual_information=mutual_info)

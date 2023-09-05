@@ -5,6 +5,7 @@ from typing import Optional
 
 from amaze.simu.env.maze import Maze
 from amaze.simu.robot import OutputType, Robot
+from amaze.visu.resources import SignType
 
 logger = getLogger(__name__)
 
@@ -112,11 +113,11 @@ class MazePainter(ABC):
                                Color.BLUE)
                 i0, j0 = i1, j1
 
-        for images, positions in [(options["clues"], maze.clues_data),
-                                  (options["lures"], maze.lures_data),
-                                  (options["traps"], maze.traps_data)]:
+        for t in SignType:
+            positions = maze.signs_data[t]
+            images = options[t.value.lower() + "s"]
             if images and positions is not None:
-                for vix, six, d in positions:
+                for vix, six, d, _ in positions:
                     c_i, c_j = maze.solution[six]
                     img = images[vix][d.value]
                     self.draw_image(c_i * scale + 1, c_j * scale + 1,

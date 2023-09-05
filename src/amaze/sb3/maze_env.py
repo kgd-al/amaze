@@ -1,9 +1,7 @@
 import logging
-import os
 from typing import Optional
 
 import numpy as np
-import pandas as pd
 import torch
 from PyQt5 import QtWidgets
 from PyQt5.QtCore import Qt
@@ -182,11 +180,14 @@ class MazeEnv(Env):
     def io_types(self): return (self._simulation.data.inputs,
                                 self._simulation.data.outputs)
 
-    def plot_trajectory(self) -> np.ndarray:
-        os.environ["QT_QPA_PLATFORM"] = "offscreen"
-        app = QApplication([])
-        img = self._qimage_to_numpy(
-            MazeWidget.plot_trajectory(
+    def log_trajectory(self, do_log: bool):
+        self._simulation.reset(save_trajectory=do_log)
+
+    def plot_trajectory(self, cb_side: int = 0, verbose: bool = True,
+                        square: bool = False) -> np.ndarray:
+        with CV2QTGuard():
+            app = QApplication.instance() or QApplication([])
+            plot = MazeWidget.plot_trajectory(
                 simulation=self._simulation,
                 size=256, trajectory=self.prev_trajectory,
                 config=dict(
@@ -194,9 +195,13 @@ class MazeEnv(Env):
                     robot=False,
                     dark=True
                 ),
+                side=cb_side,
+                verbose=verbose,
+                square=square,
                 img_format=QImage.Format_RGBA8888,
                 path=None
-            ))
+            )
+            img = self._qimage_to_numpy(plot)
         return img
 
     def _create_widget(self, size, show_robot=True):
