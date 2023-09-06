@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import argparse
+import glob
 import itertools
 import math
 import pprint
@@ -10,6 +11,7 @@ import time
 from collections import defaultdict
 from dataclasses import dataclass, field
 from datetime import timedelta
+from functools import partial
 from pathlib import Path
 from typing import List, Tuple, Optional
 
@@ -18,17 +20,19 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import seaborn
-from PyQt5.QtCore import Qt, QRectF, QLineF, QPointF
+from PyQt5.QtCore import Qt, QRectF, QPointF
 from PyQt5.QtGui import QImage, QPainter, QColor
 from PyQt5.QtWidgets import QApplication
 from matplotlib.axes import Axes
 from matplotlib.backends.backend_pdf import PdfPages
-from matplotlib.figure import Figure
+from matplotlib.text import Annotation
 from scipy.stats import mannwhitneyu
 from statannotations.Annotator import Annotator
 from tqdm import tqdm
 
 from amaze.bin import maze_viewer
+from amaze.bin.sb3.common import (move_legend, set_seaborn_style, X_ORDER,
+                                  HUE_ORDER, SWARM_ARGS, VIOLIN_ARGS)
 from amaze.sb3.callbacks import recurse_avg_dict
 from amaze.sb3.utils import CV2QTGuard
 from amaze.simu.controllers.control import load
@@ -175,14 +179,14 @@ def __debug_draw_input(array: np.ndarray, correct_action: Action,
             painter.fillRect(QRectF(.5 - w, -.5, w, 1),
                              QColor.fromHsvF(0, 0, v))
         elif v == .5:
-            painter.fillRect(QRectF(.5 - w, -w/2, w, w),
+            painter.fillRect(QRectF(.5 - w, -w / 2, w, w),
                              Qt.red)
         painter.rotate(-90)
 
     def _draw_arrow(color, rotation, height):
         painter.save()
-        painter.rotate(-90*rotation)
-        s = (DEBUG_IMAGE_SIZE * (1 - 2*w)) / DEBUG_IMAGE_SIZE
+        painter.rotate(-90 * rotation)
+        s = (DEBUG_IMAGE_SIZE * (1 - 2 * w)) / DEBUG_IMAGE_SIZE
         painter.scale(s, height * s)
         painter.translate(-.5, -.5)
         painter.fillPath(ARROW_PATH, color)
@@ -191,9 +195,11 @@ def __debug_draw_input(array: np.ndarray, correct_action: Action,
     signs = np.nonzero(array[4:])[0]
     if len(signs) > 0:
         i = signs[0]
-        _draw_arrow(QColor.fromHsvF(0, 0, array[4+i]), i, 1)
+        _draw_arrow(QColor.fromHsvF(0, 0, array[4 + i]), i, 1)
 
-    def a_to_dir(a): return Maze._offsets_inv[a]
+    def a_to_dir(a):
+        return Maze._offsets_inv[a]
+
     correct_direction = a_to_dir(correct_action)
     if correct_action != selected_action:
         _draw_arrow(Qt.blue, correct_direction.value, .5)
@@ -228,8 +234,8 @@ def __debug_draw_inputs(folder: Path, inputs, outputs: Optional = None):
         img.save(str(folder.joinpath(f"{i:0{i_digits}d}.png")))
 
         x, y = i % cols, i // cols
-        painter.drawImage(QPointF(x * (DEBUG_IMAGE_SIZE+margin) + .5*margin,
-                                  y * (DEBUG_IMAGE_SIZE+margin) + .5*margin),
+        painter.drawImage(QPointF(x * (DEBUG_IMAGE_SIZE + margin) + .5 * margin,
+                                  y * (DEBUG_IMAGE_SIZE + margin) + .5 * margin),
                           img)
 
     painter.end()
@@ -238,13 +244,18 @@ def __debug_draw_inputs(folder: Path, inputs, outputs: Optional = None):
 
 def generate_inputs():
     inputs: List[Tuple[np.ndarray, Action, Optional[SignType]]] = []
-    def array(): return np.zeros(8)
-    def i_to_dir(i_): return Maze._offsets[Maze.Direction(i_)]
+
+    def array():
+        return np.zeros(8)
+
+    def i_to_dir(i_):
+        return Maze._offsets[Maze.Direction(i_)]
 
     # First the dead ends
     for i in range(4):
         a = array()
         a[:4] = 1
+        a[i] = 0
         inputs.append((a, i_to_dir(i), None))
         a = a.copy()
         a[i] = .5
@@ -252,7 +263,7 @@ def generate_inputs():
 
     # Then the corridors
     for i in range(3):
-        for j in range(i+1, 4):
+        for j in range(i + 1, 4):
             dirs = set(range(4)) - {i, j}
             for d in dirs:
                 a = array()
@@ -266,7 +277,7 @@ def generate_inputs():
                     a_ = array()
                     a_[:] = a[:]
                     a_[4:] = 0
-                    a_[lure+4] = .25
+                    a_[lure + 4] = .25
                     inputs.append((a_, sol, SignType.LURE))
 
     # And the intersections
@@ -276,12 +287,12 @@ def generate_inputs():
                 a = array()
                 a[i] = 1
                 a[k] = .5
-                a[j+4] = 1
+                a[j + 4] = 1
                 inputs.append((a, i_to_dir(j), SignType.CLUE))
 
                 if j != k:
                     a = a.copy()
-                    a[j+4] = .5
+                    a[j + 4] = .5
                     i_sol = next(iter(set(range(4)) - {i, j, k}))
                     inputs.append((a, i_to_dir(i_sol), SignType.TRAP))
 
@@ -307,7 +318,7 @@ def evaluate_inputs(inputs, controller, folder):
     __debug_draw_inputs(folder, inputs, outputs)
 
     data = {"Empty" if k is None else k.value:
-            v[0]/v[1] for k, v in counts.items()}
+                v[0] / v[1] for k, v in counts.items()}
     data["All"] = np.average(list(data.values()))
     df = pd.DataFrame.from_dict(
         data, orient="index", columns=["Success"])
@@ -315,10 +326,12 @@ def evaluate_inputs(inputs, controller, folder):
     return df
 
 
-def analyze(axes_dict, order, hue_order, data, **plot_args):
+def analyze(axes_dict, order, hue_order, data,
+            pivot_columns, data_column,
+            **plot_args):
     pairs = [
         *[((k, "a2c"), (k, "ppo")) for k in order],
-        # *[((x_order[i], k3), (x_order[j], k3)) for k3 in ["a2c", "ppo"]
+        # *[((X_ORDER[i], k3), (X_ORDER[j], k3)) for k3 in ["a2c", "ppo"]
         #   for i in range(2) for j in range(i+1, 3)]
         *[((order[i], k3), ("edhucat", k3)) for k3 in hue_order
           for i in range(2)]
@@ -328,9 +341,14 @@ def analyze(axes_dict, order, hue_order, data, **plot_args):
         # ax.set_ylim(None, 1)
 
         def sample(t, a):
-            return data[(data.Signs == name)
+            data_mask = (data[pivot_columns] == name)
+            if isinstance(data_mask, pd.DataFrame):
+                data_mask = data_mask.all(axis=1)
+            df__ = data[data_mask
                         & (data.Trainer == t)
-                        & (data.Algo == a)]["Success"]
+                        & (data.Algo == a)][data_column]
+            # print(f"sample({pivot_columns}={name}, trainer={t}, algo={a}):\n{df__}")
+            return df__
 
         stats = [
             mannwhitneyu(sample(t1, a1), sample(t2, a2)).pvalue
@@ -339,14 +357,15 @@ def analyze(axes_dict, order, hue_order, data, **plot_args):
         positive = [s <= .05 for s in stats]
         filtered_pairs = [pair for pair, p in zip(pairs, positive) if p]
 
-        print("="*80)
-        print("==", name)
-        print("="*10)
-        for (kl, kr), v, p in zip(pairs, stats, positive):
-            print("[X]" if p else "[-]",
-                  " vs ".join(["/".join(k) for k in [kl, kr]]))
-
         if len(filtered_pairs) > 0:
+            print("#" * 80)
+            print("##", pivot_columns, "=", name)
+            print("#" * 10)
+            for (kl, kr), v, p in zip(pairs, stats, positive):
+                if p:
+                    print(f"{v:.2g}",
+                          " vs ".join(["/".join(k) for k in [kl, kr]]))
+
             annot = Annotator(ax=ax, pairs=filtered_pairs,
                               order=order, hue_order=hue_order, data=data,
                               **plot_args)
@@ -354,20 +373,7 @@ def analyze(axes_dict, order, hue_order, data, **plot_args):
                             )
             annot.set_pvalues([s for s, p in zip(stats, positive) if p])
             annot.annotate(line_offset=.1, line_offset_to_group=None)
-        print("="*80)
-
-
-def move_legend(plot, ax=None, hdl=None, lbl=None):
-    l_args = dict(ncol=2, frameon=True, title=None,
-                  handles=hdl, labels=lbl)
-    if isinstance(plot, Figure):
-        ax.legend(**l_args)
-    else:
-        seaborn.move_legend(obj=plot,
-                            loc="lower center", bbox_to_anchor=(.5, 0),
-                            **l_args)
-    # plt.subplots_adjust(top=.6)
-    plt.tight_layout()
+        print("=" * 80)
 
 
 @dataclass
@@ -383,7 +389,7 @@ class Options:
     force_eval: bool = False
     summarize: bool = True
     plot_inputs: bool = True
-    plot_eval: bool = True
+    plot_evals: bool = True
 
     @staticmethod
     def populate(parser: argparse.ArgumentParser):
@@ -416,7 +422,7 @@ class Options:
                             action='store_false',
                             help="Do not plot inputs-related graph")
 
-        parser.add_argument("--no-plot-eval", dest='plot_eval',
+        parser.add_argument("--no-plot-evals", dest='plot_evals',
                             action='store_false',
                             help="Do not plot re-eval performance graphs")
 
@@ -429,6 +435,10 @@ def main():
     parser.parse_args(namespace=args)
 
     pprint.pprint(args)
+    args.models = sorted(list(set(m_ for m in args.models for m_ in
+                                  ([m] if "*" not in str(m) else
+                                   [Path(p) for p in glob.glob(str(m))]))))
+    print("Got", len(args.models), "agents to test")
 
     mazes_file = args.data_folder.joinpath("mazes.csv")
     if args.force_generate or not mazes_file.exists():
@@ -464,7 +474,7 @@ def main():
         stats_files.append(stats_file)
 
         controller = load(controller_file)
-        if not args.force_eval and out_folder.exists():
+        if False and not args.force_eval and out_folder.exists():
             pb.update(n_mazes)
             continue
 
@@ -473,6 +483,9 @@ def main():
         inputs_df = evaluate_inputs(inputs, controller,
                                     out_folder.joinpath("inputs"))
         inputs_df.to_csv(out_folder.joinpath("inputs.csv"))
+
+        print("Skipping evaluation")
+        continue
 
         infos_df = None
         for index in mazes.index:
@@ -545,9 +558,47 @@ def main():
             df = add_columns(pd.read_csv(f.with_name("inputs.csv")))
             big_inputs_df = pd.concat([big_inputs_df, df], ignore_index=True)
 
+        def agg(col, mapping):
+            return v(col) \
+                if (v := mapping.get(col.name, None)) is not None \
+                else col.mean()
+
+        rows_marginals = (
+            big_stats_df.groupby(['Trainer', 'Algo', 'Replicate', 'MI'],
+                                 as_index=False)
+            .agg(partial(agg, mapping=dict(
+                Name=lambda _: np.nan,
+                Type=lambda c: '/'.join(set(c)),
+                TI=lambda c: c.max() + 1,
+                MI=lambda c: c.mean()))))
+        cols_marginals = (
+            big_stats_df.groupby(['Trainer', 'Algo', 'Replicate', 'TI'],
+                                 as_index=False)
+            .agg(partial(agg, mapping=dict(
+                Name=lambda _: np.nan,
+                Type=lambda c: "/".join(set(c)),
+                TI=lambda c: c.mean(),
+                MI=lambda c: c.max() + 1))))
+
+        marginals = (
+            big_stats_df.groupby(['Trainer', 'Algo', 'Replicate'],
+                                 as_index=False)
+            .agg(partial(agg, mapping=dict(
+                Name=lambda _: np.nan,
+                Type=lambda _: "$\\mathbb{E}$",
+                TI=lambda c: c.max() + 1,
+                MI=lambda c: c.max() + 1))))
+
+        big_stats_df = pd.concat([big_stats_df,
+                                  rows_marginals, cols_marginals,
+                                  marginals])
+
+        big_stats_df.insert(6, 'speed',
+                            big_stats_df['len'] / big_stats_df['steps'])
         big_stats_df.sort_values(by=list(big_stats_df.columns[:4]), axis=0,
                                  inplace=True, ignore_index=True)
         big_stats_df.to_csv(big_stats_csv, index=False)
+
         big_inputs_df.to_csv(big_inputs_csv, index=False)
 
         inputs_summary = (
@@ -570,30 +621,25 @@ def main():
         big_stats_df = pd.read_csv(big_stats_csv)
         big_inputs_df = pd.read_csv(big_inputs_csv)
 
-    if args.plot_inputs or args.plot_eval:
+    if args.plot_inputs or args.plot_evals:
         start = time.perf_counter()
-        c_names = dict(big_stats_df[["TI", "Type"]].sort_values(by="TI").values)
         stats_summary_plot = args.out_folder.joinpath("stats.pdf")
 
-        swarm_args = dict(kind='swarm', palette='deep', dodge=True)
-        violin_args = dict(kind='violin', inner=None, cut=0,
-                           scale='width', palette='pastel')
-        x_order = ["direct", "interpolation", "edhucat"]
-        hue_order = ["a2c", "ppo"]
-        seaborn.set_style("darkgrid")
+        set_seaborn_style()
 
         if args.plot_inputs:
             inputs_summary_plot = args.out_folder.joinpath("inputs.pdf")
             with PdfPages(inputs_summary_plot) as pdf:
-
                 common_args = dict(
                     data=big_inputs_df[big_inputs_df["Signs"] != "All"],
                     x="Trainer", col='Signs', y="Success", hue="Algo",
-                    order=x_order, hue_order=hue_order)
-                g = seaborn.catplot(**swarm_args, **common_args)
+                    order=X_ORDER, hue_order=HUE_ORDER)
+                g = seaborn.catplot(**SWARM_ARGS, **common_args)
                 g.map_dataframe(seaborn.violinplot,
-                                **violin_args, **common_args)
-                analyze(g.axes_dict, **common_args)
+                                **VIOLIN_ARGS, **common_args)
+                analyze_args = dict(pivot_columns="Signs",
+                                    data_column="Success")
+                analyze(g.axes_dict, **analyze_args, **common_args)
                 move_legend(g)
                 pdf.savefig(g.figure)
 
@@ -603,57 +649,75 @@ def main():
                 common_args.pop('col')
                 fig, ax = plt.subplots()
                 seaborn.swarmplot(**common_args, ax=ax,
-                                  **{k: v for k, v in swarm_args.items()
+                                  **{k: v for k, v in SWARM_ARGS.items()
                                      if k != "kind"})
                 handles = ax.legend_.legendHandles
                 labels = [text.get_text() for text in ax.legend_.texts]
 
-                seaborn.violinplot(**common_args, **violin_args, ax=ax)
+                seaborn.violinplot(**common_args, **VIOLIN_ARGS, ax=ax)
 
-                analyze({"All": ax}, **common_args)
+                analyze({"All": ax},
+                        **analyze_args, **common_args)
                 move_legend(fig, ax=ax, hdl=handles, lbl=labels)
                 fig.tight_layout()
                 pdf.savefig(fig)
 
             print("Saved inputs summary plot to", inputs_summary_plot)
 
-        if args.plot_eval:
+        if args.plot_evals:
+            big_stats_df.drop("Name", axis='columns', inplace=True)
+
             columns = [c for c in big_stats_df.columns if c[0].lower() == c[0]]
-            for c in ["time", "failure", "done", "len", "steps"]:
-                columns.remove(c)
-
-            def foo(x):
-                print(f"x='{x}'")
-                return x
-
-            print(big_stats_df)
-            big_stats_df['speed'] = big_stats_df['len'] / big_stats_df['steps']
-            print(big_stats_df.groupby(['Trainer', 'Algo', 'Replicate']).agg(foo))
+            for column in ["time", "failure", "done", "len", "steps"]:
+                columns.remove(column)
 
             print("Plotting data for columns:", " ".join(columns))
-
             with PdfPages(stats_summary_plot) as pdf:
-                for c in columns:
+                c_names = dict(big_stats_df[["TI", "Type"]]
+                               .sort_values(by="TI").values)
+                r_names = {0: "Min", 1: "Median", 2: "Max", 3: "$\\mathbb{E}$"}
+                for column in columns:
                     common_args = dict(
                         data=big_stats_df,
-                        x="Trainer", y=c, hue="Algo",
-                        order=x_order, hue_order=hue_order
+                        x="Trainer", y=column, hue="Algo",
+                        order=X_ORDER, hue_order=HUE_ORDER
                     )
-                    g = seaborn.catplot(**common_args,
-                                        **swarm_args, s=4,
-                                        col="TI", row="MI", margin_titles=True)
+                    plot = seaborn.catplot(**common_args,
+                                           **SWARM_ARGS, s=4,
+                                           col="TI", row="MI", margin_titles=True)
 
-                    g.map_dataframe(seaborn.violinplot,
-                                    **violin_args, **common_args)
+                    plot.map_dataframe(seaborn.violinplot,
+                                       **VIOLIN_ARGS, **common_args)
 
                     # analyze(g.axes_dict, **common_args)
 
-                    g.figure.suptitle(c, fontsize='x-large')
-                    for ax, name in zip(g.axes[0], c_names.values()):
-                        ax.set_title(name)
-                    move_legend(g)
+                    plot.figure.suptitle(column, fontsize='x-large')
+                    rows, cols = plot.axes.shape
+                    for i, j in np.ndindex(plot.axes.shape):
+                        ax: Axes = plot.axes[i, j]
+                        if title := ax.get_title():
+                            key = int(title.split(' = ')[-1])
+                            ax.set_title(c_names.get(key, "???"))
+                        if text := next((c for c in ax.get_children()
+                                         if isinstance(c, Annotation)), None):
+                            key = int(text.get_text().split(' = ')[-1])
+                            text.set_text(r_names.get(key, "!!!"))
 
-                    pdf.savefig(g.figure)
+                        last_row, last_col = (i == rows - 1), (j == cols - 1)
+                        if last_row or last_col:
+                            r, g, b, a = ax.get_facecolor()
+                            r, g, b = [v * .9 ** (int(last_row) + int(last_col))
+                                       for v in (r, g, b)]
+                            ax.set_facecolor((r, g, b, a))
+
+                        if last_row and last_col:
+                            analyze({(rows - 1, cols - 1): ax},
+                                    pivot_columns=["MI", "TI"],
+                                    data_column=column,
+                                    **common_args)
+                    move_legend(plot)
+
+                    pdf.savefig(plot.figure)
             print("Saved stats summary plot to", stats_summary_plot)
 
         print(f"Plotted summary in {_pretty_delta(start)}")

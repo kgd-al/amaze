@@ -1,12 +1,9 @@
 #!/usr/bin/env python3
 import os.path
-import pprint
-import sys
 import time
 from collections import defaultdict
 from datetime import timedelta
 from pathlib import Path
-from typing import Optional
 
 import humanize.time
 import matplotlib.pyplot as plt
@@ -14,18 +11,12 @@ import numpy as np
 import pandas as pd
 import seaborn
 import seaborn as sns
-from PyQt5.QtGui import QImage, QPainter
-from PyQt5.QtWidgets import QApplication
 from matplotlib.axes import Axes
 from tensorboard.backend.event_processing.event_accumulator \
     import EventAccumulator
 
-from amaze.simu.env.maze import Maze
-from amaze.simu.robot import InputType
-from amaze.simu.simulation import Simulation
-from amaze.visu import resources
-from amaze.visu.widgets.labels import InputsLabel
-from amaze.visu.widgets.maze import MazeWidget
+from amaze.bin.sb3.common import (X_ORDER, HUE_ORDER, SWARM_ARGS, VIOLIN_ARGS,
+                                  set_seaborn_style, move_legend)
 
 
 def __to_km_string(v):
@@ -218,7 +209,8 @@ if __name__ == '__main__':
     start = time.perf_counter()
 
     # training_types = ["edhucat"]
-    training_types = ["direct", "interpolation", "edhucat"]
+    training_types = X_ORDER
+    algos = HUE_ORDER
 
     out_folder = Path("results/train_summary/")
     dataframe_file = out_folder.joinpath("stats.csv")
@@ -230,20 +222,17 @@ if __name__ == '__main__':
             dataframe = (
                 process(tt, sorted(list(Path(".").glob(f"results/{tt}*/**/run*"))),
                         dataframe))
-        print(dataframe)
         dataframe.to_csv(dataframe_file, index=False)
 
-    common_args = dict(x="Trainer", y="Reward", hue="Algo",
-                       order=training_types,)
-    g = seaborn.catplot(data=dataframe, **common_args,
-                        kind='swarm',
-                        aspect=5)
-    g.map_dataframe(seaborn.violinplot, **common_args,
-                    split=True, cut=0, scale='width',
-                    palette='pastel')
+    set_seaborn_style()
 
-    seaborn.move_legend(g, "upper center", ncol=3, title=None)
-    g.figure.tight_layout()
+    common_args = dict(x="Trainer", y="Reward", hue="Algo",
+                       order=training_types, hue_order=algos)
+    g = seaborn.catplot(data=dataframe, **common_args, **SWARM_ARGS,
+                        aspect=5)
+    g.map_dataframe(seaborn.violinplot, **common_args, **VIOLIN_ARGS)
+
+    move_legend(g)
     g.figure.savefig(out_folder.joinpath('stats.pdf'))
 
     # find_events(Path(sys.argv[1]))
