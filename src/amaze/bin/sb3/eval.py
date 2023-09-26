@@ -25,14 +25,18 @@ from PyQt5.QtGui import QImage, QPainter, QColor
 from PyQt5.QtWidgets import QApplication
 from matplotlib.axes import Axes
 from matplotlib.backends.backend_pdf import PdfPages
+from matplotlib.figure import Figure
+from matplotlib.legend import Legend
+from matplotlib.lines import Line2D
 from matplotlib.text import Annotation
+from matplotlib.collections import PathCollection
 from scipy.stats import mannwhitneyu
 from statannotations.Annotator import Annotator
 from tqdm import tqdm
 
 from amaze.bin import maze_viewer
 from amaze.bin.sb3.common import (move_legend, set_seaborn_style, X_ORDER,
-                                  HUE_ORDER, SWARM_ARGS, VIOLIN_ARGS)
+                                  HUE_ORDER, SWARM_ARGS, VIOLIN_ARGS, FIG_SIZE_INCHES)
 from amaze.sb3.callbacks import recurse_avg_dict
 from amaze.sb3.utils import CV2QTGuard
 from amaze.simu.controllers.control import load
@@ -216,16 +220,21 @@ def __debug_draw_input(array: np.ndarray, correct_action: Action,
 
 
 def __debug_draw_inputs(folder: Path, inputs, outputs: Optional = None):
+    i_type_list = {t: i for i, t in enumerate([None, SignType.LURE,
+                                               SignType.CLUE, SignType.TRAP])}
+    inputs = sorted(inputs, key=lambda t: i_type_list[t[2]])
+    pprint.pprint(inputs)
+
     n_inputs = len(inputs)
     i_digits = math.ceil(math.log10(n_inputs))
-    cols = math.ceil(math.sqrt(n_inputs))
+    cols = math.ceil(math.sqrt(n_inputs) * 16/9)
     rows = math.ceil(n_inputs / cols)
 
     margin = 4
     big_image = QImage(cols * (DEBUG_IMAGE_SIZE + margin),
                        rows * (DEBUG_IMAGE_SIZE + margin),
-                       QImage.Format_RGB32)
-    big_image.fill(Qt.darkGray)
+                       QImage.Format_ARGB32)
+    big_image.fill(Qt.transparent)
     painter = QPainter(big_image)
 
     for i, ((arr, act, _), o) in \
@@ -318,12 +327,36 @@ def evaluate_inputs(inputs, controller, folder):
     __debug_draw_inputs(folder, inputs, outputs)
 
     data = {"Empty" if k is None else k.value:
-                v[0] / v[1] for k, v in counts.items()}
+            v[0] / v[1] for k, v in counts.items()}
     data["All"] = np.average(list(data.values()))
     df = pd.DataFrame.from_dict(
         data, orient="index", columns=["Success"])
     df.index.name = "Signs"
     return df
+
+
+def swarmed_violinplot(common_args: dict,
+                       violin_args: dict = VIOLIN_ARGS,
+                       swarm_args: dict = SWARM_ARGS,
+                       analyze_args: Optional[dict] = None,
+                       analyze_value: Optional[float|str] = None):
+
+    swarm_args = swarm_args.copy()
+    swarm_args.pop('kind')
+
+    fig, ax = plt.subplots()
+    seaborn.swarmplot(**common_args, ax=ax, **swarm_args)
+    handles = ax.legend_.legendHandles
+    labels = [text.get_text() for text in ax.legend_.texts]
+
+    seaborn.violinplot(**common_args, **violin_args, ax=ax)
+
+    if analyze_args and analyze_value:
+        analyze({analyze_value: ax}, **analyze_args, **common_args)
+
+    move_legend(fig, ax=ax, hdl=handles, lbl=labels, loc='best')
+
+    return fig, ax
 
 
 def analyze(axes_dict, order, hue_order, data,
@@ -357,15 +390,17 @@ def analyze(axes_dict, order, hue_order, data,
         positive = [s <= .05 for s in stats]
         filtered_pairs = [pair for pair, p in zip(pairs, positive) if p]
 
-        if len(filtered_pairs) > 0:
-            print("#" * 80)
-            print("##", pivot_columns, "=", name)
-            print("#" * 10)
-            for (kl, kr), v, p in zip(pairs, stats, positive):
-                if p:
-                    print(f"{v:.2g}",
-                          " vs ".join(["/".join(k) for k in [kl, kr]]))
+        print("#" * 80)
+        print(f"## {pivot_columns} = {name} ({data_column})")
+        print("#" * 10)
+        for (kl, kr), v, p in zip(pairs, stats, positive):
+            msg = (f"[{'X' if p else ' '}] {v:.2g} "
+                   + " vs ".join(["/".join(k) for k in [kl, kr]]))
+            if p:
+                msg = f"\033[1m{msg}\033[0m"
+            print(msg)
 
+        if len(filtered_pairs) > 0:
             annot = Annotator(ax=ax, pairs=filtered_pairs,
                               order=order, hue_order=hue_order, data=data,
                               **plot_args)
@@ -390,6 +425,8 @@ class Options:
     summarize: bool = True
     plot_inputs: bool = True
     plot_evals: bool = True
+    plot_scatters: bool = True
+    plot_results: bool = True
 
     @staticmethod
     def populate(parser: argparse.ArgumentParser):
@@ -425,6 +462,11 @@ class Options:
         parser.add_argument("--no-plot-evals", dest='plot_evals',
                             action='store_false',
                             help="Do not plot re-eval performance graphs")
+
+        parser.add_argument("--no-plot-scatters",
+                            dest='plot_scatters',
+                            action='store_false',
+                            help="Do not plot cross-performance graphs")
 
 
 def main():
@@ -474,7 +516,7 @@ def main():
         stats_files.append(stats_file)
 
         controller = load(controller_file)
-        if False and not args.force_eval and out_folder.exists():
+        if not args.force_eval and out_folder.exists():
             pb.update(n_mazes)
             continue
 
@@ -483,9 +525,6 @@ def main():
         inputs_df = evaluate_inputs(inputs, controller,
                                     out_folder.joinpath("inputs"))
         inputs_df.to_csv(out_folder.joinpath("inputs.csv"))
-
-        print("Skipping evaluation")
-        continue
 
         infos_df = None
         for index in mazes.index:
@@ -536,6 +575,7 @@ def main():
 
     big_stats_csv = args.out_folder.joinpath("stats.csv")
     big_inputs_csv = args.out_folder.joinpath("inputs.csv")
+    summary_csv = args.out_folder.joinpath("summary.csv")
     if args.summarize:
         start = time.perf_counter()
         big_stats_df, big_inputs_df = pd.DataFrame(), pd.DataFrame()
@@ -568,7 +608,7 @@ def main():
                                  as_index=False)
             .agg(partial(agg, mapping=dict(
                 Name=lambda _: np.nan,
-                Type=lambda c: '/'.join(set(c)),
+                Type=lambda c: "r_marginal",
                 TI=lambda c: c.max() + 1,
                 MI=lambda c: c.mean()))))
         cols_marginals = (
@@ -576,7 +616,7 @@ def main():
                                  as_index=False)
             .agg(partial(agg, mapping=dict(
                 Name=lambda _: np.nan,
-                Type=lambda c: "/".join(set(c)),
+                Type=lambda c: "c_marginal",
                 TI=lambda c: c.mean(),
                 MI=lambda c: c.max() + 1))))
 
@@ -585,7 +625,7 @@ def main():
                                  as_index=False)
             .agg(partial(agg, mapping=dict(
                 Name=lambda _: np.nan,
-                Type=lambda _: "$\\mathbb{E}$",
+                Type=lambda _: "all",
                 TI=lambda c: c.max() + 1,
                 MI=lambda c: c.max() + 1))))
 
@@ -593,7 +633,7 @@ def main():
                                   rows_marginals, cols_marginals,
                                   marginals])
 
-        big_stats_df.insert(6, 'speed',
+        big_stats_df.insert(9, 'speed',
                             big_stats_df['len'] / big_stats_df['steps'])
         big_stats_df.sort_values(by=list(big_stats_df.columns[:4]), axis=0,
                                  inplace=True, ignore_index=True)
@@ -615,56 +655,77 @@ def main():
                                  append=True, inplace=True)
         inputs_summary.to_csv(args.out_folder.joinpath("inputs_ranks.csv"))
 
+        summary_index = ["Trainer", "Algo", "Replicate"]
+        summary_df = [
+            big_stats_df[big_stats_df.Type == 'all']
+            .drop(['Type', 'TI', 'Name', 'MI'],
+                  axis='columns').set_index(summary_index),
+            big_inputs_df.pivot(index=summary_index,
+                                columns="Signs", values="Success")
+        ]
+        summary_df = summary_df[0].join(summary_df[1], on=summary_index)
+        summary_df.drop(["time", "failure", "done", "len", "steps",
+                         *[f"errors/{s}" for s in ["clue", "lure", "trap"]]],
+                        axis=1, inplace=True)
+        rank_df = (summary_df.rank(ascending=False).astype(int)
+                   .rename(columns={k: f"{k}_r" for k in summary_df.columns}))
+        summary_df = summary_df.join(rank_df)
+        summary_df = summary_df[sorted(summary_df.columns)]
+        summary_df.to_csv(summary_csv)
+
         print(f"Aggregated data in {_pretty_delta(start)}")
 
     else:
         big_stats_df = pd.read_csv(big_stats_csv)
         big_inputs_df = pd.read_csv(big_inputs_csv)
+        summary_df = pd.read_csv(summary_csv)
 
-    if args.plot_inputs or args.plot_evals:
+    if any([args.plot_inputs, args.plot_evals, args.plot_results]):
         start = time.perf_counter()
-        stats_summary_plot = args.out_folder.joinpath("stats.pdf")
 
         set_seaborn_style()
+
+        inputs_facets_args = dict(
+            data=big_inputs_df[big_inputs_df["Signs"] != "All"],
+            x="Trainer", col='Signs', y="Success", hue="Algo",
+            order=X_ORDER, hue_order=HUE_ORDER)
+
+        inputs_average_args = inputs_facets_args.copy()
+        inputs_average_args['data'] = (
+            big_inputs_df[big_inputs_df["Signs"] == "All"])
+        inputs_average_args.pop('col')
+
+        inputs_analyze_args = dict(pivot_columns="Signs",
+                                   data_column="Success")
+
+        def plot_inputs_per_signs(_analyze, n_cols=None):
+            _g = seaborn.catplot(**SWARM_ARGS, col_wrap=n_cols,
+                                 **inputs_facets_args)
+            _g.map_dataframe(seaborn.violinplot,
+                             **VIOLIN_ARGS, **inputs_facets_args)
+            if _analyze:
+                analyze(axes_dict=_g.axes_dict, **inputs_analyze_args,
+                        **inputs_facets_args)
+            move_legend(_g)
+            return _g.figure
+
+        def plot_inputs_average():
+            return swarmed_violinplot(common_args=inputs_average_args,
+                                      analyze_args=inputs_analyze_args,
+                                      analyze_value="All")
 
         if args.plot_inputs:
             inputs_summary_plot = args.out_folder.joinpath("inputs.pdf")
             with PdfPages(inputs_summary_plot) as pdf:
-                common_args = dict(
-                    data=big_inputs_df[big_inputs_df["Signs"] != "All"],
-                    x="Trainer", col='Signs', y="Success", hue="Algo",
-                    order=X_ORDER, hue_order=HUE_ORDER)
-                g = seaborn.catplot(**SWARM_ARGS, **common_args)
-                g.map_dataframe(seaborn.violinplot,
-                                **VIOLIN_ARGS, **common_args)
-                analyze_args = dict(pivot_columns="Signs",
-                                    data_column="Success")
-                analyze(g.axes_dict, **analyze_args, **common_args)
-                move_legend(g)
-                pdf.savefig(g.figure)
-
-                common_args.update(dict(
-                    data=big_inputs_df[big_inputs_df["Signs"] == "All"],
-                ))
-                common_args.pop('col')
-                fig, ax = plt.subplots()
-                seaborn.swarmplot(**common_args, ax=ax,
-                                  **{k: v for k, v in SWARM_ARGS.items()
-                                     if k != "kind"})
-                handles = ax.legend_.legendHandles
-                labels = [text.get_text() for text in ax.legend_.texts]
-
-                seaborn.violinplot(**common_args, **VIOLIN_ARGS, ax=ax)
-
-                analyze({"All": ax},
-                        **analyze_args, **common_args)
-                move_legend(fig, ax=ax, hdl=handles, lbl=labels)
-                fig.tight_layout()
+                fig = plot_inputs_per_signs(_analyze=True)
+                pdf.savefig(fig)
+                fig, ax = plot_inputs_average()
                 pdf.savefig(fig)
 
             print("Saved inputs summary plot to", inputs_summary_plot)
 
         if args.plot_evals:
+            stats_summary_plot = args.out_folder.joinpath("stats.pdf")
             big_stats_df.drop("Name", axis='columns', inplace=True)
 
             columns = [c for c in big_stats_df.columns if c[0].lower() == c[0]]
@@ -675,7 +736,7 @@ def main():
             with PdfPages(stats_summary_plot) as pdf:
                 c_names = dict(big_stats_df[["TI", "Type"]]
                                .sort_values(by="TI").values)
-                r_names = {0: "Min", 1: "Median", 2: "Max", 3: "$\\mathbb{E}$"}
+                r_names = {0: "Min", 1: "Median", 2: "Max", 3: "c_marginal"}
                 for column in columns:
                     common_args = dict(
                         data=big_stats_df,
@@ -683,8 +744,9 @@ def main():
                         order=X_ORDER, hue_order=HUE_ORDER
                     )
                     plot = seaborn.catplot(**common_args,
-                                           **SWARM_ARGS, s=4,
-                                           col="TI", row="MI", margin_titles=True)
+                                           **SWARM_ARGS,
+                                           col="TI", row="MI",
+                                           margin_titles=True)
 
                     plot.map_dataframe(seaborn.violinplot,
                                        **VIOLIN_ARGS, **common_args)
@@ -720,7 +782,153 @@ def main():
                     pdf.savefig(plot.figure)
             print("Saved stats summary plot to", stats_summary_plot)
 
-        print(f"Plotted summary in {_pretty_delta(start)}")
+        if args.plot_scatters:
+            results_plot = args.out_folder.joinpath("scatters.pdf")
+            with PdfPages(results_plot) as pdf:
+                print("Plotting scatters")
+                print(summary_df.to_string(max_rows=100, max_cols=100))
+
+                for lhs in ["All", "Clue", "Trap"]:
+                    for rhs in ["pretty_reward", "success"]:
+                        g = seaborn.displot(
+                            kind='kde',
+                            data=summary_df, x=lhs, y=rhs,
+                            hue="Trainer", col="Algo",
+                            hue_order=X_ORDER,
+                            fill=True, alpha=.3, legend=False)
+                        g.map_dataframe(
+                            seaborn.scatterplot,
+                            data=summary_df, x=lhs, y=rhs,
+                            hue="Trainer", #col="Algo",
+                            style='Replicate',
+                            hue_order=X_ORDER, legend=True)
+                        g.add_legend()
+
+                        g.figure.suptitle(f"{lhs} / {rhs}")
+
+                        pdf.savefig(g.figure)
+
+            # complexity_plot = args.out_folder.joinpath("complexity.pdf")
+            # with (PdfPages(complexity_plot) as pdf):
+            #     print("Plotting complexity")
+            #     mazes_df = pd.read_csv(
+            #         args.out_folder.parent
+            #         .joinpath("train_summary/edhucat_mazes.csv"),
+            #         index_col=['Algo', 'Run', 'I', 'T']
+            #     )
+            #
+            #     df = big_inputs_df[(big_inputs_df.Signs == 'All') &
+            #                        (big_inputs_df.Trainer == 'edhucat')]
+            #     df.set_index(keys=["Algo", "Replicate"], inplace=True)
+            #     for (a, r), v in df['Success'].items():
+            #         mazes_df.loc[(a, int(r[-1]), slice(None), slice(None)), "Signs"] = v
+            #
+            #     df = big_stats_df[(big_stats_df.Type == 'all') &
+            #                       (big_stats_df.Trainer == 'edhucat')]
+            #     df.set_index(keys=["Algo", "Replicate"], inplace=True)
+            #     for (a, r), v in df[["pretty_reward", "success"]].iterrows():
+            #         mazes_df.loc[(a, int(r[-1]), slice(None), slice(None)),
+            #                      ["Reward", "Success"]] = v.values
+            #
+            #     mazes_df.rename_axis(index={'I': "Stage"}, inplace=True)
+            #
+            #     cmap = "viridis"
+            #
+            #     interpolation_df = pd.read_csv(args.data_folder.joinpath(
+            #         "../interpolation_data/traps-median/mazes_stats.csv"))
+            #     interpolation_df.replace({'Set': {0: 'Eval', 1: 'Train'}},
+            #                              inplace=True)
+            #     interpolation_df.rename(columns={"ID": "Stage", "Set": "T"},
+            #                             inplace=True)
+            #
+            #     for m_col in ["Emin", "Emax", "path", "intersections",
+            #                   "clues", "lures", "traps"]:
+            #         v_min, v_max = np.quantile(mazes_df[m_col], [0, 1])
+            #         mazes_df[m_col] += np.random.normal(
+            #             0, (v_max - v_min) / 20, len(mazes_df))
+            #
+            #         for h_col in ['Signs', "Success", "Reward"]:
+            #
+            #             norm = plt.Normalize()
+            #             sm = plt.cm.ScalarMappable(cmap=cmap, norm=norm)
+            #
+            #             g = seaborn.relplot(kind='line',
+            #                                 data=mazes_df,
+            #                                 x="Stage", y=m_col,
+            #                                 col='Algo', row="T",
+            #                                 style='Run', dashes=False,
+            #                                 hue=h_col, hue_norm=norm,
+            #                                 palette=cmap,
+            #                                 legend=False)
+            #             for ax in g.axes.flatten():
+            #                 t = ax.get_title().split(' | ')[0]\
+            #                       .split('=')[1].strip()
+            #                 seaborn.lineplot(
+            #                     ax=ax,
+            #                     data=interpolation_df[interpolation_df['T'] == t],
+            #                     x="Stage", y=m_col,
+            #                     color='gray', dashes=(1, 1))
+            #
+            #             g.fig.subplots_adjust(top=.95, bottom=.05)
+            #             g.fig.colorbar(sm, ax=g.axes, cmap=cmap,
+            #                            fraction=.05, pad=.025,
+            #                            label=h_col)
+            #             g.fig.legend(handles=[
+            #                 Line2D([0], [0], color='black',
+            #                        label='EDHuCAT'),
+            #                 Line2D([0], [0], color='gray',
+            #                        dashes=(1, 1), label='Interpolation')])
+            #
+            #             g.figure.suptitle(f"{m_col} / {h_col}")
+            #             pdf.savefig(g.figure)
+            #             plt.close(g.figure)
+
+        if False and args.plot_results:
+            results_plot = args.out_folder.parent.joinpath("summary.pdf")
+            with (PdfPages(results_plot) as pdf):
+
+                def prettify(_ax: Axes, _y_label: Optional[str]):
+                    if _y_label:
+                        _ax.set_ylabel(_y_label)
+                    _ax.set_xticklabels(["Direct", "Interpolation", "EDHuCAT"])
+
+                # ==============================================================
+                # Plot the maze navigation stats
+
+                re_eval_df = big_stats_df[(big_stats_df.MI == 3)
+                                          & (big_stats_df.TI == 6)]
+                re_eval_df.loc[:, 'success'] *= 100
+                common_args = dict(data=re_eval_df, x="Trainer", hue="Algo",
+                                   order=X_ORDER, hue_order=HUE_ORDER)
+                for column, name in [("pretty_reward", "Normalized reward"),
+                                     ("success", "Success (%)")]:
+                    common_args['y'] = column
+                    fig, ax = swarmed_violinplot(
+                        common_args,
+                        analyze_args=dict(pivot_columns="Type",
+                                          data_column=column),
+                        analyze_value="all")
+                    prettify(_ax=ax, _y_label=name)
+                    pdf.savefig(fig)
+
+                # ==============================================================
+                # Plot the input response
+
+                y_label = "Success (%)"
+                fig: Figure = plot_inputs_per_signs(_analyze=False, n_cols=2)
+                for ax in fig.axes:
+                    prettify(_ax=ax, _y_label=y_label)
+                fig.set_size_inches(FIG_SIZE_INCHES)
+                pdf.savefig(fig)
+
+                fig, ax = plot_inputs_average()
+                prettify(_ax=ax, _y_label=y_label)
+                pdf.savefig(fig)
+
+
+            print("Saved results plot to", results_plot)
+
+        print(f"Plotted summaries in {_pretty_delta(start)}")
 
 
 if __name__ == '__main__':
