@@ -30,7 +30,7 @@ from matplotlib.legend import Legend
 from matplotlib.lines import Line2D
 from matplotlib.text import Annotation
 from matplotlib.collections import PathCollection
-from scipy.stats import mannwhitneyu
+from scipy.stats import mannwhitneyu, ttest_ind, false_discovery_control
 from statannotations.Annotator import Annotator
 from tqdm import tqdm
 
@@ -339,7 +339,7 @@ def swarmed_violinplot(common_args: dict,
                        violin_args: dict = VIOLIN_ARGS,
                        swarm_args: dict = SWARM_ARGS,
                        analyze_args: Optional[dict] = None,
-                       analyze_value: Optional[float|str] = None):
+                       analyze_value: Optional[float | str] = None):
 
     swarm_args = swarm_args.copy()
     swarm_args.pop('kind')
@@ -366,8 +366,8 @@ def analyze(axes_dict, order, hue_order, data,
         *[((k, "a2c"), (k, "ppo")) for k in order],
         # *[((X_ORDER[i], k3), (X_ORDER[j], k3)) for k3 in ["a2c", "ppo"]
         #   for i in range(2) for j in range(i+1, 3)]
-        *[((order[i], k3), ("edhucat", k3)) for k3 in hue_order
-          for i in range(2)]
+        *[((order[i], k3), (order[j], k3)) for k3 in hue_order
+          for i in range(2) for j in range(i+1, 3)]
     ]
 
     for name, ax in axes_dict.items():
@@ -383,18 +383,28 @@ def analyze(axes_dict, order, hue_order, data,
             # print(f"sample({pivot_columns}={name}, trainer={t}, algo={a}):\n{df__}")
             return df__
 
-        stats = [
+        mw_stats = [
             mannwhitneyu(sample(t1, a1), sample(t2, a2)).pvalue
             for ((t1, a1), (t2, a2)) in pairs
         ]
-        positive = [s <= .05 for s in stats]
+        mw_c_stats = false_discovery_control(mw_stats)
+        tt_stats = [
+            ttest_ind(sample(t1, a1), sample(t2, a2)).pvalue
+            for ((t1, a1), (t2, a2)) in pairs
+        ]
+        tt_c_stats = false_discovery_control(tt_stats)
+        stats = tt_c_stats
+        positive = [(s <= .04) for s in stats]
         filtered_pairs = [pair for pair, p in zip(pairs, positive) if p]
 
         print("#" * 80)
         print(f"## {pivot_columns} = {name} ({data_column})")
         print("#" * 10)
-        for (kl, kr), v, p in zip(pairs, stats, positive):
-            msg = (f"[{'X' if p else ' '}] {v:.2g} "
+        print("   ", " ".join([f"{s:^7s}" for s in ["mw", "mw_c", "tt", "tt_c"]]))
+        for i, ((kl, kr), v, p) in enumerate(zip(pairs, stats, positive)):
+            msg = (f"[{'X' if p else ' '}] "
+                   + " ".join([f"{lst[i]:7.2g}" for lst in [mw_stats, mw_c_stats, tt_stats, tt_c_stats]])
+                   + " "
                    + " vs ".join(["/".join(k) for k in [kl, kr]]))
             if p:
                 msg = f"\033[1m{msg}\033[0m"
@@ -707,6 +717,7 @@ def main():
                 analyze(axes_dict=_g.axes_dict, **inputs_analyze_args,
                         **inputs_facets_args)
             move_legend(_g)
+            plt.subplots_adjust(hspace=0.2, wspace=0.05)
             return _g.figure
 
         def plot_inputs_average():
@@ -782,7 +793,7 @@ def main():
                     pdf.savefig(plot.figure)
             print("Saved stats summary plot to", stats_summary_plot)
 
-        if args.plot_scatters:
+        if False and args.plot_scatters:
             results_plot = args.out_folder.joinpath("scatters.pdf")
             with PdfPages(results_plot) as pdf:
                 print("Plotting scatters")
@@ -883,9 +894,9 @@ def main():
             #             pdf.savefig(g.figure)
             #             plt.close(g.figure)
 
-        if False and args.plot_results:
+        if args.plot_results:
             results_plot = args.out_folder.parent.joinpath("summary.pdf")
-            with (PdfPages(results_plot) as pdf):
+            with PdfPages(results_plot) as pdf:
 
                 def prettify(_ax: Axes, _y_label: Optional[str]):
                     if _y_label:
@@ -915,16 +926,56 @@ def main():
                 # Plot the input response
 
                 y_label = "Success (%)"
+
+                inputs_facets_args['data'].loc[:, 'Success'] *= 100
                 fig: Figure = plot_inputs_per_signs(_analyze=False, n_cols=2)
                 for ax in fig.axes:
                     prettify(_ax=ax, _y_label=y_label)
                 fig.set_size_inches(FIG_SIZE_INCHES)
                 pdf.savefig(fig)
 
+                inputs_average_args['data'].loc[:, 'Success'] *= 100
                 fig, ax = plot_inputs_average()
                 prettify(_ax=ax, _y_label=y_label)
                 pdf.savefig(fig)
 
+                # ==============================================================
+                # Plot the edhucat stuff
+
+                plt.rcParams["figure.figsize"] = (
+                    FIG_SIZE_INCHES[0] / 3, FIG_SIZE_INCHES[1])
+
+                def df_filter(df_, c):
+                    if "Trainer" in df_.columns:
+                        df_ = df_[df_.Trainer == 'edhucat']
+                    return df_.set_index(keys=["Algo", "Replicate"])[c]
+
+                edhucat_summary = df_filter(re_eval_df,
+                                            ["success", "pretty_reward"])
+                edhucat_summary = edhucat_summary.join(
+                    df_filter(inputs_average_args['data'], "Success")
+                ).join(
+                    df_filter(
+                        pd.read_csv(args.out_folder.parent
+                                    .joinpath("train_summary")
+                                    .joinpath("edhucat_strategies.csv")),
+                        ["Strategy"])
+                ).reset_index()
+                print(edhucat_summary.to_string(max_cols=100, max_rows=100))
+
+                for y, name in [("pretty_reward", "Average normalized reward"),
+                                ("success", "Goal reaching rate (%)"),
+                                ("Success", "Inputs processing rate (%)")]:
+                    fig, ax = plt.subplots()
+                    seaborn.swarmplot(
+                        data=edhucat_summary, ax=ax,
+                        x="Strategy", y=y, hue="Algo",
+                        order=sorted(edhucat_summary['Strategy'].values)
+                    )
+                    ax.set_ylabel(name)
+                    seaborn.move_legend(obj=ax, loc="best", title=None)
+
+                    pdf.savefig(ax.figure)
 
             print("Saved results plot to", results_plot)
 

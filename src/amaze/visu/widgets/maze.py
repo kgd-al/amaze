@@ -16,14 +16,22 @@ from amaze.visu.widgets import _trajectory_plotter
 
 
 class QtPainter(MazePainter):
-    def __init__(self, p: QPainter):
+    def __init__(self, p: QPainter, config: dict):
         self.painter = p
+        dark = config['dark']
+        if config['colorblind']:
+            c1 = QColor("#de8f05")
+            c2 = QColor("#0173b2")
+            c3 = QColor("#029e73")
+        else:
+            c1 = Qt.red
+            c2 = Qt.green
+            c3 = Qt.blue
         self.colors = {
-            Color.WHITE: Qt.white,
-            Color.BLACK: Qt.black,
-            Color.RED: Qt.red,
-            Color.GREEN: Qt.green,
-            Color.BLUE: Qt.blue,
+            Color.FOREGROUND: Qt.white if dark else Qt.black,
+            Color.BACKGROUND: Qt.black if dark else Qt.white,
+            Color.START: c1, Color.FINISH: c2, Color.PATH: c3,
+            Color.COLOR1: c1, Color.COLOR2: c2, Color.COLOR3: c3
         }
 
     def draw_line(self, x0: float, y0: float, x1: float, y1: float, c: Color):
@@ -54,7 +62,27 @@ class QtPainter(MazePainter):
                    img: QImage):
         self.painter.drawImage(QRectF(x, y, w, h).toRect(), img, img.rect())
 
-    def draw_flag(self, x: float, y: float, w: float, h: float, c: Color):
+    def draw_start(self, x: float, y: float, w: float, h: float, c: Color):
+        # m = .2
+        # rh = .33  # Roof height
+        # rt = 1 - m
+        # rl = m + (rt - m) * (1 - rh)
+        # print(rt, rl)
+        #
+        # path = QPainterPath()
+        # path.addRect(QRectF(x + m * w, y + m * h,
+        #                     (1 - 2 * m) * w, (1 - 2 * m) * (1 - rh) * h))
+        # path.moveTo(x + m * w, y + rl * h)
+        # path.lineTo(x + .5 * w, y + rt * h)
+        # path.lineTo(x + (1 - m) * w, y + rl * h)
+        # path.closeSubpath()
+        #
+        # self.painter.setPen(Qt.black)
+        # self.painter.fillPath(path, self.colors[c])
+        # self.painter.drawPath(path)
+        pass
+
+    def draw_finish(self, x: float, y: float, w: float, h: float, c: Color):
         path = QPainterPath()
         path.addRect(QRectF(x + .5 * w - 2, y + .2 * h, 3, .6 * h))
         path.moveTo(x + .5 * w + 1, y + .5 * h)
@@ -81,7 +109,8 @@ class MazeWidget(QLabel):
         self._config = dict(
             solution=True,
             robot=True,
-            dark=False
+            dark=False,
+            colorblind=False,
         )
         if config:
             self._config.update(config)
@@ -194,19 +223,21 @@ class MazeWidget(QLabel):
         painter.translate(1, height)
         painter.scale(1, -1)
 
-        QtPainter(painter).render(maze, config)
+        QtPainter(painter, config).render(maze, config)
 
     def _render(self, painter: QPainter):
+        config = dict(
+            scale=self._scale,
+            clues=self._clues, lures=self._lures, traps=self._traps,
+            outputs=self._simulation.data.outputs,
+            solution=bool(self._config["solution"]),
+            robot=self._simulation.robot_dict()
+            if self._config["robot"] else None)
+        config.update(self._config)
         self.__render(
             painter, self._simulation.maze,
             self._simulation.maze.height * self._scale,
-            dict(scale=self._scale,
-                 clues=self._clues, lures=self._lures, traps=self._traps,
-                 outputs=self._simulation.data.outputs,
-                 solution=bool(self._config["solution"]),
-                 robot=self._simulation.robot_dict()
-                 if self._config["robot"] else None,
-                 dark=self._config["dark"]))
+            config)
 
     @staticmethod
     def __foreground_color(dark: bool): return Qt.white if dark else Qt.black

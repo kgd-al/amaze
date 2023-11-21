@@ -12,6 +12,7 @@ import pandas as pd
 import seaborn
 import seaborn as sns
 from matplotlib.axes import Axes
+from matplotlib.backends.backend_pdf import PdfPages
 from tensorboard.backend.event_processing.event_accumulator \
     import EventAccumulator
 
@@ -181,25 +182,28 @@ def find_events(root: Path):
 def process(training_type, folders, df):
     if df is None:
         df = pd.DataFrame(columns=["Trainer", "Algo", "Replicate",
-                                   "Time", "Reward"])
+                                   "Time", "Reward", "Success"])
     for f in folders:
         paths = None
-        if tt == 'direct':
+        if training_type == 'direct':
             paths = f.glob("*events*")
 
-        elif tt == 'interpolation':
+        elif training_type == 'interpolation':
             paths = f.glob("*events*")
 
-        elif tt == 'edhucat':
+        elif training_type == 'edhucat':
             paths = f.glob("timeline/*events*")
 
         last = sorted(list(paths), key=os.path.getmtime, reverse=False)[-1]
         tokens = str(last).split('/')
         algo = tokens[1].split('-')[1]
-        e = (EventAccumulator(str(last)).Reload()
-             .Scalars('infos/pretty_reward'))[-1]
+        e_s = (EventAccumulator(str(last)).Reload()
+               .Scalars('infos/success'))[-1]
+        e_r = (EventAccumulator(str(last)).Reload()
+               .Scalars('infos/pretty_reward'))[-1]
         df = pd.concat([
-            pd.DataFrame([[tt, algo, tokens[2], e.step, e.value]],
+            pd.DataFrame([[training_type, algo, tokens[2],
+                           e_s.step, e_r.value, e_s.value]],
                          columns=df.columns),
             df])
     return df
@@ -214,7 +218,7 @@ if __name__ == '__main__':
 
     out_folder = Path("results/train_summary/")
     dataframe_file = out_folder.joinpath("stats.csv")
-    if False and dataframe_file.exists():
+    if dataframe_file.exists():
         dataframe = pd.read_csv(dataframe_file)
     else:
         dataframe = None
@@ -226,14 +230,24 @@ if __name__ == '__main__':
 
     set_seaborn_style()
 
-    common_args = dict(x="Trainer", y="Reward", hue="Algo",
-                       order=training_types, hue_order=algos)
-    g = seaborn.catplot(data=dataframe, **common_args, **SWARM_ARGS,
-                        aspect=5)
-    g.map_dataframe(seaborn.violinplot, **common_args, **VIOLIN_ARGS)
+    print(dataframe)
 
-    move_legend(g)
-    g.figure.savefig(out_folder.joinpath('stats.pdf'))
+    with PdfPages(out_folder.joinpath('stats.pdf')) as pdf:
+        for c in ["Reward", "Success"]:
+            common_args = dict(x="Trainer", y=c, hue="Algo",
+                               order=training_types, hue_order=algos)
+            swarm_args = SWARM_ARGS.copy()
+            swarm_args['s'] = 10
+            g = seaborn.catplot(data=dataframe, **common_args, **swarm_args)
+            g.map_dataframe(seaborn.violinplot, **common_args, **VIOLIN_ARGS)
+
+            # move_legend(g)
+            seaborn.move_legend(obj=g.figure,
+                                loc="upper center", bbox_to_anchor=(.55, .98),
+                                title=None, ncols=2, frameon=True)
+            g.figure.tight_layout()
+
+            pdf.savefig(g.figure)
 
     # find_events(Path(sys.argv[1]))
 

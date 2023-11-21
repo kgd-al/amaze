@@ -25,7 +25,7 @@ def move_legend(plot, ax=None, top=.95, hdl=None, lbl=None, **kwargs):
         ax.legend(**l_args)
     else:
         seaborn.move_legend(obj=plot,
-                            loc="lower center", bbox_to_anchor=(.5, -.05),
+                            loc="upper center", bbox_to_anchor=(.5, 1.05),
                             **l_args)
     plt.tight_layout()
     plt.subplots_adjust(top=top)

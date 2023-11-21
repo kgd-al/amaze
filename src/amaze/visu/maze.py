@@ -11,11 +11,14 @@ logger = getLogger(__name__)
 
 
 class Color(Enum):
-    WHITE = auto()
-    BLACK = auto()
-    RED = auto()
-    GREEN = auto()
-    BLUE = auto()
+    BACKGROUND = auto()
+    FOREGROUND = auto()
+    START = auto()
+    FINISH = auto()
+    PATH = auto()
+    COLOR1 = auto()
+    COLOR2 = auto()
+    COLOR3 = auto()
 
 
 class MazePainter(ABC):
@@ -38,7 +41,11 @@ class MazePainter(ABC):
         pass
 
     @abstractmethod
-    def draw_flag(self, x: int, y: int, w: float, h: float, c: Color):
+    def draw_start(self, x: int, y: int, w: float, h: float, c: Color):
+        pass
+
+    @abstractmethod
+    def draw_finish(self, x: int, y: int, w: float, h: float, c: Color):
         pass
 
     def render(self, maze: Maze, options: dict):
@@ -49,50 +56,48 @@ class MazePainter(ABC):
         scale = options["scale"]
         wall = maze.wall
 
-        foreground = Color.WHITE if options["dark"] else Color.BLACK
-
         for i in range(w):
             j = h - 1
             if wall(i, j, NORTH):
                 self.draw_line(i * scale - 1, (j + 1) * scale,
                                (i + 1) * scale, (j + 1) * scale,
-                               foreground)
+                               Color.FOREGROUND)
             j = 0
             if wall(i, j, SOUTH):
                 self.draw_line(i * scale - 1, j * scale - 1,
                                (i + 1) * scale, j * scale - 1,
-                               foreground)
+                               Color.FOREGROUND)
 
         for j in range(h):
             i = w - 1
             if wall(i, j, EAST):
                 self.draw_line((i + 1) * scale, j * scale - 1,
                                (i + 1) * scale, (j + 1) * scale,
-                               foreground)
+                               Color.FOREGROUND)
             i = 0
             if wall(i, j, WEST):
                 self.draw_line(i * scale - 1, j * scale - 1,
                                i * scale - 1, (j + 1) * scale,
-                               foreground)
+                               Color.FOREGROUND)
 
         for i in range(w):
             for j in range(h):
                 if wall(i, j, EAST):
                     self.draw_line((i + 1) * scale - 1, j * scale - 1,
                                    (i + 1) * scale - 1, (j + 1) * scale,
-                                   foreground)
+                                   Color.FOREGROUND)
                 if wall(i, j, NORTH):
                     self.draw_line(i * scale - 1, (j + 1) * scale - 1,
                                    (i + 1) * scale, (j + 1) * scale - 1,
-                                   foreground)
+                                   Color.FOREGROUND)
                 if wall(i, j, WEST):
                     self.draw_line(i * scale, j * scale - 1,
                                    i * scale, (j + 1) * scale,
-                                   foreground)
+                                   Color.FOREGROUND)
                 if wall(i, j, SOUTH):
                     self.draw_line(i * scale - 1, j * scale,
                                    (i + 1) * scale, j * scale,
-                                   foreground)
+                                   Color.FOREGROUND)
 
         if options["solution"] and maze.solution is not None:
             if maze.unicursive():
@@ -101,7 +106,7 @@ class MazePainter(ABC):
                     ignored_cells.remove(e)
                 for i, j in ignored_cells:
                     self.fill_rect(i * scale, j * scale, scale, scale,
-                                   foreground, foreground)
+                                   Color.FOREGROUND, Color.FOREGROUND)
 
             # painter.setPen(Qt.blue)
             i0, j0 = maze.solution[0]
@@ -110,7 +115,7 @@ class MazePainter(ABC):
             for i, (i1, j1) in enumerate(maze.solution[1:]):
                 self.draw_line((i0 + .5) * scale, (j0 + .5) * scale - 1,
                                (i1 + .5) * scale, (j1 + .5) * scale - 1,
-                               Color.BLUE)
+                               Color.PATH)
                 i0, j0 = i1, j1
 
         for t in SignType:
@@ -124,27 +129,28 @@ class MazePainter(ABC):
                                     scale - 2, scale - 2,
                                     img)
 
-        for (i, j), c in [(maze.start, Color.RED), (maze.end, Color.GREEN)]:
-            self.draw_flag(i*scale, j * scale, scale, scale, c)
+        for f, (i, j), c in [(self.draw_start, maze.start, Color.START),
+                             (self.draw_finish, maze.end, Color.FINISH)]:
+            f(i * scale, j * scale, scale, scale, c)
 
         if r := options.get("robot"):
             i, j = r["pos"]
             if options["outputs"] is OutputType.DISCRETE:
                 self.fill_rect((i - .5) * scale, (j - .5) * scale, scale, scale,
-                               Color.RED, Color.RED, alpha=.25)
+                               Color.COLOR1, Color.COLOR1, alpha=.25)
 
             elif options["outputs"] is OutputType.CONTINUOUS:
                 x, y = scale * r["pos"]
                 self.fill_circle(x, y, Robot.RADIUS * scale,
-                                 None, Color.GREEN)
+                                 None, Color.COLOR1)
 
                 if v := r.get("vel"):
                     v *= scale
-                    self.draw_line(x, y, x+v.x, y+v.y, Color.BLUE)
+                    self.draw_line(x, y, x+v.x, y+v.y, Color.COLOR3)
 
                 if a := r.get("acc"):
                     a *= scale
-                    self.draw_line(x, y, x+a.x, y+a.y, Color.RED)
+                    self.draw_line(x, y, x+a.x, y+a.y, Color.COLOR1)
 
             else:
                 raise ValueError

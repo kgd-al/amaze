@@ -45,6 +45,9 @@ class Options:
     plot: Optional[Path] = None
     width: int = 256
 
+    dark: bool = False
+    colorblind: bool = False
+
     @staticmethod
     def populate(parser: argparse.ArgumentParser):
         group = parser.add_argument_group(
@@ -74,8 +77,15 @@ class Options:
                             help="Plot trajectory of provided agent to"
                                  " provided path")
 
-        parser.add_argument("--width", dest="width", type=int,
+        parser.add_argument("--width", type=int,
                             help="Offscreen rendering target width")
+
+        parser.add_argument("--dark", action='store_true',
+                            help="Dark background?"
+                                 " (identical to agent's perceptions)")
+
+        parser.add_argument("--colorblind", action='store_true',
+                            help="Use colorblind-friendly colormaps")
 
 
 def __make_simulation(args, trajectory=False):
@@ -128,7 +138,8 @@ def main(sys_args: Optional[Sequence[str]] = None):
                                 config=dict(
                                     robot=False,
                                     solution=True,
-                                    dark=True
+                                    dark=args.dark,
+                                    colorblind=args.colorblind
                                 ),
                                 width=args.width)
             if widget.draw_to(args.render):
