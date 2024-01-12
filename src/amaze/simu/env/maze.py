@@ -405,10 +405,10 @@ class Maze:
         if bd.unicursive:
             f += sep + "U"
         f += ''.join(f"{sep}C{Sign.to_string(s)}" for s in bd.clue)
-        if bd.p_lure:
+        if bd.p_lure and bd.lure:
             f += f"{sep}l" + f"{bd.p_lure:.2g}".lstrip('0')
             f += ''.join(f"{sep}L{Sign.to_string(s)}" for s in bd.lure)
-        if bd.p_trap:
+        if bd.p_trap and bd.trap:
             f += f"{sep}t" + f"{bd.p_trap:.2g}".lstrip('0')
             f += ''.join(f"{sep}T{Sign.to_string(s)}" for s in bd.trap)
         return f

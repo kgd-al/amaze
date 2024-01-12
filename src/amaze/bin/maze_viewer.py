@@ -128,7 +128,7 @@ def main(sys_args: Optional[Sequence[str]] = None):
         os.environ["QT_QPA_PLATFORM"] = "offscreen"
 
     app = QApplication([])
-    logging.basicConfig(level=logging.DEBUG, force=True)
+    logging.basicConfig(level=logging.DEBUG)
 
     if not window:
         simulation = __make_simulation(args)
@@ -143,7 +143,7 @@ def main(sys_args: Optional[Sequence[str]] = None):
                                 ),
                                 width=args.width)
             if widget.draw_to(args.render):
-                print(f"Saved {simulation.maze.to_string()} to {args.render}")
+                logger.info(f"Saved {simulation.maze.to_string()} to {args.render}")
 
         if simulate:
             simulation.reset(save_trajectory=True)

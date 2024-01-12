@@ -119,8 +119,7 @@ def complexity(maze: Maze, visuals: np.ndarray, inputs: InputType):
 
     inputs = []
     entropy = []
-    for f, k in [(__solution_path, "minimal"),
-                 (__all_inputs, "maximal")]:
+    for f in [__solution_path, __all_inputs]:
         i = f(maze, visuals)
         inputs.append(len(i))
         entropy.append(__entropy_bits(i))
@@ -131,5 +130,5 @@ def complexity(maze: Maze, visuals: np.ndarray, inputs: InputType):
 
     # print(f"{inputs=} {entropy=}")
     return dict(inputs=dict(zip(["min", "max"], inputs)),
-                entropy=dict(zip(["min", "max"], entropy)),
+                entropy=dict(zip(["path", "all"], entropy)),
                 mutual_information=mutual_info)
