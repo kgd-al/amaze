@@ -13,7 +13,9 @@ from typing import Optional, List, Sequence
 import pandas as pd
 import seaborn
 from matplotlib.backends.backend_pdf import PdfPages
+from matplotlib.ticker import LinearLocator
 from tqdm import tqdm
+import tqdm.contrib.itertools as tqdm_iter
 
 from amaze.bin import maze_viewer
 from amaze.simu.env.maze import Maze
@@ -29,7 +31,7 @@ class Options:
     out: Path = Path("tmp/maze_distributions")
     df_path = None
 
-    generate: bool = True
+    generate: bool = False
     plot: bool = True
 
     @staticmethod
@@ -41,8 +43,8 @@ class Options:
 
         parser.add_argument("--no-plot", action="store_false", dest="plot",
                             help="Do not generate summary plots")
-        parser.add_argument("--no-generate", action="store_false", dest="generate",
-                            help="Use existing sampled data (if any)")
+        parser.add_argument("--force-generate", action="store_true", dest="generate",
+                            help="Force sampled data regeneration (if any)")
 
 
 def __bd(clues=False, lures=False, p_lure=0, traps=False, p_trap=0):
@@ -130,17 +132,28 @@ def generate(args):
 def plot(df, args):
     out = args.df_path.with_suffix(".pdf")
     seaborn.set_style("darkgrid")
+    print(df.columns)
+    print(df.dtypes)
     with PdfPages(out) as pdf:
-        for row in ["Prob.", "SSize"]:
-            for c in ["Epath", "Eall"]:
-                common_args = dict(x="Class", y=c, col=row, row='size')
-                violin_args = dict(
-                    kind='violin', cut=0, scale='count', palette='pastel'
-                )
-                g = seaborn.catplot(data=df, **common_args, **violin_args)
-                g.figure.tight_layout()
+        for col, y in tqdm_iter.product(["Prob.", "SSize"], ["Epath", "Eall"],
+                                        desc="Violin plots"):
+            g = seaborn.catplot(data=df, x="Class", hue="Class", y=y, col=col, row='size',
+                                kind='violin', cut=0, density_norm='count',
+                                palette="pastel")
+            g.figure.tight_layout()
 
-                pdf.savefig(g.figure)
+            pdf.savefig(g.figure)
+
+        for col, x, y in tqdm_iter.product(["Prob.", "SSize"],
+                                           ["path", "intersections"],
+                                           ["Epath", "Eall"],
+                                           desc="Strip plots"):
+            g = seaborn.catplot(data=df, x=x, y=y, hue="Class", col=col, row="size",
+                                kind='strip')
+            for ax in g.axes[-1]:
+                ax.xaxis.set_major_locator(LinearLocator(5))
+            g.figure.tight_layout()
+            pdf.savefig(g.figure)
     print("Generated", out)
 
 
