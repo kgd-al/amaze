@@ -18,6 +18,7 @@ from tqdm import tqdm
 import tqdm.contrib.itertools as tqdm_iter
 
 from amaze.bin import maze_viewer
+from amaze.simu._maze_metrics import MazeMetrics
 from amaze.simu.env.maze import Maze
 from amaze.simu.robot import InputType
 from amaze.simu.simulation import Simulation
@@ -109,9 +110,11 @@ def generate(args):
                              .split(" "))
 
         stats = maze.stats()
-        c = Simulation.compute_complexity(maze, InputType.DISCRETE, 5)['entropy']
-        stats.update({f"E{k}": v for k, v in c.items()})
-        stats['Deceptiveness'] = Simulation.compute_deceptiveness(maze, InputType.DISCRETE)
+        cm = Simulation.compute_metrics(maze, InputType.DISCRETE, 5)
+        surprisingness = cm[MazeMetrics.SURPRISINGNESS]['entropy']
+        stats.update({f"E{k}": v for k, v in surprisingness.items()})
+        stats['Deceptiveness'] = cm[MazeMetrics.DECEPTIVENESS]
+        stats['Inseparability'] = cm[MazeMetrics.INSEPARABILITY]
         stats['Name'] = maze_str
         stats['Class'] = class_name
         stats['Prob.'] = p
@@ -136,10 +139,12 @@ def plot(df, args):
     print(df.columns)
     print(df.dtypes)
     with PdfPages(out) as pdf:
-        for col, y in tqdm_iter.product(["Prob.", "SSize"], ["Epath", "Eall"],
+        for col, y in tqdm_iter.product(["Prob.", "SSize"],
+                                        ["Epath", "Eall"],
                                         desc="Violin plots"):
-            g = seaborn.catplot(data=df, x="Class", hue="Class", y=y, col=col, row='size',
-                                kind='violin', cut=0, density_norm='count',
+            g = seaborn.catplot(data=df, x="Class", hue="Class", y=y,
+                                col=col, row='size',
+                                kind='violin', cut=0, width=1,
                                 palette="pastel")
             g.figure.tight_layout()
 
@@ -149,8 +154,8 @@ def plot(df, args):
                                            ["path", "intersections"],
                                            ["Epath", "Eall"],
                                            desc="Strip plots"):
-            g = seaborn.catplot(data=df, x=x, y=y, hue="Class", col=col, row="size",
-                                kind='strip')
+            g = seaborn.catplot(data=df, x=x, y=y, hue="Class", col=col,
+                                row="size", kind='strip')
             for ax in g.axes[-1]:
                 ax.xaxis.set_major_locator(LinearLocator(5))
             g.figure.tight_layout()

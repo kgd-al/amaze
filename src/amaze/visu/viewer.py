@@ -12,6 +12,7 @@ from PyQt5.QtWidgets import (QMainWindow, QHBoxLayout, QWidget, QLabel,
                              QDoubleSpinBox, QFormLayout, QFrame, QGridLayout,
                              QFileDialog, QSizePolicy, QScrollArea)
 
+from amaze.simu._maze_metrics import MazeMetrics
 from amaze.simu.controllers.control import (Controllers, controller_factory,
                                             load)
 from amaze.simu.controllers.random import RandomController
@@ -160,12 +161,19 @@ class MainWindow(QWidget):
             self.next_action = self._think()
         self._update()
 
-        complexity = Simulation.compute_complexity(
-                        self.simulation.maze, self.simulation.data.inputs,
-                        self.simulation.data.vision)
-        complexity_str = (
-            ', '.join([f'{v:.2g}' for v in complexity['entropy'].values()]))
-        self.stats["m_complexity"].setText(f"[{complexity_str}]")
+        maze_metrics = Simulation.compute_metrics(
+            self.simulation.maze, self.simulation.data.inputs,
+            self.simulation.data.vision)
+        pprint.pprint(maze_metrics)
+        s_str = (
+            ', '.join([f'{v:.2g}' for v in
+                       maze_metrics[MazeMetrics.SURPRISINGNESS].values()]))
+        for m, v in [(MazeMetrics.SURPRISINGNESS, f"{{{s_str}}}"),
+                     (MazeMetrics.DECEPTIVENESS, None),
+                     (MazeMetrics.INSEPARABILITY, None)]:
+            if v is None:
+                v = f"{maze_metrics[m]:.2g}"
+            self.stats[f"m_{m.name.lower()}"].setText(v)
 
         title = self.simulation.maze.to_string()
         if self.controller:
@@ -554,7 +562,8 @@ class MainWindow(QWidget):
 
         layout.addRow(self._section("Maze"))
         add_fields(["m_size", "m_path", "m_intersections",
-                    "m_lures", "m_traps", "m_complexity"])
+                    "m_lures", "m_traps"]
+                   + [f"m_{m.name.lower()}" for m in MazeMetrics])
         layout.addRow(self._section("Simulation"))
         add_fields(["s_step"])
         layout.addRow(self._section("Robot"))

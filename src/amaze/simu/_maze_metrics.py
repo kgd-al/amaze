@@ -1,7 +1,9 @@
+import enum
 import math
 import pprint
-from collections import defaultdict
+from collections import defaultdict, namedtuple
 from pathlib import Path
+from typing import Callable, Tuple, Generator
 
 import numpy as np
 from PyQt5.QtGui import QImage, QPainter
@@ -9,7 +11,15 @@ from PyQt5.QtWidgets import QApplication
 
 from amaze.simu.env.maze import Maze
 from amaze.simu.robot import InputType
+from amaze.visu.resources import Sign
 from amaze.visu.widgets.labels import InputsLabel
+
+
+class MazeMetrics(enum.Flag):
+    SURPRISINGNESS = enum.auto()
+    DECEPTIVENESS = enum.auto()
+    INSEPARABILITY = enum.auto()
+    ALL = SURPRISINGNESS | DECEPTIVENESS | INSEPARABILITY
 
 
 def __inputs(c, r, maze, visuals):
@@ -28,7 +38,7 @@ def __all_inputs(maze: Maze, visuals):
     cells = maze.iter_cells if not maze.unicursive() else maze.iter_solutions
 
     i = __inputs(*maze.start, maze=maze, visuals=visuals)
-    inputs[tuple(i)] += 1
+    yield tuple(i)
 
     for c, r in cells():
         i = __inputs(c=c, r=r, maze=maze, visuals=visuals)
@@ -37,9 +47,7 @@ def __all_inputs(maze: Maze, visuals):
             if not i[j]:
                 i_ = i.copy()
                 i_[j] = .5
-                inputs[tuple(i_)] += 1
-
-    return inputs
+                yield tuple(i_)
 
 
 def __solution_path(maze, visuals):
@@ -50,19 +58,56 @@ def __solution_path(maze, visuals):
             c0_i, c0_j = maze.solution[j - 1]
             c1_i, c1_j = maze.solution[j]
             di, dj = c0_i - c1_i, c0_j - c1_j
-            d = maze._offsets_inv[(di, dj)]
-            i[d.value] = .5
-        inputs[tuple(i)] += 1
-    return inputs
+            d_from = maze._offsets_inv[(di, dj)]
+            i[d_from.value] = .5
+
+        d_to = None
+        if j < len(maze.solution) - 1:
+            c1_i, c1_j = maze.solution[j]
+            c2_i, c2_j = maze.solution[j + 1]
+            di, dj = c1_i - c2_i, c1_j - c2_j
+            d_to = maze._offsets_inv[(di, dj)]
+
+        yield tuple(i), d_to
 
 
-def __entropy_bits(inputs):
-    entropy = 0
-    total_states = sum(inputs.values())
-    for n in inputs.values():
-        p = n / total_states
-        entropy += - p * math.log(p)
-    return entropy
+class InputsEntropy:
+    def __init__(self):
+        self.__count = 0
+        self.__inputs = defaultdict(lambda: 0)
+
+    def process(self, state: Tuple):
+        self.__count += 1
+        self.__inputs[hash(state)] += 1
+
+    def value(self):
+        entropy = 0
+        for n in self.__inputs.values():
+            p = n / self.__count
+            entropy += - p * math.log(p)
+        return entropy
+
+    def count(self): return self.__count
+    def reset(self): self.__init__()
+
+
+class StatesEntropy:
+    def __init__(self):
+        self.__counts = defaultdict(lambda: 0)
+        self.__inputs = defaultdict(lambda: defaultdict(lambda: 0))
+
+    def process(self, state: Tuple, solution: Maze.Direction):
+        h = hash(tuple([*state[:4], solution]))
+        self.__counts[h] += 1
+        self.__inputs[h][hash(state[4:])] += 1
+
+    def value(self):
+        entropy = 0
+        for cell, states in self.__inputs.items():
+            for n in states.values():
+                p = n / self.__counts[cell]
+                entropy += - p * math.log(p)
+        return entropy
 
 
 # noinspection PyPep8Naming
@@ -95,6 +140,34 @@ def __mutual_information(maze: Maze):
     return mi
 
 
+def __inseparability(maze: Maze):
+    c, l, t = maze.clues(), maze.lures(), maze.traps()
+    print(c, l, t)
+    sorted_signs = sorted([(s.value, t) for lst, t in [(c, Sign.CLUE),
+                                                       (l, Sign.LURE),
+                                                       (t, Sign.TRAP)]
+                           for s in lst], key=lambda x: x[0])
+    print(sorted_signs)
+    range_t = namedtuple("Range", ["l", "u", "t"])
+
+    ranges = [range_t(0, *sorted_signs[0])]
+    for v, t in sorted_signs[1:]:
+        last = ranges[-1]
+        if last.t == t:
+            ranges[-1] = range_t(last.l, v, t)
+        else:
+            mid = .5 * (last.u + v)
+            ranges[-1] = range_t(last.l, mid, last.t)
+            ranges.append(range_t(mid, v, t))
+    ranges[-1] = range_t(ranges[-1].l, 1, ranges[-1].t)
+    print()
+    print("=====")
+    pprint.pprint(ranges)
+    print("=====")
+    print()
+    return 0
+
+
 def __debug_draw_inputs(inputs, name):
     app = QApplication([])
     label = InputsLabel()
@@ -111,36 +184,48 @@ def __debug_draw_inputs(inputs, name):
         img.save(str(folder.joinpath(f"{str_i}.png")))
 
 
-def complexity(maze: Maze, visuals: np.ndarray, inputs: InputType):
-    if inputs is not InputType.DISCRETE:
-        return dict(inputs=dict(min=np.nan, max=np.nan),
-                    entropy=dict(min=np.nan, max=np.nan),
-                    mutual_information=np.nan)
+def metrics(maze: Maze, visuals: np.ndarray, input_type: InputType):
+    if input_type is not InputType.DISCRETE:
+        raise NotImplementedError
 
-    inputs = []
-    entropy = []
-    for f in [__solution_path, __all_inputs]:
-        i = f(maze, visuals)
-        inputs.append(len(i))
-        entropy.append(__entropy_bits(i))
+    n_inputs = {}
+    s_entropy = {}
 
-        # __debug_draw_inputs(i, maze.to_string())
+    # ======
 
-    mutual_info = __mutual_information(maze)
+    k = "all"
+    s_metric = InputsEntropy()
+    for i in __all_inputs(maze, visuals):
+        s_metric.process(i)
+    n_inputs[k] = s_metric.count()
+    s_entropy[k] = s_metric.value()
 
-    # print(f"{inputs=} {entropy=}")
-    return dict(inputs=dict(zip(["min", "max"], inputs)),
-                entropy=dict(zip(["path", "all"], entropy)),
-                mutual_information=mutual_info)
+    # ======
 
+    k = "path"
+    s_metric.reset()
+    d_metric = StatesEntropy()
+    for i, d in __solution_path(maze, visuals):
+        s_metric.process(i)
+        d_metric.process(i, d)
 
-def deceptiveness(maze: Maze, visuals: np.ndarray, inputs: InputType):
-    if inputs is not InputType.DISCRETE:
-        return np.nan
-    else:
-        return 0
+    n_inputs[k] = s_metric.count()
+    s_entropy[k] = s_metric.value()
+    d_entropy = d_metric.value()
 
+    # ======
 
-def metrics(maze: Maze, visuals: np.ndarray, inputs: InputType):
-    return dict(complexity=complexity(maze, visuals, inputs),
-                deceptiveness=deceptiveness(maze, visuals, inputs))
+    # __debug_draw_inputs(i, maze.to_string())
+
+    return {
+        MazeMetrics.INSEPARABILITY: __inseparability(maze),
+        MazeMetrics.SURPRISINGNESS: s_entropy,
+        MazeMetrics.DECEPTIVENESS: d_entropy,
+
+        "n_inputs": n_inputs,
+        "mutual_information": __mutual_information(maze),
+        #
+        # "__debug_entropy": {
+        #     k: __entropy_bits(f(maze, visuals)) for k, f in [("all", __all_inputs), ("path", __solution_path)]
+        # }
+    }
