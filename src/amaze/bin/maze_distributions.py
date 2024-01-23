@@ -111,6 +111,7 @@ def generate(args):
         stats = maze.stats()
         c = Simulation.compute_complexity(maze, InputType.DISCRETE, 5)['entropy']
         stats.update({f"E{k}": v for k, v in c.items()})
+        stats['Deceptiveness'] = Simulation.compute_deceptiveness(maze, InputType.DISCRETE)
         stats['Name'] = maze_str
         stats['Class'] = class_name
         stats['Prob.'] = p

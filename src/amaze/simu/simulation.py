@@ -6,8 +6,7 @@ from typing import Union, TypeVar, Optional
 import numpy as np
 import pandas as pd
 
-from amaze.simu import _maze_complexity
-# from amaze.simu.controllers.base import BaseController
+from amaze.simu import _maze_metrics
 from amaze.simu.env.maze import Maze
 from amaze.simu.pos import Pos, AlignedPos
 from amaze.simu.robot import Robot, InputType, OutputType, Action, State
@@ -386,6 +385,12 @@ class Simulation:
 
     @classmethod
     def compute_complexity(cls, maze: Maze, inputs: InputType, vision: int):
-        return _maze_complexity.complexity(
+        return _maze_metrics.complexity(
+            maze, cls.generate_visuals_map(maze, inputs, vision), inputs
+        )
+
+    @classmethod
+    def compute_metrics(cls, maze: Maze, inputs: InputType, vision: int):
+        return _maze_metrics.metrics(
             maze, cls.generate_visuals_map(maze, inputs, vision), inputs
         )

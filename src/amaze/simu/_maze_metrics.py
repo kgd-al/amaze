@@ -132,3 +132,15 @@ def complexity(maze: Maze, visuals: np.ndarray, inputs: InputType):
     return dict(inputs=dict(zip(["min", "max"], inputs)),
                 entropy=dict(zip(["path", "all"], entropy)),
                 mutual_information=mutual_info)
+
+
+def deceptiveness(maze: Maze, visuals: np.ndarray, inputs: InputType):
+    if inputs is not InputType.DISCRETE:
+        return np.nan
+    else:
+        return 0
+
+
+def metrics(maze: Maze, visuals: np.ndarray, inputs: InputType):
+    return dict(complexity=complexity(maze, visuals, inputs),
+                deceptiveness=deceptiveness(maze, visuals, inputs))
