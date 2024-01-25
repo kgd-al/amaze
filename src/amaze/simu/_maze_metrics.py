@@ -66,10 +66,38 @@ def __solution_path(maze, visuals):
         if j < len(maze.solution) - 1:
             c1_i, c1_j = maze.solution[j]
             c2_i, c2_j = maze.solution[j + 1]
-            di, dj = c1_i - c2_i, c1_j - c2_j
+            di, dj = c2_i - c1_i, c2_j - c1_j
             d_to = maze._offsets_inv[(di, dj)]
 
-        yield tuple(i), d_to
+        cost = 0
+        d_sign = Maze.Direction(np.argmax(i[4:]))  # Where to?
+        if d_to != d_sign:  # Trap/Lure
+            cost = 1
+            if sum(i[:4]) <= 1.5:  # Intersection
+                cost += __deadend_cost(maze, (c, r), maze._offsets[d_sign])
+            cost /= (maze.width * maze.height - len(maze.solution))
+
+        yield tuple(i), d_to, cost
+
+
+def __deadend_cost(maze, cell, offset):
+    c_i, c_j = cell
+    d_i, d_j = offset
+    c_i, c_j = c_i + d_i, c_j + d_j
+    cost = 1
+    visited = {cell, (c_i, c_j)}
+    stack = [(c_i, c_j)]
+    while stack:
+        c_i, c_j = stack.pop()
+        for d, (d_i, d_j) in Maze._offsets.items():
+            i, j = c_i + d_i, c_j + d_j
+            if maze.valid(i, j) and not maze.wall(c_i, c_j, d) \
+                    and (i, j) not in visited:
+                cost += 1
+                stack.append((i, j))
+                visited.add((i, j))
+
+    return cost
 
 
 class InputsEntropy:
@@ -96,19 +124,35 @@ class StatesEntropy:
     def __init__(self):
         self.__counts = defaultdict(lambda: 0)
         self.__inputs = defaultdict(lambda: defaultdict(lambda: 0))
+        self.__costs = defaultdict(lambda: 0)
+        self.__types = defaultdict(lambda: 0)
 
-    def process(self, state: Tuple, solution: Maze.Direction):
-        h = hash(tuple([*state[:4], solution]))
+    def process(self, state: Tuple, solution: Maze.Direction, cost: int):
+        h = state[:4]
         self.__counts[h] += 1
-        self.__inputs[h][hash(state[4:])] += 1
+        self.__inputs[h][state[4:]] += 1
+        self.__costs[state] += cost
+        self.__types[self.__intersection(state)] += 1
+
+    @staticmethod
+    def __intersection(state: Tuple):
+        return sum(1 if s == 1 else 0 for s in state[:4]) <= 1
 
     def value(self):
-        entropy = 0
+        entropy = {True: 0, False: 0}
         for cell, states in self.__inputs.items():
-            for n in states.values():
+            # print(">", cell, len(states), self.__intersection(cell))
+            e = 0
+            for signs, n in states.items():
+                # print(">>", foo, max(foo), n)
                 p = n / self.__counts[cell]
-                entropy += - p * log(p)
-        return entropy
+                e += -p * log(p) * self.__costs[(*cell, *signs)]
+            # print(">>", e, self.__costs[cell])
+            entropy[self.__intersection(cell)] += e
+            # entropy += e
+
+        return (sum(self.__types[i] * entropy[not i] for i in [True, False])
+                / sum(self.__types.values()))
 
 
 # noinspection PyPep8Naming
@@ -222,9 +266,9 @@ def metrics(maze: Maze, visuals: np.ndarray, input_type: InputType):
     k = "path"
     s_metric.reset()
     d_metric = StatesEntropy()
-    for i, d in __solution_path(maze, visuals):
+    for i, d, c in __solution_path(maze, visuals):
         s_metric.process(i)
-        d_metric.process(i, d)
+        d_metric.process(i, d, c)
 
     n_inputs[k] = s_metric.count()
     s_entropy[k] = s_metric.value()

@@ -4,12 +4,14 @@ import argparse
 import itertools
 import logging
 import pprint
+import random
 from dataclasses import dataclass, field
 from functools import reduce
 from operator import mul
 from pathlib import Path
 from typing import Optional, List, Sequence
 
+import numpy as np
 import pandas as pd
 import seaborn
 from matplotlib import pyplot as plt
@@ -70,30 +72,27 @@ def generate(args):
             ("Lures", __bd(clues=True, lures=True)),
             ("Complex", __bd(clues=True, lures=True, traps=True)),
         ],
-        [0., .25, .5, .75, 1.] + [1, 2, 3, 4, 5]
+        [0., .25, .5, .75, 1.],
+        [0., .25, .5, .75, 1.],
+        [1, 2, 3, 4, 5]
     ]
 
     def signs(*_args): return [Sign(value=_v) for _v in _args]
-    clues = signs(.9, 0.85, 0.8, 0.75, 0.7)
-    lures = signs(0.6, 0.55, 0.5, 0.45, 0.4)
-    traps = signs(0.3, 0.25, 0.2, 0.15, 0.1)
+    values = np.linspace(1, 0, 15, endpoint=False)
+    clues = signs(*values[0::3])
+    lures = signs(*values[1::3])
+    traps = signs(*values[2::3])
 
     mazes_set = set()
 
-    for seed, size, (class_name, bd), v in (
+    for seed, size, (class_name, bd), p_lure, p_trap, ssize in (
             tqdm_iter.product(*items, desc="Processing")):
-        if isinstance(v, int):
-            ssize = v
-            p = .5
-        else:
-            ssize = 1
-            p = v
 
         bd.seed = seed + 10
         bd.width = size
         bd.height = size
-        bd.p_lure = p
-        bd.p_trap = p
+        bd.p_lure = p_lure
+        bd.p_trap = p_trap
 
         if bd.clue:
             bd.clue = clues[:ssize]
@@ -102,7 +101,13 @@ def generate(args):
         if bd.trap:
             bd.trap = traps[:ssize]
 
-        if class_name in ["Trivial", "Simple"] and p > 0:
+        if class_name in ["Trivial", "Simple"] and (p_lure > 0 or p_trap > 0):
+            continue
+
+        if class_name == "Lures" and p_lure == 0:
+            continue
+
+        if class_name == "Traps" and p_trap == 0:
             continue
 
         maze_str = Maze.bd_to_string(bd)
@@ -126,7 +131,8 @@ def generate(args):
         stats['Inseparability'] = cm[MazeMetrics.INSEPARABILITY]
         stats['Name'] = maze_str
         stats['Class'] = class_name
-        stats['Prob.'] = p
+        stats['P_l'] = p_lure
+        stats['P_t'] = p_trap
         stats['SSize'] = ssize
         if df is None:
             df = pd.DataFrame(columns=stats.keys())
@@ -148,31 +154,51 @@ def plot(df, args):
     df["f_size"] = df["size"].apply(lambda s: s.split("x")[0])
 
     with (PdfPages(args.pdf_path) as pdf):
-        fig, ax = plt.subplots()
-        df_class = df.groupby("Class")
-        for d_class in ["Complex", "Lures", "Traps", "Simple", "Trivial"]:
-            ax.scatter(data=df_class.get_group(d_class),
-                       x="Epath", y="Deceptiveness",
-                       label=d_class, s=.25)
-        ax.set_xlabel("Surprisingness")
-        ax.set_ylabel("Deceptiveness")
-        ax.legend()
-        fig.tight_layout()
-        pdf.savefig(fig)
+        # fig, ax = plt.subplots()
+        # df_class = df.groupby("Class")
+        # for d_class in ["Complex", "Lures", "Traps", "Simple", "Trivial"]:
+        #     ax.scatter(data=df_class.get_group(d_class),
+        #                x="Epath", y="Deceptiveness",
+        #                label=d_class, s=.25)
+        # ax.set_xlabel("Surprisingness")
+        # ax.set_ylabel("Deceptiveness")
+        # ax.legend()
+        # fig.tight_layout()
+        # pdf.savefig(fig)
 
-        mini_df = df[["Class", "size", "Prob.", "SSize", "Epath", "Eall"]].reset_index()
-        mini_df = pd.wide_to_long(mini_df,
-                                  "E", i="index", j="Entropy", suffix=r'\D+'
-                                  ).reset_index()
-        for col in tqdm(["Prob.", "SSize"], desc="Violin plots (dodge)"):
-            g = seaborn.catplot(data=mini_df, x="Class", hue="Entropy", y="E",
-                                col=col, row='size', dodge=True, split=True,
-                                density_norm="width",
-                                kind='violin', cut=0, width=.8,
-                                palette="pastel", inner='quart')
-            g.figure.tight_layout()
+        hue_order = ["Complex", "Lures", "Traps", "Simple", "Trivial"]
 
+        jp_dict = dict(
+            y="Deceptiveness",
+            alpha=1,
+            marginal_kws=dict(cut=0, common_norm=False)
+        )
+
+        for e_type in ["Epath", "Eall"]:
+            g = seaborn.jointplot(data=df, x=e_type,
+                                  hue="Class", hue_order=hue_order,
+                                  **jp_dict)
             pdf.savefig(g.figure)
+
+            g = seaborn.jointplot(data=df[df["Class"] == "Complex"],
+                                  x=e_type, hue="size",
+                                  **jp_dict)
+            pdf.savefig(g.figure)
+
+        # mini_df = df[["Class", "size", "Prob.", "SSize", "Epath", "Eall"]].reset_index()
+        # mini_df = pd.wide_to_long(mini_df,
+        #                           "E", i="index", j="Entropy", suffix=r'\D+'
+        #                           ).reset_index()
+        # print(mini_df)
+        # for col in tqdm(["Prob.", "SSize"], desc="Violin plots (split)"):
+        #     g = seaborn.catplot(data=mini_df, x="Class", hue="Entropy", y="E",
+        #                         col=col, row='size', split=True, dodge=True,
+        #                         density_norm="width",
+        #                         kind='violin', cut=0, width=.8,
+        #                         palette="pastel", inner='quart')
+        #     g.figure.tight_layout()
+        #
+        #     pdf.savefig(g.figure)
         #
         # for col, y in tqdm_iter.product(["Prob.", "SSize"],
         #                                 ["Deceptiveness", "Inseparability"],

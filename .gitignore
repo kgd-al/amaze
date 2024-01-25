@@ -9,6 +9,7 @@ results/
 backup_results/
 stash/
 tmp/
+tmp
 
 
 ##################
