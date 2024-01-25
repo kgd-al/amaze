@@ -1,6 +1,7 @@
 import enum
-import math
 import pprint
+import math
+from math import log2 as log
 from collections import defaultdict, namedtuple
 from pathlib import Path
 from typing import Callable, Tuple, Generator
@@ -84,7 +85,7 @@ class InputsEntropy:
         entropy = 0
         for n in self.__inputs.values():
             p = n / self.__count
-            entropy += - p * math.log(p)
+            entropy += - p * log(p)
         return entropy
 
     def count(self): return self.__count
@@ -106,7 +107,7 @@ class StatesEntropy:
         for cell, states in self.__inputs.items():
             for n in states.values():
                 p = n / self.__counts[cell]
-                entropy += - p * math.log(p)
+                entropy += - p * log(p)
         return entropy
 
 
@@ -135,19 +136,22 @@ def __mutual_information(maze: Maze):
         for x in X:
             p_xy, mp = P_XY[(x, y)], P_X * P_Y[y]
             if mp and p_xy:
-                mi += p_xy * math.log2(p_xy / mp)
+                mi += p_xy * log(p_xy / mp)
 
     return mi
 
 
 def __inseparability(maze: Maze):
-    c, l, t = maze.clues(), maze.lures(), maze.traps()
-    print(c, l, t)
+    c = maze.clues()
+    l = maze.lures() if maze.p_lure > 0 else []
+    t = maze.traps() if maze.p_trap > 0 else []
+    if len(c+l+t) == 0:
+        return 0
+
     sorted_signs = sorted([(s.value, t) for lst, t in [(c, Sign.CLUE),
                                                        (l, Sign.LURE),
                                                        (t, Sign.TRAP)]
                            for s in lst], key=lambda x: x[0])
-    print(sorted_signs)
     range_t = namedtuple("Range", ["l", "u", "t"])
 
     ranges = [range_t(0, *sorted_signs[0])]
@@ -160,12 +164,25 @@ def __inseparability(maze: Maze):
             ranges[-1] = range_t(last.l, mid, last.t)
             ranges.append(range_t(mid, v, t))
     ranges[-1] = range_t(ranges[-1].l, 1, ranges[-1].t)
-    print()
-    print("=====")
-    pprint.pprint(ranges)
-    print("=====")
-    print()
-    return 0
+    #
+    # print()
+    # print("=====")
+    # print(maze.to_string())
+    # print(maze.clues() + maze.lures() + maze.traps())
+    # pprint.pprint(ranges)
+
+    entropy = 0
+    for r in ranges:
+        p = r.u - r.l
+        # print(p, math.log(p), math.log2(p), math.log10(p))
+        if p > 0:
+            entropy += -p * log(p)
+    #
+    # print(f"{entropy=}")
+    # print("=====")
+    # print()
+
+    return entropy
 
 
 def __debug_draw_inputs(inputs, name):

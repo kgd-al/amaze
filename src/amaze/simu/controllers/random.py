@@ -16,6 +16,7 @@ class RandomController(BaseController):
 
     def __call__(self, _) -> Tuple[float, float]:
         ci, cj = pos = self.curr_pos.aligned()
+        print(self.stack, self.curr_pos, self.last_pos)
 
         if self.last_pos and self.last_pos == pos:
             self.stack.pop()  # Cancel last move
@@ -39,6 +40,8 @@ class RandomController(BaseController):
         else:
             return self.stack.pop()
 
-    def reset(self): pass
+    def reset(self):
+        self.__init__()
+
     def save(self): return {}
     def restore(self, _): pass

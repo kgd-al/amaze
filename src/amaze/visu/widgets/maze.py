@@ -1,3 +1,4 @@
+import pprint
 from pathlib import Path
 from typing import Optional, Tuple, Union, Any
 
@@ -226,14 +227,15 @@ class MazeWidget(QLabel):
         QtPainter(painter, config).render(maze, config)
 
     def _render(self, painter: QPainter):
-        config = dict(
+        config = dict(self._config)
+        config.update(dict(
             scale=self._scale,
             clues=self._clues, lures=self._lures, traps=self._traps,
             outputs=self._simulation.data.outputs,
             solution=bool(self._config["solution"]),
             robot=self._simulation.robot_dict()
-            if self._config["robot"] else None)
-        config.update(self._config)
+            if self._config["robot"] else None))
+
         self.__render(
             painter, self._simulation.maze,
             self._simulation.maze.height * self._scale,

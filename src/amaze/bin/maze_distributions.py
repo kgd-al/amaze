@@ -12,6 +12,7 @@ from typing import Optional, List, Sequence
 
 import pandas as pd
 import seaborn
+from matplotlib import pyplot as plt
 from matplotlib.backends.backend_pdf import PdfPages
 from matplotlib.ticker import LinearLocator
 from tqdm import tqdm
@@ -30,7 +31,7 @@ from amaze.visu.widgets.maze import MazeWidget
 class Options:
     n: int = 1_000
     out: Path = Path("tmp/maze_distributions")
-    df_path = None
+    df_path, pdf_path = None, None
 
     generate: bool = False
     plot: bool = True
@@ -77,9 +78,10 @@ def generate(args):
     lures = signs(0.6, 0.55, 0.5, 0.45, 0.4)
     traps = signs(0.3, 0.25, 0.2, 0.15, 0.1)
 
+    mazes_set = set()
+
     for seed, size, (class_name, bd), v in (
-            tqdm(itertools.product(*items), desc="Processing",
-                 total=reduce(mul, [len(lst) for lst in items]))):
+            tqdm_iter.product(*items, desc="Processing")):
         if isinstance(v, int):
             ssize = v
             p = .5
@@ -100,8 +102,16 @@ def generate(args):
         if bd.trap:
             bd.trap = traps[:ssize]
 
+        if class_name in ["Trivial", "Simple"] and p > 0:
+            continue
+
+        maze_str = Maze.bd_to_string(bd)
+        if maze_str in mazes_set:
+            continue
+        else:
+            mazes_set.add(maze_str)
+
         maze = Maze.generate(bd)
-        maze_str = maze.to_string()
 
         if seed == 0:
             maze_viewer.main(f"--maze {maze_str}"
@@ -111,8 +121,7 @@ def generate(args):
 
         stats = maze.stats()
         cm = Simulation.compute_metrics(maze, InputType.DISCRETE, 5)
-        surprisingness = cm[MazeMetrics.SURPRISINGNESS]['entropy']
-        stats.update({f"E{k}": v for k, v in surprisingness.items()})
+        stats.update({f"E{k}": v for k, v in cm[MazeMetrics.SURPRISINGNESS].items()})
         stats['Deceptiveness'] = cm[MazeMetrics.DECEPTIVENESS]
         stats['Inseparability'] = cm[MazeMetrics.INSEPARABILITY]
         stats['Name'] = maze_str
@@ -134,33 +143,60 @@ def generate(args):
 
 
 def plot(df, args):
-    out = args.df_path.with_suffix(".pdf")
     seaborn.set_style("darkgrid")
-    print(df.columns)
-    print(df.dtypes)
-    with PdfPages(out) as pdf:
-        for col, y in tqdm_iter.product(["Prob.", "SSize"],
-                                        ["Epath", "Eall"],
-                                        desc="Violin plots"):
-            g = seaborn.catplot(data=df, x="Class", hue="Class", y=y,
-                                col=col, row='size',
-                                kind='violin', cut=0, width=1,
-                                palette="pastel")
+
+    df["f_size"] = df["size"].apply(lambda s: s.split("x")[0])
+
+    with (PdfPages(args.pdf_path) as pdf):
+        fig, ax = plt.subplots()
+        df_class = df.groupby("Class")
+        for d_class in ["Complex", "Lures", "Traps", "Simple", "Trivial"]:
+            ax.scatter(data=df_class.get_group(d_class),
+                       x="Epath", y="Deceptiveness",
+                       label=d_class, s=.25)
+        ax.set_xlabel("Surprisingness")
+        ax.set_ylabel("Deceptiveness")
+        ax.legend()
+        fig.tight_layout()
+        pdf.savefig(fig)
+
+        mini_df = df[["Class", "size", "Prob.", "SSize", "Epath", "Eall"]].reset_index()
+        mini_df = pd.wide_to_long(mini_df,
+                                  "E", i="index", j="Entropy", suffix=r'\D+'
+                                  ).reset_index()
+        for col in tqdm(["Prob.", "SSize"], desc="Violin plots (dodge)"):
+            g = seaborn.catplot(data=mini_df, x="Class", hue="Entropy", y="E",
+                                col=col, row='size', dodge=True, split=True,
+                                density_norm="width",
+                                kind='violin', cut=0, width=.8,
+                                palette="pastel", inner='quart')
             g.figure.tight_layout()
 
             pdf.savefig(g.figure)
+        #
+        # for col, y in tqdm_iter.product(["Prob.", "SSize"],
+        #                                 ["Deceptiveness", "Inseparability"],
+        #                                 desc="Violin plots (straight)"):
+        #     g = seaborn.catplot(data=df, x="Class", hue="Class", y=y,
+        #                         col=col, row='size',
+        #                         density_norm="width",
+        #                         kind='violin', cut=0, width=.8,
+        #                         palette="pastel", inner='quart')
+        #     g.figure.tight_layout()
+        #
+        #     pdf.savefig(g.figure)
 
-        for col, x, y in tqdm_iter.product(["Prob.", "SSize"],
-                                           ["path", "intersections"],
-                                           ["Epath", "Eall"],
-                                           desc="Strip plots"):
-            g = seaborn.catplot(data=df, x=x, y=y, hue="Class", col=col,
-                                row="size", kind='strip')
-            for ax in g.axes[-1]:
-                ax.xaxis.set_major_locator(LinearLocator(5))
-            g.figure.tight_layout()
-            pdf.savefig(g.figure)
-    print("Generated", out)
+        # for col, x, y in tqdm_iter.product(["Prob.", "SSize"],
+        #                                    ["path", "intersections"],
+        #                                    ["Epath", "Eall"],
+        #                                    desc="Strip plots"):
+        #     g = seaborn.catplot(data=df, x=x, y=y, hue="Class", col=col,
+        #                         row="size", kind='strip')
+        #     for ax in g.axes[-1]:
+        #         ax.xaxis.set_major_locator(LinearLocator(5))
+        #     g.figure.tight_layout()
+        #     pdf.savefig(g.figure)
+    print("Generated", args.pdf_path)
 
 
 def main(sys_args: Optional[Sequence[str]] = None):
@@ -178,8 +214,14 @@ def main(sys_args: Optional[Sequence[str]] = None):
     else:
         df = pd.read_csv(args.df_path)
 
+    args.pdf_path = args.df_path.with_suffix(".pdf")
     if args.plot:
         plot(df, args)
+
+    pdf_symlink = args.out.joinpath("distributions.pdf")
+    pdf_symlink.unlink(missing_ok=True)
+    pdf_symlink.symlink_to(args.pdf_path.name)
+    print("Generated", pdf_symlink, "->", args.pdf_path)
 
     return 0
 
