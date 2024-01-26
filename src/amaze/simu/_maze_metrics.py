@@ -150,6 +150,14 @@ class StatesEntropy:
             # print(">>", e, self.__costs[cell])
             entropy[self.__intersection(cell)] += e
             # entropy += e
+        #
+        # print("=============================")
+        # pprint.pprint([self.__types, entropy])
+        # print("=============================")
+
+        # return sum(entropy.values())
+
+        entropy[True] *= 2
 
         return (sum(self.__types[i] * entropy[not i] for i in [True, False])
                 / sum(self.__types.values()))

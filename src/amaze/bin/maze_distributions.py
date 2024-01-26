@@ -85,6 +85,7 @@ def generate(args):
 
     mazes_set = set()
 
+    skipped = 0
     for seed, size, (class_name, bd), p_lure, p_trap, ssize in (
             tqdm_iter.product(*items, desc="Processing")):
 
@@ -102,16 +103,24 @@ def generate(args):
             bd.trap = traps[:ssize]
 
         if class_name in ["Trivial", "Simple"] and (p_lure > 0 or p_trap > 0):
+            skipped += 1
+            print(f"Skip: {class_name} but {p_lure=} or {p_trap=}")
             continue
 
-        if class_name == "Lures" and p_lure == 0:
+        if class_name in ["Lures", "Complex"] and p_lure == 0:
+            skipped += 1
+            print(f"Skip: {class_name} but {p_lure=}")
             continue
 
-        if class_name == "Traps" and p_trap == 0:
+        if class_name in ["Traps", "Complex"] and p_trap == 0:
+            skipped += 1
+            print(f"Skip: {class_name} but {p_trap=}")
             continue
 
         maze_str = Maze.bd_to_string(bd)
         if maze_str in mazes_set:
+            skipped += 1
+            print(f"Skip: {maze_str} already seen")
             continue
         else:
             mazes_set.add(maze_str)
@@ -139,6 +148,7 @@ def generate(args):
         df.loc[len(df)] = stats.values()
     print(df.columns)
     print(df)
+    print(f"{skipped=}")
 
     if df is not None and args.out:
         args.out.mkdir(parents=True, exist_ok=True)
@@ -226,6 +236,24 @@ def plot(df, args):
 
 
 def main(sys_args: Optional[Sequence[str]] = None):
+
+    rng = random.Random(0)
+    for i in range(10):
+        n = 10**i
+        v = 10**(i+1)
+        p, p_ = rng.random(), rng.random()
+        a, b = p*n, (1-p)*n
+        c, d = p_*v, (1-p_)*v
+        p__ = a/(a+b)
+        c_, d_ = c/p__, d/(1-p__)
+        print(f"{a:10.0f} {b:10.0f}")
+        print(f"{c:10.0f} {d:10.0f}")
+        print(f"> {p=} {p_=} {p__=}")
+        print(f"> {a/p__} {b/(1-p__)}")
+        print(f"> {c_:10.0f} {d_:10.0f} {c_/(c_+d_)}")
+        print()
+    # exit(42)
+
     args = Options()
     parser = argparse.ArgumentParser(
         description="Generates distributions of mazes statistics")

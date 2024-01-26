@@ -711,6 +711,8 @@ class MainWindow(QWidget):
             return
 
         config = self._settings()
+        logger.info(f"Saving configuration to {config.fileName()}")
+
         config.setValue('pos', self.pos())
         config.setValue('size', self.size())
 
