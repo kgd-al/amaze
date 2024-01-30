@@ -145,16 +145,20 @@ class StatesEntropy:
         # > Costs are not applied
         # Trap/Lure normalization always active?
 
-        entropy = {True: 0, False: 0}
+        entropy = [{True: 0, False: 0} for _ in range(3)]
         for cell, states in self.__inputs.items():
             # print(">", cell, len(states), self.__intersection(cell))
-            e = 0
+            e = [0, 0, 0]
             for signs, n in states.items():
                 # print(">>", foo, max(foo), n)
                 p = n / self.__counts[cell]
-                e += -p * log(p)# * self.__costs[(*cell, *signs)]
+                e[0] += -p * log(p) * self.__costs[(*cell, *signs)]
+                e[1] += -p * log(p)
+                e[2] += -p * log(p)
             # print(">>", e, self.__costs[cell])
-            entropy[self.__intersection(cell)] += e
+            e[1] *= sum(self.__costs[(*cell, *signs)] for signs in states.keys())
+            for i in range(3):
+                entropy[i][self.__intersection(cell)] += e[i]
             # entropy += e
         
         # print("=============================")
@@ -163,10 +167,15 @@ class StatesEntropy:
 
         # return sum(entropy.values())
 
-        entropy[True] *= 2
+        for i in range(3):
+            entropy[i][True] *= 2
 
-        return (sum(self.__types[i] * entropy[not i] for i in [True, False])
-                / sum(self.__types.values()))
+        return {
+            f"D{j}":
+            (sum(self.__types[i] * entropy[j][not i] for i in [True, False])
+             / sum(self.__types.values()))
+            for j in range(3)
+        }
 
 
 # noinspection PyPep8Naming

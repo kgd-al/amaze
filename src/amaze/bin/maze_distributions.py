@@ -44,6 +44,8 @@ class Options:
     append: bool = False
     plot: bool = True
 
+    parallel: int = 1
+
     @staticmethod
     def populate(parser: argparse.ArgumentParser):
         parser.add_argument("-n", type=int,
@@ -57,6 +59,8 @@ class Options:
                             help="Force sampled data regeneration (if any)")
         parser.add_argument("--append", action="store_true",
                             help="Try to only generate missing entries")
+        parser.add_argument("--parallel", type=int,
+                            help="Use multiple process")
 
 
 def __bd(clues=False, lures=False, p_lure=0, traps=False, p_trap=0):
@@ -68,9 +72,18 @@ def __bd(clues=False, lures=False, p_lure=0, traps=False, p_trap=0):
                           trap=[Sign()] if traps else [], p_trap=p_trap)
 
 
-def _generate(*args, mazes_set, signs, folder):
+def _signs(*_args): return [Sign(value=_v) for _v in _args]
+
+
+values = np.linspace(1, 0, 15, endpoint=False)
+clues = _signs(*values[0::3])
+lures = _signs(*values[1::3])
+traps = _signs(*values[2::3])
+
+
+def _generate(*args, mazes_set):
     seed, size, (class_name, bd), p_lure, p_trap, ssize = args
-    clues, lures, traps = signs
+    # print(f"[Start] _generate({args})")
 
     bd.seed = seed + 18
     bd.width = size
@@ -102,22 +115,20 @@ def _generate(*args, mazes_set, signs, folder):
 
     maze = Maze.generate(bd)
 
-    if seed == 0:
-        maze_viewer.main(f"--maze {maze_str}"
-                         f" --render {folder.joinpath(maze_str)}.png"
-                         f" --dark --colorblind"
-                         .split(" "))
-
     stats = maze.stats()
     cm = Simulation.compute_metrics(maze, InputType.DISCRETE, 5)
     stats.update({f"E{k}": v for k, v in cm[MazeMetrics.SURPRISINGNESS].items()})
-    stats['Deceptiveness'] = cm[MazeMetrics.DECEPTIVENESS]
+    stats.update(cm[MazeMetrics.DECEPTIVENESS])
+    # stats['Deceptiveness'] = cm[MazeMetrics.DECEPTIVENESS]
     stats['Inseparability'] = cm[MazeMetrics.INSEPARABILITY]
     stats['Name'] = maze_str
     stats['Class'] = class_name
     stats['P_l'] = p_lure
     stats['P_t'] = p_trap
     stats['SSize'] = ssize
+
+    # print(f"[Done] _generate({args})")
+
     return stats
 
 
@@ -137,13 +148,6 @@ def generate(args):
         [0., .25, .5, .75, 1.],
         [1, 2, 3, 4, 5]
     ]
-
-    def _signs(*_args): return [Sign(value=_v) for _v in _args]
-    values = np.linspace(1, 0, 15, endpoint=False)
-    clues = _signs(*values[0::3])
-    lures = _signs(*values[1::3])
-    traps = _signs(*values[2::3])
-    signs = [clues, lures, traps]
 
     mazes_set = set()
     if not args.generate and args.append and args.df_path.exists():
@@ -170,31 +174,8 @@ def generate(args):
     signal.signal(signal.SIGINT, _save_df)
     signal.signal(signal.SIGTERM, _save_df)
 
-    # progress_bar = tqdm(desc="Generating",
-    #                     total=reduce(mul, [len(lst) for lst in items]))
-    # # progress_bar.
-    # with ProcessPoolExecutor(max_workers=os.cpu_count()-1) as executor:
-    #     for g_args in itertools.product(*items):
-    #         progress_bar.update()
-    #     for future in concurrent.futures.as_completed(
-    #         executor.submit(_generate, *g_args,
-    #                         mazes_set=mazes_set, signs=signs, folder=args.out)
-    #         for g_args in itertools.product(*items)
-    #     ):
-    #         progress_bar.update()
-    #         print(future, future.result())
-    #         result = future.result()
-    #         if isinstance(result, bool):
-    #             skipped += 1
-    #         else:
-    #             if df is None:
-    #                 df = pd.DataFrame(columns=result.keys())
-    #             df.loc[len(df)] = result.values()
-    # progress_bar.close()
-
-    for g_args in tqdm_iter.product(*items):
-        r = _generate(*g_args,
-                      mazes_set=mazes_set, signs=signs, folder=args.out)
+    def _add_to_df(_result):
+        nonlocal skipped, processed, df
         if isinstance(r, bool):
             skipped += 1
         else:
@@ -205,12 +186,38 @@ def generate(args):
                                   index=pd.Index([], name="Name"))
             df.loc[name] = r.values()
 
+    if args.parallel > 1:
+        progress_bar = tqdm(desc="Generating",
+                            total=reduce(mul, [len(lst) for lst in items]))
+        # progress_bar.
+        with ProcessPoolExecutor(max_workers=args.parallel) as executor:
+            for future in concurrent.futures.as_completed(
+                    executor.submit(_generate, *g_args)
+                    for g_args in itertools.product(*items)):
+                progress_bar.update()
+                result = future.result()
+                print(future, result, flush=True)
+                _add_to_df(result)
+        progress_bar.close()
+
+    else:
+        for g_args in tqdm_iter.product(*items):
+            r = _generate(*g_args, mazes_set=mazes_set)
+            _add_to_df(r)
+
+                # if seed == 0:
+                #     maze_viewer.main(f"--maze {maze_str}"
+                #                      f" --render {folder.joinpath(maze_str)}.png"
+                #                      f" --dark --colorblind"
+                #                      .split(" "))
+
     _save_df(interrupt=False)
 
     return df
 
 
 def plot(df, args):
+    os.environ["QT_QPA_PLATFORM"] = "offscreen"
     seaborn.set_style("darkgrid")
 
     df = df.reset_index()
@@ -234,18 +241,19 @@ def plot(df, args):
         # hue_order = ["Complex", "Lures", "Traps", "Simple", "Trivial"]
 
         jp_dict = dict(
-            y="Deceptiveness",
+            # y="Deceptiveness",
             marginal_kws=dict(cut=0, common_norm=True),
             joint_kws=dict()
         )
 
         s = 1
-        for e_type, hue_column in tqdm_iter.product(
+        for d_type, e_type, hue_column in tqdm_iter.product(
+            ["D0", "D1", "D2"],
             ["Epath", "Eall"],
             ["Class", "size", "Seeds", "P_l", "P_t", "SSize"],
             desc="Joint plots"
         ):
-            g = seaborn.jointplot(data=df, x=e_type, hue=hue_column,
+            g = seaborn.jointplot(data=df, x=e_type, hue=hue_column, y=d_type,
                                   palette="deep",
                                   s=s, linewidths=0,
                                   **jp_dict)
