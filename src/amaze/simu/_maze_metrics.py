@@ -139,6 +139,12 @@ class StatesEntropy:
         return sum(1 if s == 1 else 0 for s in state[:4]) <= 1
 
     def value(self):
+        # Three versions:
+        # > Costs are applied per state
+        # > Costs are applied per cell
+        # > Costs are not applied
+        # Trap/Lure normalization always active?
+
         entropy = {True: 0, False: 0}
         for cell, states in self.__inputs.items():
             # print(">", cell, len(states), self.__intersection(cell))
@@ -146,11 +152,11 @@ class StatesEntropy:
             for signs, n in states.items():
                 # print(">>", foo, max(foo), n)
                 p = n / self.__counts[cell]
-                e += -p * log(p) * self.__costs[(*cell, *signs)]
+                e += -p * log(p)# * self.__costs[(*cell, *signs)]
             # print(">>", e, self.__costs[cell])
             entropy[self.__intersection(cell)] += e
             # entropy += e
-        #
+        
         # print("=============================")
         # pprint.pprint([self.__types, entropy])
         # print("=============================")

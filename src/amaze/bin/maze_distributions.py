@@ -1,10 +1,15 @@
 #!/usr/bin/env python3
 
 import argparse
+import concurrent
 import itertools
 import logging
+import os
 import pprint
 import random
+import signal
+import sys
+from concurrent.futures import ProcessPoolExecutor
 from dataclasses import dataclass, field
 from functools import reduce
 from operator import mul
@@ -36,6 +41,7 @@ class Options:
     df_path, pdf_path = None, None
 
     generate: bool = False
+    append: bool = False
     plot: bool = True
 
     @staticmethod
@@ -49,6 +55,8 @@ class Options:
                             help="Do not generate summary plots")
         parser.add_argument("--force-generate", action="store_true", dest="generate",
                             help="Force sampled data regeneration (if any)")
+        parser.add_argument("--append", action="store_true",
+                            help="Try to only generate missing entries")
 
 
 def __bd(clues=False, lures=False, p_lure=0, traps=False, p_trap=0):
@@ -58,6 +66,59 @@ def __bd(clues=False, lures=False, p_lure=0, traps=False, p_trap=0):
                           clue=[Sign()] if clues else [],
                           lure=[Sign()] if lures else [], p_lure=p_lure,
                           trap=[Sign()] if traps else [], p_trap=p_trap)
+
+
+def _generate(*args, mazes_set, signs, folder):
+    seed, size, (class_name, bd), p_lure, p_trap, ssize = args
+    clues, lures, traps = signs
+
+    bd.seed = seed + 18
+    bd.width = size
+    bd.height = size
+    bd.p_lure = p_lure
+    bd.p_trap = p_trap
+
+    if bd.clue:
+        bd.clue = clues[:ssize]
+    if bd.lure:
+        bd.lure = lures[:ssize]
+    if bd.trap:
+        bd.trap = traps[:ssize]
+
+    if class_name in ["Trivial", "Simple"] and (p_lure > 0 or p_trap > 0):
+        return False
+
+    if class_name in ["Lures", "Complex"] and p_lure == 0:
+        return False
+
+    if class_name in ["Traps", "Complex"] and p_trap == 0:
+        return False
+
+    maze_str = Maze.bd_to_string(bd)
+    if maze_str in mazes_set:
+        return False
+    else:
+        mazes_set.add(maze_str)
+
+    maze = Maze.generate(bd)
+
+    if seed == 0:
+        maze_viewer.main(f"--maze {maze_str}"
+                         f" --render {folder.joinpath(maze_str)}.png"
+                         f" --dark --colorblind"
+                         .split(" "))
+
+    stats = maze.stats()
+    cm = Simulation.compute_metrics(maze, InputType.DISCRETE, 5)
+    stats.update({f"E{k}": v for k, v in cm[MazeMetrics.SURPRISINGNESS].items()})
+    stats['Deceptiveness'] = cm[MazeMetrics.DECEPTIVENESS]
+    stats['Inseparability'] = cm[MazeMetrics.INSEPARABILITY]
+    stats['Name'] = maze_str
+    stats['Class'] = class_name
+    stats['P_l'] = p_lure
+    stats['P_t'] = p_trap
+    stats['SSize'] = ssize
+    return stats
 
 
 def generate(args):
@@ -77,83 +138,74 @@ def generate(args):
         [1, 2, 3, 4, 5]
     ]
 
-    def signs(*_args): return [Sign(value=_v) for _v in _args]
+    def _signs(*_args): return [Sign(value=_v) for _v in _args]
     values = np.linspace(1, 0, 15, endpoint=False)
-    clues = signs(*values[0::3])
-    lures = signs(*values[1::3])
-    traps = signs(*values[2::3])
+    clues = _signs(*values[0::3])
+    lures = _signs(*values[1::3])
+    traps = _signs(*values[2::3])
+    signs = [clues, lures, traps]
 
     mazes_set = set()
+    if not args.generate and args.append and args.df_path.exists():
+        df = pd.read_csv(str(args.df_path), index_col="Name")
+        mazes_set = set(df.index.values)
+        print(f"Will skip {len(mazes_set)} existing mazes")
 
-    skipped = 0
-    for seed, size, (class_name, bd), p_lure, p_trap, ssize in (
-            tqdm_iter.product(*items, desc="Processing")):
+    skipped, processed = 0, 0
 
-        bd.seed = seed + 10
-        bd.width = size
-        bd.height = size
-        bd.p_lure = p_lure
-        bd.p_trap = p_trap
-
-        if bd.clue:
-            bd.clue = clues[:ssize]
-        if bd.lure:
-            bd.lure = lures[:ssize]
-        if bd.trap:
-            bd.trap = traps[:ssize]
-
-        if class_name in ["Trivial", "Simple"] and (p_lure > 0 or p_trap > 0):
-            skipped += 1
-            print(f"Skip: {class_name} but {p_lure=} or {p_trap=}")
-            continue
-
-        if class_name in ["Lures", "Complex"] and p_lure == 0:
-            skipped += 1
-            print(f"Skip: {class_name} but {p_lure=}")
-            continue
-
-        if class_name in ["Traps", "Complex"] and p_trap == 0:
-            skipped += 1
-            print(f"Skip: {class_name} but {p_trap=}")
-            continue
-
-        maze_str = Maze.bd_to_string(bd)
-        if maze_str in mazes_set:
-            skipped += 1
-            print(f"Skip: {maze_str} already seen")
-            continue
+    def _save_df(*_, interrupt=True):
+        if df is not None and args.out:
+            args.out.mkdir(parents=True, exist_ok=True)
+            df.to_csv(args.df_path)
+            if interrupt:
+                print(f"Interrupted while generating {args.df_path}")
+            else:
+                print("Successfully generated", args.df_path)
+            print(f"{len(df)} items written ({skipped=}, {processed=})")
         else:
-            mazes_set.add(maze_str)
+            print("Error generating", args.df_path)
+        if interrupt:
+            sys.exit()
 
-        maze = Maze.generate(bd)
+    signal.signal(signal.SIGINT, _save_df)
+    signal.signal(signal.SIGTERM, _save_df)
 
-        if seed == 0:
-            maze_viewer.main(f"--maze {maze_str}"
-                             f" --render {args.out.joinpath(maze_str)}.png"
-                             f" --dark --colorblind"
-                             .split(" "))
+    # progress_bar = tqdm(desc="Generating",
+    #                     total=reduce(mul, [len(lst) for lst in items]))
+    # # progress_bar.
+    # with ProcessPoolExecutor(max_workers=os.cpu_count()-1) as executor:
+    #     for g_args in itertools.product(*items):
+    #         progress_bar.update()
+    #     for future in concurrent.futures.as_completed(
+    #         executor.submit(_generate, *g_args,
+    #                         mazes_set=mazes_set, signs=signs, folder=args.out)
+    #         for g_args in itertools.product(*items)
+    #     ):
+    #         progress_bar.update()
+    #         print(future, future.result())
+    #         result = future.result()
+    #         if isinstance(result, bool):
+    #             skipped += 1
+    #         else:
+    #             if df is None:
+    #                 df = pd.DataFrame(columns=result.keys())
+    #             df.loc[len(df)] = result.values()
+    # progress_bar.close()
 
-        stats = maze.stats()
-        cm = Simulation.compute_metrics(maze, InputType.DISCRETE, 5)
-        stats.update({f"E{k}": v for k, v in cm[MazeMetrics.SURPRISINGNESS].items()})
-        stats['Deceptiveness'] = cm[MazeMetrics.DECEPTIVENESS]
-        stats['Inseparability'] = cm[MazeMetrics.INSEPARABILITY]
-        stats['Name'] = maze_str
-        stats['Class'] = class_name
-        stats['P_l'] = p_lure
-        stats['P_t'] = p_trap
-        stats['SSize'] = ssize
-        if df is None:
-            df = pd.DataFrame(columns=stats.keys())
-        df.loc[len(df)] = stats.values()
-    print(df.columns)
-    print(df)
-    print(f"{skipped=}")
+    for g_args in tqdm_iter.product(*items):
+        r = _generate(*g_args,
+                      mazes_set=mazes_set, signs=signs, folder=args.out)
+        if isinstance(r, bool):
+            skipped += 1
+        else:
+            processed += 1
+            name = r.pop("Name")
+            if df is None:
+                df = pd.DataFrame(columns=r.keys(),
+                                  index=pd.Index([], name="Name"))
+            df.loc[name] = r.values()
 
-    if df is not None and args.out:
-        args.out.mkdir(parents=True, exist_ok=True)
-        df.to_csv(args.df_path)
-        print("Generated", args.df_path)
+    _save_df(interrupt=False)
 
     return df
 
@@ -161,7 +213,9 @@ def generate(args):
 def plot(df, args):
     seaborn.set_style("darkgrid")
 
+    df = df.reset_index()
     df["f_size"] = df["size"].apply(lambda s: s.split("x")[0])
+    df["Seeds"] = [s.split("_")[0][1:] for s in df["Name"]]
 
     with (PdfPages(args.pdf_path) as pdf):
         # fig, ax = plt.subplots()
@@ -176,23 +230,27 @@ def plot(df, args):
         # fig.tight_layout()
         # pdf.savefig(fig)
 
-        hue_order = ["Complex", "Lures", "Traps", "Simple", "Trivial"]
+        hue_order = ["Trivial", "Simple", "Traps", "Lures", "Complex"]
+        # hue_order = ["Complex", "Lures", "Traps", "Simple", "Trivial"]
 
         jp_dict = dict(
             y="Deceptiveness",
-            alpha=1,
-            marginal_kws=dict(cut=0, common_norm=False)
+            marginal_kws=dict(cut=0, common_norm=True),
+            joint_kws=dict()
         )
 
-        for e_type in ["Epath", "Eall"]:
-            g = seaborn.jointplot(data=df, x=e_type,
-                                  hue="Class", hue_order=hue_order,
+        s = 1
+        for e_type, hue_column in tqdm_iter.product(
+            ["Epath", "Eall"],
+            ["Class", "size", "Seeds", "P_l", "P_t", "SSize"],
+            desc="Joint plots"
+        ):
+            g = seaborn.jointplot(data=df, x=e_type, hue=hue_column,
+                                  palette="deep",
+                                  s=s, linewidths=0,
                                   **jp_dict)
-            pdf.savefig(g.figure)
-
-            g = seaborn.jointplot(data=df[df["Class"] == "Complex"],
-                                  x=e_type, hue="size",
-                                  **jp_dict)
+            g.plot_joint(seaborn.kdeplot, zorder=0, fill=True, alpha=.5,
+                         warn_singular=False)
             pdf.savefig(g.figure)
 
         # mini_df = df[["Class", "size", "Prob.", "SSize", "Epath", "Eall"]].reset_index()
@@ -236,24 +294,6 @@ def plot(df, args):
 
 
 def main(sys_args: Optional[Sequence[str]] = None):
-
-    rng = random.Random(0)
-    for i in range(10):
-        n = 10**i
-        v = 10**(i+1)
-        p, p_ = rng.random(), rng.random()
-        a, b = p*n, (1-p)*n
-        c, d = p_*v, (1-p_)*v
-        p__ = a/(a+b)
-        c_, d_ = c/p__, d/(1-p__)
-        print(f"{a:10.0f} {b:10.0f}")
-        print(f"{c:10.0f} {d:10.0f}")
-        print(f"> {p=} {p_=} {p__=}")
-        print(f"> {a/p__} {b/(1-p__)}")
-        print(f"> {c_:10.0f} {d_:10.0f} {c_/(c_+d_)}")
-        print()
-    # exit(42)
-
     args = Options()
     parser = argparse.ArgumentParser(
         description="Generates distributions of mazes statistics")
@@ -263,10 +303,10 @@ def main(sys_args: Optional[Sequence[str]] = None):
     logging.basicConfig(level=logging.WARNING, force=True)
 
     args.df_path = args.out.joinpath(f"distributions_{args.n}.csv")
-    if args.generate or not args.df_path.exists():
+    if args.generate or args.append or not args.df_path.exists():
         df = generate(args)
     else:
-        df = pd.read_csv(args.df_path)
+        df = pd.read_csv(args.df_path, index_col="Name")
 
     args.pdf_path = args.df_path.with_suffix(".pdf")
     if args.plot:
