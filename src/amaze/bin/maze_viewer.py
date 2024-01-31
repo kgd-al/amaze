@@ -115,6 +115,9 @@ def main(sys_args: Optional[Sequence[str]] = None):
         print("Cannot plot trajectory without a controller")
         exit(1)
 
+    if not args.controller:
+        args.autostart = False
+
     if args.eval:
         if args.render and len(args.render.parts) == 1:
             args.render = args.eval.joinpath(args.render)

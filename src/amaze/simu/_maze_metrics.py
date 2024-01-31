@@ -75,7 +75,7 @@ def __solution_path(maze, visuals):
             cost = 1
             if sum(i[:4]) <= 1.5:  # Intersection
                 cost += __deadend_cost(maze, (c, r), maze._offsets[d_sign])
-            cost /= (maze.width * maze.height - len(maze.solution))
+            cost /= (maze.width * maze.height)
 
         yield tuple(i), d_to, cost
 
@@ -150,8 +150,10 @@ class StatesEntropy:
             # print(">", cell, len(states), self.__intersection(cell))
             e = [0, 0, 0]
             for signs, n in states.items():
-                # print(">>", foo, max(foo), n)
+                # print(">>", signs, max(signs), n, self.__counts[cell],
+                #       self.__costs[(*cell, *signs)])
                 p = n / self.__counts[cell]
+                # print(">>>", -p * log(p) * self.__costs[(*cell, *signs)])
                 e[0] += -p * log(p) * self.__costs[(*cell, *signs)]
                 e[1] += -p * log(p)
                 e[2] += -p * log(p)
