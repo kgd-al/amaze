@@ -168,8 +168,11 @@ class MainWindow(QWidget):
         s_str = (
             ', '.join([f'{v:.2g}' for v in
                        maze_metrics[MazeMetrics.SURPRISINGNESS].values()]))
+        d_str = (
+            ', '.join([f'{v:.2g}' for v in
+                       maze_metrics[MazeMetrics.DECEPTIVENESS].values()]))
         for m, v in [(MazeMetrics.SURPRISINGNESS, f"{{{s_str}}}"),
-                     (MazeMetrics.DECEPTIVENESS, None),
+                     (MazeMetrics.DECEPTIVENESS, f"{{{d_str}}}"),
                      (MazeMetrics.INSEPARABILITY, None)]:
             if v is None:
                 v = f"{maze_metrics[m]:.2g}"
