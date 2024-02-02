@@ -73,8 +73,8 @@ def __solution_path(maze, visuals):
         d_sign = Maze.Direction(np.argmax(i[4:]))  # Where to?
         if d_to != d_sign:  # Trap/Lure
             cost = 1
-            if sum(i[:4]) <= 1.5:  # Intersection
-                cost += __deadend_cost(maze, (c, r), maze._offsets[d_sign])
+            # if sum(i[:4]) <= 1.5:  # Intersection
+            #     cost += __deadend_cost(maze, (c, r), maze._offsets[d_sign])
             # cost /= (maze.width * maze.height)
 
         yield tuple(i), d_to, cost
@@ -138,42 +138,20 @@ class StatesEntropy:
     def __intersection(state: Tuple):
         return sum(1 if s == 1 else 0 for s in state[:4]) <= 1
 
-    def value(self, maze):
-        # Three versions:
-        # > Costs are applied per state
-        # > Costs are applied per cell
-        # > Costs are not applied
-        # Trap/Lure normalization always active?
-
-        entropy = [[0, 0] for _ in range(2)]
+    def value(self):
+        entropy = [0, 0]
         for cell, states in self.__inputs.items():
             # print(">", cell, len(states), self.__intersection(cell))
             for signs, n in states.items():
                 # print(">>", signs, max(signs), n, self.__counts[cell],
                 #       self.__costs[(*cell, *signs)])
                 p = n / self.__counts[cell]
-                cost = self.__costs[(*cell, *signs)]
                 # print(">>>", -p * log(p) * self.__costs[(*cell, *signs)])
-                i = self.__intersection(cell)
-                entropy[0][i] += -p * log(p)
-                entropy[1][i] += -p * log(p) * (cost > 0)
+                if self.__costs[(*cell, *signs)] > 0:
+                    entropy[self.__intersection(cell)] += -p * log(p)
 
-        # print("=============================")
-        # pprint.pprint([self.__types, entropy])
-        # print("=============================")
-
-        # return sum(entropy.values())
-        #
-        # for i in range(3):
-        #     self.__types[False] *= (maze.width * maze.height - len(maze.solution) + 1)
-
-        dct = {
-            "D0": (sum(self.__types[i] * entropy[1][not i] for i in [True, False])
-                   / sum(self.__types.values())),
-            "D1": entropy[0][1],
-            "D2": entropy[1][1]
-        }
-        return dct
+        return (sum(self.__types[i] * entropy[not i] for i in [True, False])
+                / sum(self.__types.values()))
 
 
 # noinspection PyPep8Naming
@@ -293,7 +271,7 @@ def metrics(maze: Maze, visuals: np.ndarray, input_type: InputType):
 
     n_inputs[k] = s_metric.count()
     s_entropy[k] = s_metric.value()
-    d_entropy = d_metric.value(maze)
+    d_entropy = d_metric.value()
 
     # ======
 
