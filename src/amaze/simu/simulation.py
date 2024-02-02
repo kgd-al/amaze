@@ -385,12 +385,14 @@ class Simulation:
 
     @classmethod
     def compute_complexity(cls, maze: Maze, inputs: InputType, vision: int):
+        inputs = InputType.DISCRETE
         return _maze_metrics.complexity(
             maze, cls.generate_visuals_map(maze, inputs, vision), inputs
         )
 
     @classmethod
     def compute_metrics(cls, maze: Maze, inputs: InputType, vision: int):
+        inputs = InputType.DISCRETE
         return _maze_metrics.metrics(
             maze, cls.generate_visuals_map(maze, inputs, vision), inputs
         )

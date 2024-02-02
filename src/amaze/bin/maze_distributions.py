@@ -146,9 +146,9 @@ def generate(args):
             ("Lures", __bd(clues=True, lures=True)),
             ("Complex", __bd(clues=True, lures=True, traps=True)),
         ],
-        [0., .25, .5, .75, 1.],
-        [0., .25, .5, .75, 1.],
-        [1, 2, 3, 4, 5]
+        [0., .25, .5, .75, 1.],  # Lures probability
+        [0., .25, .5, .75, 1.],  # Traps probability
+        [1]#, 2, 3, 4, 5]  # Sets size
     ]
 
     mazes_set = set()
@@ -241,13 +241,15 @@ def plot(df, args):
     }
 
     with (PdfPages(args.pdf_path) as pdf):
+        common_norm = True
         jp_dict = dict(
             kind='kde',
             palette="deep",
-            marginal_kws=dict(cut=0, common_norm=True, warn_singular=False),
             joint_kws=dict(cut=0,
                            alpha=.5, fill=True,
-                           warn_singular=False)
+                           common_norm=common_norm, warn_singular=False),
+            marginal_kws=dict(cut=0, common_norm=common_norm,
+                              warn_singular=False),
         )
         sp_dict = dict(zorder=1, linewidth=0, s=1, legend=False)
         extend = .05
@@ -304,46 +306,47 @@ def plot(df, args):
                            if pd.api.types.is_numeric_dtype(df[c])]
         _section("Distributions",
                  f"{len(numeric_columns)} variables:\n"
-                 f"{pprint.pformat(numeric_columns)}")
+                 + "\n".join(f"- {pretty_labels.get(c, c)}"
+                             for c in numeric_columns))
         for c in tqdm(numeric_columns, desc="histograms"):
             g = seaborn.histplot(data=df, x=c)
             g.set_xlabel(pretty_labels.get(c, c))
             pdf.savefig(g.figure)
             plt.close(g.figure)
 
-        _section("Variations",
-                 "Surprisingness (Epath) versus Deceptiveness (D0).\n"
-                 "Multiple graphical configurations to see which one is best")
-
-        pb = tqdm(desc="Style tests", total=5)
-
-        d_type, e_type, hue_column = "D0", "Epath", "Class"
-        _plot_one(x=e_type, y=d_type, hue=hue_column, title="Best version?")
-        pb.update()
-
-        del jp_dict["marginal_kws"]["cut"]
-        del jp_dict["joint_kws"]["cut"]
-        _plot_one(x=e_type, y=d_type, hue=hue_column, title="No cut")
-        jp_dict["marginal_kws"]["cut"] = 0
-        jp_dict["joint_kws"]["cut"] = 0
-        pb.update()
-
-        seaborn.set_style("darkgrid")
-        _plot_one(x=e_type, y=d_type, hue=hue_column, title="Black grid")
-        seaborn.set_style("whitegrid")
-        pb.update()
-
-        del sp_dict["s"]
-        _plot_one(x=e_type, y=d_type, hue=hue_column, title="Default point size")
-        sp_dict["s"] = 1
-        pb.update()
-
-        jp_dict["palette"] = "colorblind"
-        _plot_one(x=e_type, y=d_type, hue=hue_column, title="Colorblind palette")
-        jp_dict["palette"] = "deep"
-        pb.update()
-
-        pb.close()
+        # _section("Variations",
+        #          "Surprisingness (Epath) versus Deceptiveness (D0).\n"
+        #          "Multiple graphical configurations to see which one is best")
+        #
+        # pb = tqdm(desc="Style tests", total=5)
+        #
+        # d_type, e_type, hue_column = "D0", "Epath", "Class"
+        # _plot_one(x=e_type, y=d_type, hue=hue_column, title="Best version?")
+        # pb.update()
+        #
+        # del jp_dict["marginal_kws"]["cut"]
+        # del jp_dict["joint_kws"]["cut"]
+        # _plot_one(x=e_type, y=d_type, hue=hue_column, title="No cut")
+        # jp_dict["marginal_kws"]["cut"] = 0
+        # jp_dict["joint_kws"]["cut"] = 0
+        # pb.update()
+        #
+        # seaborn.set_style("darkgrid")
+        # _plot_one(x=e_type, y=d_type, hue=hue_column, title="Black grid")
+        # seaborn.set_style("whitegrid")
+        # pb.update()
+        #
+        # del sp_dict["s"]
+        # _plot_one(x=e_type, y=d_type, hue=hue_column, title="Default point size")
+        # sp_dict["s"] = 1
+        # pb.update()
+        #
+        # jp_dict["palette"] = "colorblind"
+        # _plot_one(x=e_type, y=d_type, hue=hue_column, title="Colorblind palette")
+        # jp_dict["palette"] = "deep"
+        # pb.update()
+        #
+        # pb.close()
 
         _section("Systematic distributions",
                  "Both Surprisingness implementations plotted against all"
@@ -351,11 +354,13 @@ def plot(df, args):
                  "Group variables are the maze class, size, probabilities and"
                  "number of signs")
 
-        hue_variables = ["Class", "size", "P_l", "P_t", "SSize"]
-        if len(set(df["Seeds"].values)) <= 10:
-            hue_variables.append("Seeds")
+        d_variables = ["D0", "D1", "D2"]
+        e_variables = ["Epath"]#, "Eall"]
+        hue_variables = ["Class", "size"]#, "P_l", "P_t", "SSize"]
+        # if len(set(df["Seeds"].values)) <= 10:
+        #     hue_variables.append("Seeds")
         for d_type, e_type, hue_column in tqdm_iter.product(
-            ["D0", "D1", "D2"], ["Epath", "Eall"], hue_variables,
+            d_variables, e_variables, hue_variables,
             desc="Joint plots"
         ):
             _plot_one(e_type, d_type, hue_column)
