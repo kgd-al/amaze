@@ -236,7 +236,7 @@ def plot(df, args):
         "P_l": "Lures prob.", "P_t": "Traps prob.",
         "SSize": "Unique signs"
     }
-    common_norm = False
+    common_norm = True
     jp_dict = dict(
         kind='kde',
         palette="deep",
