@@ -117,6 +117,9 @@ def _generate(*args, mazes_set):
 
     maze = Maze.generate(bd)
 
+    if class_name != "Trivial" and maze.unicursive():
+        return False
+
     stats = maze.stats()
     cm = Simulation.compute_metrics(maze, InputType.DISCRETE, 5)
     stats.update({f"E{k}": v for k, v in cm[MazeMetrics.SURPRISINGNESS].items()})
@@ -232,14 +235,21 @@ def plot(df, args):
     pretty_labels = {
         "Epath": "Surprisingness", "Eall": "Surprisingness (all inputs)",
 
+        "Class": "Maze class",
         "size": "Maze size", "Seeds": "RNG seed",
         "P_l": "Lures prob.", "P_t": "Traps prob.",
-        "SSize": "Unique signs"
+        "SSize": "Unique signs",
+
+        "path": "Optimal path length",
+        "intersections": "Number of intersections",
+        "clues": "Number of clues",
+        "lures": "Number of lures",
+        "traps": "Number of traps",
     }
     common_norm = True
     jp_dict = dict(
         kind='kde',
-        palette="deep",
+        palette="colorblind",
         joint_kws=dict(cut=0,
                        alpha=1, fill=True,
                        common_norm=common_norm, warn_singular=False),
@@ -247,11 +257,37 @@ def plot(df, args):
                           warn_singular=False),
     )
     sp_dict = dict(zorder=1, linewidth=0, s=1, legend=False)
-    extend = .05
+    extend = .01
     sample_size = 1000
-    df_sample = df.sample(sample_size) if len(df) > sample_size else df
 
-    hue_orders = dict(size=["50x50", "25x25", "10x10", "5x5"])
+    if len(df) > sample_size:
+        def _get(d_class, col):
+            return df.loc[[
+                df[df.Class == d_class][col].idxmin(),
+                df[df.Class == d_class][col].idxmax()
+            ]]
+
+        df_sample = pd.concat(
+            [_get(_c, "Epath") for _c in ["Trivial", "Simple"]]
+            + [
+                _get(_c, _v) for _c, _v in itertools.product(
+                    ["Traps", "Lures", "Complex"], ["Epath", "Deceptiveness"])
+            ]
+        )
+        df_sample.to_csv(args.df_path.with_suffix(".extremum.csv"))
+        df_sample = pd.concat([
+            df_sample,
+            df.sample(sample_size - len(df_sample), random_state=0)
+        ])
+        df_sample.to_csv(args.df_path.with_suffix('.sample.csv'))
+    else:
+        df_sample = df
+
+    hue_orders = dict(Class=["Complex", "Lures", "Traps", "Simple", "Trivial"],
+                      size=["50x50", "25x25", "10x10", "5x5"],
+                      P_l=[1, .75, .5, .25, 0],
+                      P_t=[1, .75, .5, .25, 0],
+                      SSize=[5, 4, 3, 2, 1])
 
     def __plot_one(_pdf, x, y, hue, title=None):
         hue_order = hue_orders.get(hue, [
@@ -265,6 +301,8 @@ def plot(df, args):
                             x=x, y=y, hue=hue, ax=g.ax_joint,
                             hue_order=hue_order, palette=jp_dict["palette"],
                             **sp_dict)
+
+        seaborn.despine(bottom=True)
 
         if "cut" in jp_dict["joint_kws"]:
             x_min, x_max = g.ax_joint.get_xlim()
@@ -289,7 +327,12 @@ def plot(df, args):
         plt.close(g.figure)
 
     with PdfPages(args.pdf_path.with_suffix('.best.pdf')) as pdf:
-        __plot_one(pdf, "Epath", "Deceptiveness", "Class")
+        jp_dict["height"] = 3.5
+        with seaborn.plotting_context(rc={'legend.fontsize': 'x-small',
+                                          'legend.title_fontsize': 'x-small'}):
+            __plot_one(pdf, "Epath", "Deceptiveness", "Class")
+        del jp_dict["height"]
+        # exit(1)
 
     with (PdfPages(args.pdf_path) as pdf):
 
@@ -321,48 +364,9 @@ def plot(df, args):
             pdf.savefig(g.figure)
             plt.close(g.figure)
 
-        _section("Variations",
-                 "Surprisingness (Epath) versus Deceptiveness (D0).\n"
-                 "Multiple graphical configurations to see which one is best")
-
-        pb = tqdm(desc="Style tests", total=6)
-
-        e_type, d_type, hue_column = "Epath", "Deceptiveness", "Class"
-        _plot_one(x=e_type, y=d_type, hue=hue_column, title="Best version?")
-        pb.update()
-
-        del jp_dict["marginal_kws"]["cut"]
-        del jp_dict["joint_kws"]["cut"]
-        _plot_one(x=e_type, y=d_type, hue=hue_column, title="No cut")
-        jp_dict["marginal_kws"]["cut"] = 0
-        jp_dict["joint_kws"]["cut"] = 0
-        pb.update()
-
-        seaborn.set_style("darkgrid")
-        _plot_one(x=e_type, y=d_type, hue=hue_column, title="Black grid")
-        seaborn.set_style("whitegrid")
-        pb.update()
-
-        del sp_dict["s"]
-        _plot_one(x=e_type, y=d_type, hue=hue_column, title="Default point size")
-        sp_dict["s"] = 1
-        pb.update()
-
-        jp_dict["palette"] = "deep"
-        _plot_one(x=e_type, y=d_type, hue=hue_column, title="Deep palette")
-        jp_dict["palette"] = "colorblind"
-        pb.update()
-
-        jp_dict["joint_kws"]["alpha"] = .5
-        _plot_one(x=e_type, y=d_type, hue=hue_column, title="Alpha < 1")
-        jp_dict["joint_kws"]["alpha"] = 1
-        pb.update()
-
-        pb.close()
-
         _section("Systematic distributions",
-                 "Both Surprisingness implementations plotted against all"
-                 "three Deceptiveness.\n"
+                 "Both Surprisingness implementations plotted against"
+                 " Deceptiveness.\n"
                  "Group variables are the maze class, size, probabilities and"
                  "number of signs")
 
