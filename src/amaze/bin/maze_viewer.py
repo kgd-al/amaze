@@ -44,6 +44,7 @@ class Options:
     render: Optional[Path] = None
     plot: Optional[Path] = None
     width: int = 256
+    cell_width: int = None
 
     dark: bool = False
     colorblind: bool = False
@@ -79,6 +80,9 @@ class Options:
 
         parser.add_argument("--width", type=int,
                             help="Offscreen rendering target width")
+        parser.add_argument("--cell-width", type=int,
+                            help="Offscreen rendering target width of a"
+                                 " single cell")
 
         parser.add_argument("--dark", action='store_true',
                             help="Dark background?"
@@ -94,6 +98,10 @@ def __make_simulation(args, trajectory=False):
             args.maze, Maze.BuildData.from_argparse(args, set_defaults=False))
     else:
         maze_bd = Maze.BuildData.from_argparse(args, set_defaults=True)
+
+    if args.cell_width is not None:
+        args.width = args.cell_width * maze_bd.width
+
     return Simulation(
         Maze.generate(maze_bd),
         Robot.BuildData.from_argparse(args),

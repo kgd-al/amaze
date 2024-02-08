@@ -120,6 +120,12 @@ def _generate(*args, mazes_set):
     if class_name != "Trivial" and maze.unicursive():
         return False
 
+    if class_name in ["Lures", "Complex"] and len(maze.lures()) == 0:
+        return False
+
+    if class_name in ["Traps", "Complex"] and len(maze.traps()) == 0:
+        return False
+
     stats = maze.stats()
     cm = Simulation.compute_metrics(maze, InputType.DISCRETE, 5)
     stats.update({f"E{k}": v for k, v in cm[MazeMetrics.SURPRISINGNESS].items()})
@@ -250,10 +256,10 @@ def plot(df, args):
     jp_dict = dict(
         kind='kde',
         palette="colorblind",
-        joint_kws=dict(cut=0,
-                       alpha=1, fill=True,
+        joint_kws=dict(cut=0, alpha=1, fill=True,
                        common_norm=common_norm, warn_singular=False),
         marginal_kws=dict(cut=0, common_norm=common_norm,
+                          linewidth=.5,
                           warn_singular=False),
     )
     sp_dict = dict(zorder=1, linewidth=0, s=1, legend=False)
@@ -276,7 +282,7 @@ def plot(df, args):
         )
         df_sample.to_csv(args.df_path.with_suffix(".extremum.csv"))
         df_sample = pd.concat([
-            df_sample,
+            df_sample.iloc[::-1],
             df.sample(sample_size - len(df_sample), random_state=0)
         ])
         df_sample.to_csv(args.df_path.with_suffix('.sample.csv'))
@@ -302,6 +308,11 @@ def plot(df, args):
                             hue_order=hue_order, palette=jp_dict["palette"],
                             **sp_dict)
 
+        for i, c in enumerate(g.ax_marg_x.collections):
+            c.set_zorder(100-i)
+        for i, c in enumerate(g.ax_marg_y.collections):
+            c.set_zorder(100-i)
+
         seaborn.despine(bottom=True)
 
         if "cut" in jp_dict["joint_kws"]:
@@ -323,7 +334,7 @@ def plot(df, args):
             g.figure.suptitle(title)
             g.figure.tight_layout()
 
-        _pdf.savefig(g.figure)
+        _pdf.savefig(g.figure, bbox_inches='tight')
         plt.close(g.figure)
 
     with PdfPages(args.pdf_path.with_suffix('.best.pdf')) as pdf:
