@@ -52,6 +52,7 @@ class Simulation:
         self.robot.reset(start)
 
         self.timestep = 0
+        self.last_reward = 0
         self.dt = 1 if self.data.outputs is OutputType.DISCRETE else .1
 
         sl = len(self.maze.solution)
@@ -245,6 +246,7 @@ class Simulation:
             reward += self.rewards.backward
             self.stats.backsteps += 1
 
+        self.last_reward = reward
         self.robot.reward += reward
         self.generate_inputs()
         self.timestep += 1

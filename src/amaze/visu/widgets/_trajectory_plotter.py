@@ -183,14 +183,19 @@ def _plot_trajectory_value(
         trajectory: pd.DataFrame,
         config: dict, functions: dict,
         path: Optional[Path] = None,
-        verbose: bool = True, side: int = 0,
+        verbose: int = 0, side: int = 0,
         square: bool = False,
         img_format: QImage.Format = QImage.Format_RGB32) \
             -> Optional[QImage]:
 
     assert QApplication.instance(), "ERROR: No existing QApplication"
 
-    # verbose = 10
+    verbose = 10
+    if verbose > 0:
+        if verbose > 5:
+            print()
+            print("="*80)
+        print(f"Verbose debugging of {__name__}._plot_trajectory_value")
     # side = -1
 
     maze = simulation.maze
@@ -210,14 +215,16 @@ def _plot_trajectory_value(
     for i, px, py, ax, ay, r in trajectory.itertuples():
         if verbose > 1:
             print("===")
-        # Detect cycles
-        k = ((px, py), (ax, ay))
-        if k in state_action:
-            cycle = i
-            if verbose > 1:
-                print("Cycle detected")
-            break
-        state_action.add(k)
+
+        if config["cycles"]:
+            # Detect cycles
+            k = ((px, py), (ax, ay))
+            if k in state_action:
+                cycle = i
+                if verbose > 1:
+                    print("Cycle detected")
+                break
+            state_action.add(k)
 
         # Compute value
         c_reward += r
@@ -257,9 +264,11 @@ def _plot_trajectory_value(
     if verbose > 1:
         print(trajectory.merge(data, left_index=True, right_index=True))
 
-    if verbose > 1:
+    if verbose > 1 and cycle:
         print(f"Cycle: [0:{cycle}]")
+
     trivial_trajectory = (len(set(values)) == 1)
+
     needs_color_bar = cycle and not trivial_trajectory
     needs_overlay = cycle or needs_color_bar
     if verbose > 1:
@@ -298,15 +307,14 @@ def _plot_trajectory_value(
         painter.translate(m_x_offset * scale, -m_y_offset * scale)
 
     clues, lures, traps = functions['qt_images'](maze=maze, size=32)
+    render_config = config.copy()
+    render_config.update(dict(
+        scale=scale,
+        clues=clues, lures=lures, traps=traps,
+        outputs=simulation.data.outputs,
+        robot=simulation.robot_dict() if config["robot"] else None))
     functions['render'](painter=painter, maze=maze, height=height,
-                        config=dict(
-                            scale=scale,
-                            clues=clues, lures=lures, traps=traps,
-                            outputs=simulation.data.outputs,
-                            solution=config["solution"],
-                            robot=simulation.robot_dict()
-                            if config["robot"] else None,
-                            dark=config["dark"]))
+                        config=render_config)
 
     min_v, max_v = np.quantile(values, [0, 1])
     diff_v = max_v - min_v

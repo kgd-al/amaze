@@ -107,12 +107,7 @@ class MazeWidget(QLabel):
                          "on the right >>>")
         self._simulation = simulation
         self._scale = 12
-        self._config = dict(
-            solution=True,
-            robot=True,
-            dark=False,
-            colorblind=False,
-        )
+        self._config = self.default_config()
         if config:
             self._config.update(config)
 
@@ -151,7 +146,14 @@ class MazeWidget(QLabel):
         self.update()
 
     @staticmethod
-    def config_keys(): return ["solution", "robot", "dark"]
+    def default_config():
+        return dict(
+            solution=True,      # Show path to the target
+            robot=True,         # Show the robot
+            dark=True,          # Dark background (same vision as the robot)
+            colorblind=False,   # Colorblind-friendly scheme
+            cycles=True         # Cycle detection and simplification
+        )
 
     def minimumSize(self) -> QSize:
         return 3 * QSize(self._simulation.maze.width,
@@ -294,10 +296,10 @@ class MazeWidget(QLabel):
     @classmethod
     def plot_trajectory(cls, simulation: Simulation,
                         size: int,
-                        trajectory: pd.DataFrame,
-                        config: dict,
+                        trajectory: Optional[pd.DataFrame] = None,
+                        config: Optional[dict] = None,
                         path: Optional[Path] = None,
-                        verbose: bool = True,
+                        verbose: int = 0,
                         side: int = 0,
                         square: bool = False,
                         img_format: QImage.Format = QImage.Format_RGB32) \
@@ -315,7 +317,7 @@ class MazeWidget(QLabel):
         :param side: where to put the color bar (<0: left, >0: right, 0: auto)
         :param square: whether to generate a square image of size max(w,h)^2
         :param img_format: QImage.Format to use for the underlying QImage
-        :param config: kw configuration values (see config_keys())
+        :param config: kw configuration values (see default_config())
         """
 
         funcs = dict(
@@ -328,11 +330,16 @@ class MazeWidget(QLabel):
             save=cls._save_image
         )
 
+        trajectory = trajectory or simulation.trajectory
+        _config = cls.default_config()
+        if config is not None:
+            _config.update(config)
+
         return _trajectory_plotter.plot_trajectory(
             simulation=simulation,
             size=size,
             trajectory=trajectory,
-            config=config,
+            config=_config,
             functions=funcs,
             verbose=verbose,
             side=side,

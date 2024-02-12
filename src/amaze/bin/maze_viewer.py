@@ -37,6 +37,8 @@ class Options:
     maze: Optional[str] = None
     controller: Optional[Path] = None
 
+    is_robot: bool = False
+
     eval: Optional[Path] = None
 
     autostart: bool = True
@@ -57,12 +59,17 @@ class Options:
 
         parser.add_argument("--maze", dest="maze",
                             help="Use provided string-format maze")
+
         parser.add_argument("--no-autostart", dest="autostart",
                             action="store_false",
                             help="Whether to autostart the evaluation")
 
         parser.add_argument("--controller", dest="controller",
                             type=Path, help="Load robot/controller from file")
+
+        parser.add_argument("--robot-mode", dest="is_robot",
+                            action="store_true",
+                            help="See the maze as if you were a robot")
 
         parser.add_argument("--evaluate", dest="eval", type=Path,
                             help="Evaluate provided controller on provided"
@@ -119,7 +126,7 @@ def main(sys_args: Optional[Sequence[str]] = None):
         print("Cannot evaluate without a controller")
         exit(1)
 
-    if args.plot and not args.controller:
+    if args.plot and not args.controller and not args.is_robot:
         print("Cannot plot trajectory without a controller")
         exit(1)
 
@@ -133,7 +140,7 @@ def main(sys_args: Optional[Sequence[str]] = None):
             args.plot = args.eval.joinpath(args.plot)
         args.eval.mkdir(parents=True, exist_ok=True)
 
-    simulate = args.eval or args.plot
+    simulate = args.eval or (args.plot and not args.is_robot)
     window = not (args.render or simulate)
     if not window:
         os.environ["QT_QPA_PLATFORM"] = "offscreen"
@@ -166,14 +173,7 @@ def main(sys_args: Optional[Sequence[str]] = None):
                   f"{simulation.infos()['pretty_reward']}")
             if args.plot:
                 MazeWidget.plot_trajectory(
-                    simulation=simulation,
-                    size=args.width, trajectory=simulation.trajectory,
-                    config=dict(
-                        solution=True,
-                        robot=False,
-                        dark=True
-                    ),
-                    path=args.plot
+                    simulation=simulation, size=args.width, path=args.plot,
                 )
                 print(f"Plotted {args.controller}"
                       f" in {simulation.maze.to_string()}"
