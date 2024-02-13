@@ -1,0 +1,51 @@
+\documentclass{standalone}
+\usepackage{tikz}
+\usetikzlibrary{calc, decorations.pathreplacing, spy, tikzmark}
+\newenvironment{localtoimage}[3][]{%
+ \node (I) [inner sep=0pt] {\includegraphics[#3]{#2}};%
+ \begin{localto}[#1]{I}%
+}{%
+ \end{localto}%
+}
+\newenvironment{localto}[2][]{
+ \path let \p1=(#2.center), \p2=(#2.north), \p3=(#2.east) in coordinate (#2X) at (\x3-\x1,0) coordinate (#2Y) at (0,\y2-\y1);
+ \begin{scope}[x={(#2X)}, y={(#2Y)}, shift={(#2.center)},#1]
+}{
+ \end{scope}
+}
+\begin{document}
+\begin{tikzpicture}
+ \def\scale{.75}
+ \pgfmathsetmacro{\s}{.21 * \scale * \textwidth}
+
+ \node at (0, 7) {
+  \Large
+  \tikzmarknode{A}{M16}%
+  \_\tikzmarknode{B}{10x10}%
+  \_\tikzmarknode{C}{C1}%
+  \_\tikzmarknode{D}{l.07}%
+  \_\tikzmarknode{E}{L.25}%
+  \_\tikzmarknode{F}{t.25}%
+  \_\tikzmarknode{G}{T.5}};
+
+ \begin{scope}[spy using outlines={size=\s, connect spies, magnification=2}]
+  \begin{localtoimage}{sample_maze}{width=\scale\textwidth}
+   \draw [<->] (-1.1, -1) -- ++(0, 2) node [pos=.5, fill=white, rotate=90] {Height};
+   \draw [<->] (-1, 1.1) -- ++(2, 0) node [pos=.5, fill=white] {Width};
+   \foreach \n/\x/\y in {Start/-.9/-.9, End/.9/.9, Clue/-.9/.5, Lure/-.3/-.3, Trap/.9/.3} {
+    \coordinate (\n) at (\x, \y);
+   }
+
+   \coordinate (L) at (-1.6, 0);
+   \coordinate (R) at ( 1.3, 0);
+   \coordinate (RR) at ( 1.8, 0);
+   \coordinate (RRR) at ( 2.3, 0);
+  \end{localtoimage}
+  \gdef\labels{Start/L, Clue/L, End/R, Lure/R, Trap/R}
+  \foreach \n/\c in \labels {
+   \edef\tmp{\noexpand\spy [red] on (\n) in node (S\n) at (\c|-\n);}\tmp
+ }
+ \end{scope}
+ \foreach \n/\c in \labels {\node at (S\n.north) [anchor=south] {\n};}
+\end{tikzpicture}
+\end{document}
