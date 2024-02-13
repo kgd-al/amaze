@@ -11,6 +11,7 @@ stash/
 tmp/
 tmp
 
+*.aux
 
 ##################
 # Auto generated #
