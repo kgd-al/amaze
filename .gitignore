@@ -12,6 +12,7 @@ tmp/
 tmp
 
 *.aux
+*.pdf
 
 ##################
 # Auto generated #

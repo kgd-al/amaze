@@ -2,6 +2,8 @@
 
 A lightweight maze navigation task generator for sighted AI agents
 
+![maze sample](https://raw.githubusercontent.com/kgd-al/amaze/master/docs/latex/maze/maze.png)
+
 ## Current state
 
 No clear distinction between library code (maze generator, viewer, stats extractor, ...)

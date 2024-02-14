@@ -1,4 +1,4 @@
-\documentclass{standalone}
+\documentclass[convert]{standalone}
 \usepackage{amsmath}
 \usepackage{tikz}
 \usetikzlibrary{arrows, calc, decorations.pathreplacing, spy, tikzmark}
@@ -23,16 +23,16 @@
  \def\scale{.75}
  \pgfmathsetmacro{\s}{.21 * \scale * \textwidth}
 
- \node (str) [inner sep=0pt] at (0, 7) {
-  \Large
+ \node (str) [inner sep=0pt] at (0, 8) {
+  \LARGE
   M%
-  \subnode{S}{16}%
-  \_\subnode{WH}{10x10}%
-  \_\subnode{C}{C1}%
-  \_\subnode{l}{l.07}%
-  \_\subnode{L}{L.25}%
-  \_\subnode{t}{t.25}%
-  \_\subnode{T}{T.5}
+  \subnode{str_S}{16}%
+  \_\subnode{str_WH}{10x10}%
+  \_\subnode{str_C}{C1}%
+  \_\subnode{str_t}{t.25}%
+  \_\subnode{str_T}{T.5}%
+  \_\subnode{str_l}{l.07}%
+  \_\subnode{str_L}{L.25}%
  };
 
  \begin{scope}[spy using outlines={size=\s, connect spies, magnification=2}]
@@ -56,10 +56,35 @@
  \end{scope}
  \foreach \n/\c in \labels {\node at (S\n.north) [anchor=south] {\n};}
 %
- \coordinate (UP) at ($(str)+(0, 2)$);
- \draw [->] (S.north) ++(0, 5pt) -- ++(S-|UP) node [anchor=south] {Seed};
- \draw [decorate,decoration={brace, amplitude=10pt, raise=5pt}] (WH.north west) -- (WH.north east)
+ \coordinate (UP) at ($(str)+(0, .75)$); \coordinate (DOWN) at ($(str)-(0, .75)$);
+ \draw [->] (str_S.north) ++(0, 5pt) -- (str_S|-UP) node [anchor=south] {Seed};
+
+ \draw [decorate,decoration={brace, amplitude=10pt, raise=5pt}]
+  (str_WH.north west) -- (str_WH.north east)
   node [pos=.5, anchor=south, yshift=15pt] {Size};
- \draw [->] (C.north) ++(0, 5pt) -- ++(0, .5) node [anchor=south] {Clues};
+
+ \draw [->] (str_C.south) ++(0, -5pt) -- (str_C|-DOWN) -- ++(-.5, 0)
+  node [anchor=east] (strl_C) {Clues};
+
+ \draw [decorate,decoration={brace, amplitude=10pt, raise=5pt}]
+  (str_t.north west) -- (str_T.north east)
+  node [pos=.5, anchor=south, yshift=15pt] {Traps};
+ \draw [->] (str_t.south) ++(0, -5pt) -- (str_t|-DOWN)
+  node [anchor=north] (strl_t) {$p(t)$};
+ \draw [->] (str_T.south) ++(0, -5pt) -- (str_T|-DOWN) -- ++(0, -.8)
+  node [anchor=north] (strl_T) {Value};
+
+ \draw [decorate,decoration={brace, amplitude=10pt, raise=5pt}]
+  (str_l.north west) -- (str_L.north east)
+  node [pos=.5, anchor=south, yshift=15pt] {Lures};
+ \draw [->] (str_l.south) ++(0, -5pt) -- (str_l|-DOWN)
+  node [anchor=north] (strl_l) {$p(l)$};
+ \draw [->] (str_L.south) ++(0, -5pt) -- (str_L|-DOWN) -- ++(0, -.4)
+  node [anchor=north] (strl_L) {Value};
+
+  \draw [dotted] (strl_C) -- ++(-6, 0) |- (SClue);
+  \draw [dotted] (strl_T) -- ++(6, 0) |- (STrap);
+  \draw [dotted] (strl_L) -- ++(4, 0) |- (SLure);
+
 \end{tikzpicture}
 \end{document}
