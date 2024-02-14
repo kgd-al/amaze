@@ -1,6 +1,7 @@
 \documentclass{standalone}
+\usepackage{amsmath}
 \usepackage{tikz}
-\usetikzlibrary{calc, decorations.pathreplacing, spy, tikzmark}
+\usetikzlibrary{arrows, calc, decorations.pathreplacing, spy, tikzmark}
 \newenvironment{localtoimage}[3][]{%
  \node (I) [inner sep=0pt] {\includegraphics[#3]{#2}};%
  \begin{localto}[#1]{I}%
@@ -14,19 +15,25 @@
  \end{scope}
 }
 \begin{document}
-\begin{tikzpicture}
+\newcommand*{\ExtractCoordinateOld}[1]{%
+ \path [transform canvas] (#1);
+ \pgfgetlastxy{\XCoord}{\YCoord}%
+}
+\begin{tikzpicture}[>=stealth', remember picture]
  \def\scale{.75}
  \pgfmathsetmacro{\s}{.21 * \scale * \textwidth}
 
- \node at (0, 7) {
+ \node (str) [inner sep=0pt] at (0, 7) {
   \Large
-  \tikzmarknode{A}{M16}%
-  \_\tikzmarknode{B}{10x10}%
-  \_\tikzmarknode{C}{C1}%
-  \_\tikzmarknode{D}{l.07}%
-  \_\tikzmarknode{E}{L.25}%
-  \_\tikzmarknode{F}{t.25}%
-  \_\tikzmarknode{G}{T.5}};
+  M%
+  \subnode{S}{16}%
+  \_\subnode{WH}{10x10}%
+  \_\subnode{C}{C1}%
+  \_\subnode{l}{l.07}%
+  \_\subnode{L}{L.25}%
+  \_\subnode{t}{t.25}%
+  \_\subnode{T}{T.5}
+ };
 
  \begin{scope}[spy using outlines={size=\s, connect spies, magnification=2}]
   \begin{localtoimage}{sample_maze}{width=\scale\textwidth}
@@ -43,9 +50,16 @@
   \end{localtoimage}
   \gdef\labels{Start/L, Clue/L, End/R, Lure/R, Trap/R}
   \foreach \n/\c in \labels {
-   \edef\tmp{\noexpand\spy [red] on (\n) in node (S\n) at (\c|-\n);}\tmp
+   \ExtractCoordinateOld{$(\n)$}
+   \edef\tmp{\noexpand\spy [red] on (\XCoord, \YCoord) in node (S\n) at (\c|-\n);}\tmp
  }
  \end{scope}
  \foreach \n/\c in \labels {\node at (S\n.north) [anchor=south] {\n};}
+%
+ \coordinate (UP) at ($(str)+(0, 2)$);
+ \draw [->] (S.north) ++(0, 5pt) -- ++(S-|UP) node [anchor=south] {Seed};
+ \draw [decorate,decoration={brace, amplitude=10pt, raise=5pt}] (WH.north west) -- (WH.north east)
+  node [pos=.5, anchor=south, yshift=15pt] {Size};
+ \draw [->] (C.north) ++(0, 5pt) -- ++(0, .5) node [anchor=south] {Clues};
 \end{tikzpicture}
 \end{document}
