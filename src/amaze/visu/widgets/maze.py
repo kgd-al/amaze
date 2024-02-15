@@ -204,6 +204,12 @@ class MazeWidget(QLabel):
         self._render(painter)
         return self._save_image(path, img, painter)
 
+    def pretty_render(self):
+        img, painter = self._image_drawer()
+        self._render(painter)
+        painter.end()
+        return img
+
     @classmethod
     def static_draw_to(cls, maze, path, size=None, **kwargs):
         width, height = cls.__compute_size(maze, size or maze.width * 15)

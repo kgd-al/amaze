@@ -7,16 +7,23 @@ log=$base/.log
 date > $log
 
 compile(){
-    pdflatex --shell-escape --interaction=errorstopmode $@
+    cd $1
+    echo "### Compiling $1 figure" | tee -a $log
+    for mode in light dark
+    do
+        echo "#### mode: $mode" | tee -a $log
+        for i in 0 1
+        do
+            pdflatex --shell-escape --interaction=nonstopmode --jobname=$mode *.tex >> $log
+        done
+        convert -density 300 $mode.pdf $mode.png
+    done
+
+    rm *.{aux,log,pdf}
+
+    cd ..
 }
 
-cd maze
-echo "### Compiling maze figure" | tee -a $log
-echo "#### Dark mode 1" | tee -a $log
-compile --jobname=maze_dark maze.tex <<< "x\n" #>> $log
-echo "#### Dark mode 2" | tee -a $log
-compile --jobname=dark maze.tex <<< "x\n" #>> $log
-echo "#### Dark mode 3" | tee -a $log
-pdflatex --shell-escape --interaction=errorstopmode --jobname=dark maze.tex <<< "x\n" #>> $log
+compile maze
 # echo "#### Light mode" | tee -a $log
 # compile --jobname=maze_light maze.tex >> $log

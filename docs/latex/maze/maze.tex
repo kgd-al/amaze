@@ -1,5 +1,4 @@
-\documentclass[convert]{standalone}
-\usepackage{amsmath}
+\documentclass{standalone}
 \usepackage{tikz}
 \usetikzlibrary{arrows, calc, decorations.pathreplacing, spy, tikzmark}
 \newenvironment{localtoimage}[3][]{%
@@ -16,18 +15,17 @@
 }
 \usepackage{substr}
 \IfSubStringInString{\detokenize{dark}}{\jobname}{
- \pagecolor{black}
+%  \pagecolor{black}
  \def\thecolor{white}
  \color{\thecolor}
 }{
  \def\thecolor{black}
 }
-
-\begin{document}
 \newcommand*{\ExtractCoordinateOld}[1]{%
  \path [transform canvas] (#1);
  \pgfgetlastxy{\XCoord}{\YCoord}%
 }
+\begin{document}
 \begin{tikzpicture}[>=stealth', remember picture]
  \def\scale{.75}
  \pgfmathsetmacro{\s}{.21 * \scale * \textwidth}

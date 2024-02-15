@@ -1,9 +1,18 @@
 # AMaze
 
-A lightweight maze navigation task generator for sighted AI agents
+A lightweight maze navigation task generator for sighted AI agents.
 
-![maze sample](https://raw.githubusercontent.com/kgd-al/amaze/master/docs/latex/maze/maze_dark.png#gh-dark-mode-only)
-![maze sample](https://raw.githubusercontent.com/kgd-al/amaze/master/docs/latex/maze/maze_light.png#gh-light-mode-only)
+## Mazes
+
+AMaze is primarily a maze generator: its goal is to provide an easy way to 
+generate arbitrarily complex (or simple) mazes for agents to navigate in.
+
+Every maze can be described by a unique, human-readable string:
+
+![maze sample](https://raw.githubusercontent.com/kgd-al/amaze/master/docs/latex/maze/dark.png#gh-dark-mode-only)
+![maze sample](https://raw.githubusercontent.com/kgd-al/amaze/master/docs/latex/maze/light.png#gh-light-mode-only)
+
+## Agents
 
 ## Current state
 

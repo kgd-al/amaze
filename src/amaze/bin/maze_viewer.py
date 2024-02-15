@@ -43,6 +43,8 @@ class Options:
 
     autostart: bool = True
 
+    movie: Optional[Path] = None
+
     render: Optional[Path] = None
     plot: Optional[Path] = None
     width: int = 256
@@ -80,8 +82,12 @@ class Options:
                             nargs='?', const='maze.png',
                             help="Render maze to requested file")
 
-        parser.add_argument("--trajectory", dest="plot", type=Path,
-                            nargs='?', const='trajectory.png',
+        parser.add_argument("--movie", dest="movie", type=Path,
+                            help="Render a video of the robot's strategy "
+                                 "to requested file (gif)")
+
+        parser.add_argument("--trajectory", dest="plot",
+                            type=Path, nargs='?', const='trajectory.png',
                             help="Plot trajectory of provided agent to"
                                  " provided path")
 
@@ -94,7 +100,6 @@ class Options:
         parser.add_argument("--dark", action='store_true',
                             help="Dark background?"
                                  " (identical to agent's perceptions)")
-
         parser.add_argument("--colorblind", action='store_true',
                             help="Use colorblind-friendly colormaps")
 
@@ -133,6 +138,9 @@ def main(sys_args: Optional[Sequence[str]] = None):
     if not args.controller:
         args.autostart = False
 
+    if args.movie:
+        args.autostart = True
+
     if args.eval:
         if args.render and len(args.render.parts) == 1:
             args.render = args.eval.joinpath(args.render)
@@ -161,7 +169,8 @@ def main(sys_args: Optional[Sequence[str]] = None):
                                 ),
                                 width=args.width)
             if widget.draw_to(args.render):
-                logger.info(f"Saved {simulation.maze.to_string()} to {args.render}")
+                logger.info(f"Saved {simulation.maze.to_string()}"
+                            f" to {args.render}")
 
         if simulate:
             simulation.reset(save_trajectory=True)

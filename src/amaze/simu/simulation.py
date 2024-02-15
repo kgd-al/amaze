@@ -201,12 +201,12 @@ class Simulation:
         collision = ((x != x_) + (y != y_))
         return collision
 
-    def step(self, action: Action):
+    def step(self, action: Action) -> Optional[float]:
         # logger.debug(f"{'-'*80}\n-- step {self.time()}")
 
         if self.data.control == "KEYBOARD" and \
                 not action and not self.robot.vel:
-            return
+            return None
 
         reward = 0
 

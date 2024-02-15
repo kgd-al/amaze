@@ -1,4 +1,5 @@
 import functools
+import math
 import pprint
 from datetime import time
 from enum import IntFlag, Enum
@@ -6,7 +7,9 @@ from logging import getLogger
 from pathlib import Path
 from typing import Optional, Union
 
-from PyQt5.QtCore import QSettings, QTimer, Qt, QSignalBlocker, QObject, pyqtSignal, QObjectCleanupHandler
+from PyQt5.QtCore import QSettings, QTimer, Qt, QSignalBlocker, QObject, pyqtSignal, QObjectCleanupHandler, QRect, \
+    QPoint, QSize
+from PyQt5.QtGui import QImage, QShowEvent, QRegion, QPainter
 from PyQt5.QtWidgets import (QMainWindow, QHBoxLayout, QWidget, QLabel,
                              QVBoxLayout, QToolButton, QSpinBox, QGroupBox,
                              QStyle, QAbstractButton, QCheckBox, QComboBox,
@@ -121,7 +124,6 @@ class MainWindow(QWidget):
             self._trajectory_plotter = None
 
         # ----
-
         if runnable:
             if args:
                 self._generate_controller(args.controller)
@@ -132,6 +134,8 @@ class MainWindow(QWidget):
 
         self._update()
         self.buttons["play"].setFocus()
+
+        self._movie = _MovieRecorder(self, args.movie) if args.movie else None
 
         if self.robot_mode:  # Trimmed down version for the robot
             self._set_robot_mode_layout()
@@ -241,6 +245,9 @@ class MainWindow(QWidget):
 
         self.buttons["play"].setIcon(self.style().standardIcon(icon))
 
+        if self.playing and self._movie:
+            self._movie.step()
+
     def _think(self):
         if isinstance(self.controller, RandomController):
             self.controller.curr_pos = self.simulation.robot.pos
@@ -249,11 +256,15 @@ class MainWindow(QWidget):
 
     def _step(self):
         self.sections[self.Sections.CONFIG].setEnabled(False)
-        self.simulation.step(self.next_action)
+        reward = self.simulation.step(self.next_action)
+        self.next_action = self._think()
+
+        if reward is None:
+            return
+
         if self.simulation.done():
             self._done()
         else:
-            self.next_action = self._think()
             self._update()
 
     def _done(self):
@@ -270,6 +281,9 @@ class MainWindow(QWidget):
 
         if self._trajectory_plotter is not None:
             self._trajectory_plotter()
+
+        if self._movie:
+            self._movie.save()
 
         self.stop()
 
@@ -432,6 +446,11 @@ class MainWindow(QWidget):
     # == Layout/controls setup
     # =========================================================================
 
+    def showEvent(self, e):
+        super().showEvent(e)
+        if self._movie:
+            self._movie.step()
+
     def _set_robot_mode_layout(self):
         self._layout_holder.setLayout(self.layout)
 
@@ -514,6 +533,7 @@ class MainWindow(QWidget):
         widget("solution", QCheckBox, "Show solution")
         widget("robot", QCheckBox, "Show robot")
         widget("dark", QCheckBox, "Dark")
+        widget("colorblind", QCheckBox, "Colorblind")
 
         return layout
 
@@ -713,7 +733,7 @@ class MainWindow(QWidget):
                 new_value=self.config['control'].currentText(),
                 open_dialog=False))
 
-        for k in ["solution", "robot", "dark"]:
+        for k in ["solution", "robot", "dark", "colorblind"]:
             self.config["show_" + k].clicked.connect(
                 lambda v, k_=k: self.maze_w.update_config(**{k_: v}))
 
@@ -794,8 +814,9 @@ class MainWindow(QWidget):
         config.setValue('robot', self._robot_data().__dict__)
 
         config.beginGroup("show")
-        for k in MazeWidget.config_keys():
-            config.setValue(k, int(self.config["show_" + k].isChecked()))
+        for k in MazeWidget.default_config().keys():
+            if (w := self.config.get("show_" + k)) is not None:
+                config.setValue(k, int(w.isChecked()))
         config.endGroup()
 
         config.beginGroup("sections")
@@ -854,3 +875,62 @@ class MainWindow(QWidget):
 
         name = "control"
         self.config[name].setCurrentText(val(name).lower())
+
+
+class _MovieRecorder:
+    def __init__(self, viewer, path: Path):
+        self.viewer = viewer
+        self.path = path
+        self.folder = self.path.with_suffix('')
+        self.folder.mkdir(parents=True, exist_ok=True)
+        self.frames = []
+
+        max_timestep = self.viewer.simulation.deadline
+        self.step_format = (f"{{:0{math.ceil(math.log10(max_timestep))}d}}"
+                            f".png")
+
+    def _path(self, name=None):
+        if name:
+            name = name + "_"
+        else:
+            name = ""
+        name += self.step_format.format(self.viewer.simulation.timestep)
+        return str(self.folder.joinpath(name))
+
+    def step(self):
+        m_img = self.viewer.maze_w.pretty_render()
+        m_img.save(self._path("maze"))
+
+        size = m_img.width()
+
+        # robot = self.viewer.sections[MainWindow.Sections.ROBOT]
+        # img = QImage(robot.rect().size(), QImage.Format_ARGB32)
+        # img.fill(Qt.transparent)
+        # robot.render(img)
+        # img.save(str(self.folder.joinpath(f"robot_{step}.png")))
+
+        vision = self.viewer.visu["img_inputs"]
+        v_size = min(vision.width(), vision.height())
+        v_ratio = size / v_size
+        v_offset = (
+            (vision.width() - v_size) // 2,
+            (vision.height() - v_size) // 2
+        )
+
+        v_img = QImage(m_img.size(), m_img.format())
+        painter = QPainter(v_img)
+        painter.scale(v_ratio, v_ratio)
+        vision.render(painter, QPoint(0, 0),
+                      QRegion(*v_offset, v_size, v_size))
+        painter.end()
+        v_img.save(self._path("vision"))
+
+        img = QImage(2*size, size, m_img.format())
+        painter = QPainter(img)
+        painter.drawImage(0, 0, m_img)
+        painter.drawImage(size, 0, v_img)
+        painter.end()
+        img.save(self._path())
+
+    def save(self):
+        print("Saving")
