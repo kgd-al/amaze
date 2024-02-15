@@ -2,7 +2,8 @@
 
 A lightweight maze navigation task generator for sighted AI agents
 
-![maze sample](https://raw.githubusercontent.com/kgd-al/amaze/master/docs/latex/maze/maze.png)
+![maze sample](https://raw.githubusercontent.com/kgd-al/amaze/master/docs/latex/maze/maze_dark.png#gh-dark-mode-only)
+![maze sample](https://raw.githubusercontent.com/kgd-al/amaze/master/docs/latex/maze/maze_light.png#gh-light-mode-only)
 
 ## Current state
 

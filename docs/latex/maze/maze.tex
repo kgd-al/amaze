@@ -14,6 +14,15 @@
 }{
  \end{scope}
 }
+\usepackage{substr}
+\IfSubStringInString{\detokenize{dark}}{\jobname}{
+ \pagecolor{black}
+ \def\thecolor{white}
+ \color{\thecolor}
+}{
+ \def\thecolor{black}
+}
+
 \begin{document}
 \newcommand*{\ExtractCoordinateOld}[1]{%
  \path [transform canvas] (#1);
@@ -37,8 +46,14 @@
 
  \begin{scope}[spy using outlines={size=\s, connect spies, magnification=2}]
   \begin{localtoimage}{sample_maze}{width=\scale\textwidth}
-   \draw [<->] (-1.1, -1) -- ++(0, 2) node [pos=.5, fill=white, rotate=90] {Height};
-   \draw [<->] (-1, 1.1) -- ++(2, 0) node [pos=.5, fill=white] {Width};
+   \begin{scope}[every path/.style={\thecolor}]
+    \node (Hn) [rotate=90] at (-1.1, 0) {Height};
+    \node (Wn) at (0, -1.1) {Width};
+
+    \draw [->] (Hn) -- (-1.1, -1); \draw [->] (Hn) -- (-1.1, 1);
+    \draw [->] (Wn) -- (-1, -1.1); \draw [->] (Wn) -- (1, -1.1);
+   \end{scope}
+
    \foreach \n/\x/\y in {Start/-.9/-.9, End/.9/.9, Clue/-.9/.5, Lure/-.3/-.3, Trap/.9/.3} {
     \coordinate (\n) at (\x, \y);
    }
@@ -54,7 +69,7 @@
    \edef\tmp{\noexpand\spy [red] on (\XCoord, \YCoord) in node (S\n) at (\c|-\n);}\tmp
  }
  \end{scope}
- \foreach \n/\c in \labels {\node at (S\n.north) [anchor=south] {\n};}
+ \foreach \n/\c in \labels {\node at (S\n.north) (Sl\n) [anchor=south] {\n};}
 %
  \coordinate (UP) at ($(str)+(0, .75)$); \coordinate (DOWN) at ($(str)-(0, .75)$);
  \draw [->] (str_S.north) ++(0, 5pt) -- (str_S|-UP) node [anchor=south] {Seed};
@@ -82,7 +97,7 @@
  \draw [->] (str_L.south) ++(0, -5pt) -- (str_L|-DOWN) -- ++(0, -.4)
   node [anchor=north] (strl_L) {Value};
 
-  \draw [dotted] (strl_C) -- ++(-6, 0) |- (SClue);
+  \draw [dotted] (strl_C) -- (strl_C-|SClue) -- (SlClue);
   \draw [dotted] (strl_T) -- ++(6, 0) |- (STrap);
   \draw [dotted] (strl_L) -- ++(4, 0) |- (SLure);
 
