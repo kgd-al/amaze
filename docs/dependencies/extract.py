@@ -55,16 +55,16 @@ def process_dependencies():
             key = []
         for k, v in _dct.items():
             _key = key + [k]
-            print(k)
+            print(k, v)
             if len(v) > 0:
                 with cluster.subgraph(name=k) as _cluster:
                     _cluster.attr(label=k)
                     _cluster.attr(cluster="True")
                     _process(v, _key, _cluster)
             else:
-                cluster.node(name=".".join(_key[1:]), label=k)
+                cluster.node(name=".".join(_key), label=k)
 
-    _process(dict(dependencies=dct))
+    _process(dct)
 
 
 if __name__ == "__main__":
@@ -76,10 +76,11 @@ if __name__ == "__main__":
 
     dot = graphviz.Digraph('AMaze', format='pdf')
     dot.graph_attr['rankdir'] = 'LR'
+    dot.attr(compound="True")
     process_folder(dot, src)
 
     process_dependencies()
-    print(dot.source)
+    # print(dot.source)
 
     # dot_file = me.parent.joinpath("data.dot")
     # pdf_file = dot_file.with_suffix(".pdf")
