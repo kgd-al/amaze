@@ -13,7 +13,7 @@
 \begin{tikzpicture}[scale=.6]%
  \foreach \r/\c/\L in {2/snode/S, 1/wnode/W} {
   \foreach \a/\l in {0/e, 90/n, 180/w, 270/s} {
-    \draw [\c, fill=white, thick] (\a:\r) ++(-.5, -.5) rectangle ++(1, 1);
+    \draw [\c, thick] (\a:\r) ++(-.5, -.5) rectangle ++(1, 1);
     \node at (\a:\r) {\footnotesize $\L_\l$};
   }
  }
