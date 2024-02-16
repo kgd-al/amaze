@@ -9,8 +9,8 @@ generate arbitrarily complex (or simple) mazes for agents to navigate in.
 
 Every maze can be described by a unique, human-readable string:
 
-![maze sample](https://raw.githubusercontent.com/kgd-al/amaze/master/docs/latex/maze/dark.png#gh-dark-mode-only)
-![maze sample](https://raw.githubusercontent.com/kgd-al/amaze/master/docs/latex/maze/light.png#gh-light-mode-only)
+![maze sample_dark](https://raw.githubusercontent.com/kgd-al/amaze/master/docs/latex/maze/dark.png#gh-dark-mode-only)
+![maze sample_light](https://raw.githubusercontent.com/kgd-al/amaze/master/docs/latex/maze/light.png#gh-light-mode-only)
 
 ## Agents
 
@@ -20,14 +20,50 @@ The input and output spaces can either be discrete or continuous.
 
 ### Discrete inputs
 
-![inputs_discrete](https://raw.githubusercontent.com/kgd-al/amaze/master/docs/latex/agents/dark-0.png#gh-dark-mode-only)
-![inputs_discrete](https://raw.githubusercontent.com/kgd-al/amaze/master/docs/latex/agents/light-0.png#gh-light-mode-only)
+![inputs_discrete_dark](https://raw.githubusercontent.com/kgd-al/amaze/master/docs/latex/agents/dark-0.png#gh-dark-mode-only)
+![inputs_discrete_light](https://raw.githubusercontent.com/kgd-al/amaze/master/docs/latex/agents/light-0.png#gh-light-mode-only)
 
-## Current state
+In the discrete input case, information is provided in an easily intelligible format of fixed size.
+According to the cell highlighted in the previous example, an agent following the optimal trajectory 
+would receive the following inputs:
 
-No clear distinction between library code (maze generator, viewer, stats extractor, ...)
+![inputs_discrete_example_dark](https://raw.githubusercontent.com/kgd-al/amaze/master/docs/latex/agents/dark-1.png#gh-dark-mode-only)
+![inputs_discrete_example_light](https://raw.githubusercontent.com/kgd-al/amaze/master/docs/latex/agents/light-1.png#gh-light-mode-only)
+
+### Continuous inputs
+
+![inputs_continuous_dark](https://raw.githubusercontent.com/kgd-al/amaze/master/docs/latex/agents/dark-2.png#gh-dark-mode-only)
+![inputs_continuous_light](https://raw.githubusercontent.com/kgd-al/amaze/master/docs/latex/agents/light-2.png#gh-light-mode-only)
+
+For continuous inputs, a raw grayscale image is directly provided to the agent.
+It contains wall information on the outer edge, as well as the same temporal information as with the
+discrete case (centered pixel on the corresponding border).
+The sign, if any, is thus provided a potentially complex image that the agent must parse and understand:
+
+![inputs_continuous_example_dark](https://raw.githubusercontent.com/kgd-al/amaze/master/docs/latex/agents/dark-3.png#gh-dark-mode-only)
+![inputs_continuous_example_light](https://raw.githubusercontent.com/kgd-al/amaze/master/docs/latex/agents/light-3.png#gh-light-mode-only)
+
+### Examples
+
+According to the combinations of input and output spaces, the library can work in one of three ways:
+
+#### Fully discrete
+
+![example_dd](https://raw.githubusercontent.com/kgd-al/amaze/master/docs/demo/dd.gif)
+
+#### Hybrid (continuous inputs, discrete outputs)
+
+![example_dd](https://raw.githubusercontent.com/kgd-al/amaze/master/docs/demo/cd.gif)
+
+#### Fully continuous
+
+![example_cc](https://raw.githubusercontent.com/kgd-al/amaze/master/docs/demo/cc.gif)
+
+## Development state (todolist)
+
+- No clear distinction between library code (maze generator, viewer, stats extractor, ...)
 and user code (experiments, training protocols, results generation, ...).
-Dependency on stable baselines 3, should (will) be optional.
+- Dependency on stable baselines 3, should (will) be optional.
 
 Install with
 ```
