@@ -8,6 +8,9 @@ from amaze.simu.robot import State, InputType, OutputType
 class BaseController(ABC):
     simple = True  # Whether this controller has a state (table, ANN, ...)
 
+    def __init__(self, a_type: OutputType):
+        self.action_type = a_type
+
     @abstractmethod
     def __call__(self, inputs: State) -> Vec:
         """

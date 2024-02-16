@@ -25,5 +25,3 @@ compile(){
 }
 
 compile maze
-# echo "#### Light mode" | tee -a $log
-# compile --jobname=maze_light maze.tex >> $log

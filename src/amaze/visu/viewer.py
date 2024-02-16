@@ -7,6 +7,7 @@ from logging import getLogger
 from pathlib import Path
 from typing import Optional, Union
 
+import PIL
 from PyQt5.QtCore import QSettings, QTimer, Qt, QSignalBlocker, QObject, pyqtSignal, QObjectCleanupHandler, QRect, \
     QPoint, QSize
 from PyQt5.QtGui import QImage, QShowEvent, QRegion, QPainter
@@ -245,9 +246,6 @@ class MainWindow(QWidget):
 
         self.buttons["play"].setIcon(self.style().standardIcon(icon))
 
-        if self.playing and self._movie:
-            self._movie.step()
-
     def _think(self):
         if isinstance(self.controller, RandomController):
             self.controller.curr_pos = self.simulation.robot.pos
@@ -262,10 +260,14 @@ class MainWindow(QWidget):
         if reward is None:
             return
 
+        if not self.simulation.done():
+            self._update()
+
+        if self._movie:
+            self._movie.step()
+
         if self.simulation.done():
             self._done()
-        else:
-            self._update()
 
     def _done(self):
         reward = self.simulation.robot.reward
@@ -335,9 +337,14 @@ class MainWindow(QWidget):
 
         return maze
 
+    def _combobox_value(self, name):
+        return self.config[name].currentText().upper()
+
+    def _enum_value(self, name, enum): return enum[self._combobox_value(name)]
+
     def maze_data(self):
         def _sbv(name): return self.config[name].value()
-        def _cbv(name): return self.config[name].currentText()
+        def _cbv(name): return self._combobox_value(name)
         def _cbb(name): return self.config[name].isChecked()
         def _sign(name): return self.config[name].signs()
         def _on(name): return _cbb("with_" + name + "s")
@@ -356,8 +363,8 @@ class MainWindow(QWidget):
 
     def _robot_data(self):
         def _sbv(name): return self.config[name].value()
-        def _cbv(name): return self.config[name].currentText().upper()
-        def _ecbv(name, enum): return enum[_cbv(name)]
+        def _cbv(name): return self._combobox_value(name)
+        def _ecbv(name, enum): return self._enum_value(name, enum)
 
         return Robot.BuildData(
             vision=_sbv("vision"),
@@ -412,7 +419,11 @@ class MainWindow(QWidget):
 
         ct = ccb.currentText()
         if (ct.lower() != "autonomous") or c is None:
-            c = controller_factory(Controllers[ct.upper()], {})
+            c = controller_factory(
+                Controllers[ct.upper()],
+                dict(
+                    a_type=self._enum_value("outputs", OutputType)
+                ))
 
         simple = c.simple
         if not simple:
@@ -879,6 +890,7 @@ class MainWindow(QWidget):
 
 class _MovieRecorder:
     def __init__(self, viewer, path: Path):
+        self.save_intermediates = True
         self.viewer = viewer
         self.path = path
         self.folder = self.path.with_suffix('')
@@ -899,7 +911,6 @@ class _MovieRecorder:
 
     def step(self):
         m_img = self.viewer.maze_w.pretty_render()
-        m_img.save(self._path("maze"))
 
         size = m_img.width()
 
@@ -923,14 +934,24 @@ class _MovieRecorder:
         vision.render(painter, QPoint(0, 0),
                       QRegion(*v_offset, v_size, v_size))
         painter.end()
-        v_img.save(self._path("vision"))
 
         img = QImage(2*size, size, m_img.format())
         painter = QPainter(img)
         painter.drawImage(0, 0, m_img)
         painter.drawImage(size, 0, v_img)
         painter.end()
-        img.save(self._path())
+
+        path = self._path()
+
+        m_img.save(self._path("maze"))
+        v_img.save(self._path("vision"))
+        img.save(path)
+
+        self.frames.append(PIL.Image.open(path))
 
     def save(self):
-        print("Saving")
+        duration = 1000 // len(self.frames)
+        self.frames[0].save(self.path, format="GIF",
+                            append_images=self.frames,
+                            save_all=True, duration=duration,
+                            loop=0)

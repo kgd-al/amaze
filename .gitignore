@@ -13,6 +13,7 @@ tmp
 
 *.aux
 *.pdf
+*.synctex.gz
 
 ##################
 # Auto generated #

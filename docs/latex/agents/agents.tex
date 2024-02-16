@@ -1,0 +1,89 @@
+\documentclass{standalone}
+\usepackage{tikz}
+\usetikzlibrary{positioning}
+\standaloneenv{tikzpicture}
+\begin{document}
+\tikzset{%
+ every node/.style={ultra thick},%
+ wnode/.style={solid},%
+ snode/.style={draw=blue}%
+}%
+%
+\begin{tikzpicture}[scale=.6]%
+ \foreach \r/\c/\L in {2/snode/S, 1/wnode/W} {
+  \foreach \a/\l in {0/e, 90/n, 180/w, 270/s} {
+    \draw [\c, fill=white, thick] (\a:\r) ++(-.5, -.5) rectangle ++(1, 1);
+    \node at (\a:\r) {\footnotesize $\L_\l$};
+  }
+ }
+
+ \node at (8, 0) {
+  \begin{tabular}{rl}
+   $W_*$ & Wall/Previous direction \\
+   $S_*$ & Sign value (if any) \\
+  \end{tabular}
+ };
+\end{tikzpicture}%
+%
+\begin{tikzpicture}
+ \def\i#1#2#3{%
+  \begin{scope}[scale=.21, shift={(#1)}]%
+   \fill [gray] (-2.75, -2.75) rectangle ++(5.5, 5.5);
+   \foreach \x [count=\c,evaluate=\c as \y using {{#3}[\c-1]}] in {0:1, 90:1, 180:1, 270:1, 0:2, 90:2, 180:2, 270:2} {
+    \ifnum\c<5\def\d{wnode}\else\def\d{snode}\fi
+    \fill [\y, draw=black, \d, thick] (\x*1.1) ++(-.5, -.5) rectangle ++(1,1);
+   }
+%   \draw (-2.5, -.5) rectangle ++(5, 1) (-.5, -2.5) rectangle ++(1, 5);
+   \node [anchor=north] at (0, -2.7) {\small #2};
+  \end{scope}%
+ }%
+
+ \i{ 0,0}{Start}{"white","black","white","white","black","black","black","black"}
+ \i{10,0}{Clue}{"red","black","white","black","black","white","black","black"}
+ \i{20,0}{End}{"white","white","red","black","black","black","black","black"}
+
+ \i{ 0, -10}{Trap}{"white","black","red","black","black","black","black","white!50!black"}
+ \i{10, -10}{Lure}{"black","white","white","black","black","black","white!25!black","black"}
+
+ \begin{scope}[scale=.25, font=\footnotesize, shift={(17, -5)}]
+  \draw (-3.5, -.5) -- ++(8.25, 0);
+  \draw (-3.5, -.5) -- ++(0, -6.5);
+  \foreach \c/\l [count=\i] in {white/Wall, black/Empty, red/Origin, white/Sign} {
+   \node [draw, fill=\c] (k\i) at (0, -1.5*\i) {}; \node (l\i) [right=0 of k\i] {\l};
+  }
+  \node [draw, snode, fill=black, left=0 of k2] {};
+  \node [draw, snode, fill=white] at (k4) {};
+  \node [draw, snode, fill=white!50!black, left=0 of k4] (k4_) {};
+  \node [draw, snode, fill=white!25!black, left=0 of k4_] (k4__) {};
+%    \fill [draw, red] (0, 0) rectangle ++(1, 1) ++(1.25, .5) node [anchor=west, at end] {Wall};
+ \end{scope}
+
+\end{tikzpicture}%
+%
+\begin{tikzpicture}[scale=.6, y=-1cm]
+ \draw [dotted] (1,1) grid (8,8);
+ \fill [opacity=.1, white] (1,1) rectangle (8,8) node [pos=.5, opacity=1, black, fill=white] {Sign};
+ \draw (0,0) rectangle (9,1) node at (4.5,9) [anchor=north] {South};
+ \draw (0,0) rectangle (1,9) node at (0,4.5) [anchor=south, rotate=90] {West};
+ \draw (8,0) rectangle (9,9) node at (9,4.5) [anchor=north, rotate=90] {East};
+ \draw (0,8) rectangle (9,9) node at (4.5,0) [anchor=south] {North};
+ \def\hn{m}
+ \foreach \x/\y/\i/\j in {0/0/0/0, 0/8/0/n, 8/0/n/0, 8/8/n/n,
+                          4/0/\hn/0, 0/4/0/\hn, 4/8/\hn/n, 8/4/n/\hn} {
+  \node at (\x+.5, \y+.5) {\tiny $v_{\i,\j}$};
+  \draw (\x,\y) rectangle ++(1,1);
+ }
+
+ \node at (10, 4) [anchor=west] {
+  \begin{tabular}{llll}
+   $\forall 0\leq i < n,$\ & $v_{n,i} = 1$, & if wall & right \\
+                           & $v_{i,0} = 1$, &         & above \\
+                           & $v_{0,i} = 1$, &         & left \\
+                           & $v_{i,n} = 1$, &         & below \\
+   \\
+   \multicolumn{4}{l}{$\{v_{n,m}, v_{m,0}, v_{0,m}, v_{m,n}\}$ previous cell}\\
+   \multicolumn{4}{l}{$(v_{i,j})_{i,j \in \{1,...,n-2\}^2}$ downsampled sign image}
+  \end{tabular}
+ };
+\end{tikzpicture}
+\end{document}
