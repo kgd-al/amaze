@@ -1,26 +1,6 @@
 \documentclass{standalone}
-\usepackage{tikz}
-\usetikzlibrary{arrows, calc, decorations.pathreplacing, spy, tikzmark}
-\newenvironment{localtoimage}[3][]{%
- \node (I) [inner sep=0pt] {\includegraphics[#3]{#2}};%
- \begin{localto}[#1]{I}%
-}{%
- \end{localto}%
-}
-\newenvironment{localto}[2][]{
- \path let \p1=(#2.center), \p2=(#2.north), \p3=(#2.east) in coordinate (#2X) at (\x3-\x1,0) coordinate (#2Y) at (0,\y2-\y1);
- \begin{scope}[x={(#2X)}, y={(#2Y)}, shift={(#2.center)},#1]
-}{
- \end{scope}
-}
-\usepackage{substr}
-\IfSubStringInString{\detokenize{dark}}{\jobname}{
-%  \pagecolor{black}
- \def\thecolor{white}
- \color{\thecolor}
-}{
- \def\thecolor{black}
-}
+\input{../common}
+\usetikzlibrary{calc, decorations.pathreplacing, spy, tikzmark}
 \newcommand*{\ExtractCoordinateOld}[1]{%
  \path [transform canvas] (#1);
  \pgfgetlastxy{\XCoord}{\YCoord}%
@@ -44,7 +24,7 @@
 
  \begin{scope}[spy using outlines={size=\s, connect spies, magnification=2}]
   \begin{localtoimage}{sample_maze}{width=\scale\textwidth}
-   \begin{scope}[every path/.style={\thecolor}]
+   \begin{scope}[every path/.style={\fg}]
     \node (Hn) [rotate=90] at (-1.1, 0) {Height};
     \node (Wn) at (0, -1.1) {Width};
 

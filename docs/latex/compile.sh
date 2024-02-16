@@ -25,3 +25,4 @@ compile(){
 }
 
 compile maze
+compile agents

@@ -1,0 +1,28 @@
+\usepackage{tikz}
+\standaloneenv{tikzpicture}
+\usetikzlibrary{arrows}
+\tikzset{%
+ >=stealth'
+}
+\newenvironment{localtoimage}[3][]{%
+ \node (I) [inner sep=0pt] {\includegraphics[#3]{#2}};%
+ \begin{localto}[#1]{I}%
+}{%
+ \end{localto}%
+}
+\newenvironment{localto}[2][]{
+ \path let \p1=(#2.center), \p2=(#2.north), \p3=(#2.east) in coordinate (#2X) at (\x3-\x1,0) coordinate (#2Y) at (0,\y2-\y1);
+ \begin{scope}[x={(#2X)}, y={(#2Y)}, shift={(#2.center)},#1]
+}{
+ \end{scope}
+}
+\usepackage{substr}
+\IfSubStringInString{\detokenize{dark}}{\jobname}{
+%  \pagecolor{black}
+ \def\fg{white}
+ \def\bg{black}
+ \color{\fg}
+}{
+ \def\fg{black}
+ \def\bg{white}
+}

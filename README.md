@@ -14,6 +14,15 @@ Every maze can be described by a unique, human-readable string:
 
 ## Agents
 
+Agents in AMaze are loosely embodied with only access to local physical information (the current cell)
+and one step-removed temporal information (direction of the previous cell, if any).
+The input and output spaces can either be discrete or continuous.
+
+### Discrete inputs
+
+![inputs_discrete](https://raw.githubusercontent.com/kgd-al/amaze/master/docs/latex/agents/dark-0.png#gh-dark-mode-only)
+![inputs_discrete](https://raw.githubusercontent.com/kgd-al/amaze/master/docs/latex/agents/light-0.png#gh-light-mode-only)
+
 ## Current state
 
 No clear distinction between library code (maze generator, viewer, stats extractor, ...)

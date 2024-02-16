@@ -1,17 +1,23 @@
 import functools
+import logging
 import math
 import pprint
 from datetime import time
 from enum import IntFlag, Enum
-from logging import getLogger
 from pathlib import Path
 from typing import Optional, Union
 
-import PIL
-from PyQt5.QtCore import QSettings, QTimer, Qt, QSignalBlocker, QObject, pyqtSignal, QObjectCleanupHandler, QRect, \
-    QPoint, QSize
-from PyQt5.QtGui import QImage, QShowEvent, QRegion, QPainter
-from PyQt5.QtWidgets import (QMainWindow, QHBoxLayout, QWidget, QLabel,
+try:
+    import PIL
+    logging.getLogger("PIL.PngImagePlugin").propagate = False
+    HAS_PIL = True
+except ImportError:
+    HAS_PIL = False
+
+from PyQt5.QtCore import (QSettings, QTimer, Qt, QSignalBlocker, QObject,
+                          pyqtSignal, QPoint)
+from PyQt5.QtGui import QImage, QRegion, QPainter
+from PyQt5.QtWidgets import (QHBoxLayout, QWidget, QLabel,
                              QVBoxLayout, QToolButton, QSpinBox, QGroupBox,
                              QStyle, QAbstractButton, QCheckBox, QComboBox,
                              QDoubleSpinBox, QFormLayout, QFrame, QGridLayout,
@@ -24,7 +30,6 @@ from amaze.simu.controllers.random import RandomController
 from amaze.simu.env.maze import Maze, StartLocation
 from amaze.simu.robot import Robot, InputType, OutputType
 from amaze.simu.simulation import Simulation
-from amaze.utils.build_data import BaseBuildData
 from amaze.visu.resources import SignType
 from amaze.visu.widgets.collapsible import CollapsibleBox
 from amaze.visu.widgets.labels import (InputsLabel, OutputsLabel, ValuesLabel,
@@ -32,7 +37,7 @@ from amaze.visu.widgets.labels import (InputsLabel, OutputsLabel, ValuesLabel,
 from amaze.visu.widgets.lists import SignList
 from amaze.visu.widgets.maze import MazeWidget
 
-logger = getLogger(__name__)
+logger = logging.getLogger(__name__)
 
 
 class MainWindow(QWidget):
@@ -260,7 +265,7 @@ class MainWindow(QWidget):
         if reward is None:
             return
 
-        if not self.simulation.done():
+        if not self.simulation.done() or self._movie:
             self._update()
 
         if self._movie:
@@ -910,9 +915,10 @@ class _MovieRecorder:
         return str(self.folder.joinpath(name))
 
     def step(self):
-        m_img = self.viewer.maze_w.pretty_render()
+        size = 256
 
-        size = m_img.width()
+        m_img = self.viewer.maze_w.pretty_render(width=size)
+        m_size = m_img.width()
 
         # robot = self.viewer.sections[MainWindow.Sections.ROBOT]
         # img = QImage(robot.rect().size(), QImage.Format_ARGB32)
@@ -922,7 +928,7 @@ class _MovieRecorder:
 
         vision = self.viewer.visu["img_inputs"]
         v_size = min(vision.width(), vision.height())
-        v_ratio = size / v_size
+        v_ratio = m_size / v_size
         v_offset = (
             (vision.width() - v_size) // 2,
             (vision.height() - v_size) // 2
@@ -937,8 +943,9 @@ class _MovieRecorder:
 
         img = QImage(2*size, size, m_img.format())
         painter = QPainter(img)
+        painter.setRenderHint(QPainter.SmoothPixmapTransform)
         painter.drawImage(0, 0, m_img)
-        painter.drawImage(size, 0, v_img)
+        painter.drawImage(m_size, 0, v_img)
         painter.end()
 
         path = self._path()
@@ -947,11 +954,18 @@ class _MovieRecorder:
         v_img.save(self._path("vision"))
         img.save(path)
 
-        self.frames.append(PIL.Image.open(path))
+        if HAS_PIL:
+            self.frames.append(PIL.Image.open(path))
 
     def save(self):
-        duration = 1000 // len(self.frames)
-        self.frames[0].save(self.path, format="GIF",
-                            append_images=self.frames,
-                            save_all=True, duration=duration,
-                            loop=0)
+        if HAS_PIL:
+            print("Generating", self.path, "...")
+            duration = 1000 // len(self.frames)
+            self.frames[0].save(self.path, format="GIF",
+                                append_images=self.frames,
+                                save_all=True, duration=duration,
+                                loop=0)
+            print("Done!")
+        else:
+            print("PIL module not installed. Generate gif manually using"
+                  " files under", self.folder)

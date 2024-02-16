@@ -59,6 +59,10 @@ class Options:
             "Maze", "Initial settings for maze generation")
         Maze.BuildData.populate_argparser(group)
 
+        group = parser.add_argument_group(
+            "Robot", "Initial settings for robot configuration")
+        Robot.BuildData.populate_argparser(group)
+
         parser.add_argument("--maze", dest="maze",
                             help="Use provided string-format maze")
 

@@ -137,7 +137,8 @@ class MazePainter(ABC):
         if r := options.get("robot"):
             i, j = r["pos"]
             if options["outputs"] is OutputType.DISCRETE:
-                self.fill_rect((i - .5) * scale, (j - .5) * scale, scale, scale,
+                self.fill_rect((i - .5) * scale, (j - .5) * scale,
+                               scale-1, scale-1,
                                Color.COLOR1, Color.COLOR1, alpha=.25)
 
             elif options["outputs"] is OutputType.CONTINUOUS:

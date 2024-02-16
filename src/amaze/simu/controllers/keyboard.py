@@ -2,6 +2,7 @@ from abc import ABCMeta
 from logging import getLogger
 
 from PyQt5.QtCore import QObject, Qt, QEvent
+from PyQt5.QtGui import QKeyEvent
 from PyQt5.QtWidgets import QApplication
 
 from amaze.simu.controllers.base import BaseController
@@ -29,9 +30,12 @@ class KeyboardController(QObject, BaseController, metaclass=__Meta):
         if self.action_type == OutputType.DISCRETE:
             self.actions_queue = []
         else:
+            self.down_keys = {a: False for a in self.actions.keys()}
             self.current_action = Vec.null()
 
     def eventFilter(self, obj: 'QObject', e: 'QEvent') -> bool:
+        if not isinstance(e, QKeyEvent):
+            return False
         if self.action_type is OutputType.DISCRETE:
             return self._process_discrete_input(e)
         else:
@@ -47,11 +51,7 @@ class KeyboardController(QObject, BaseController, metaclass=__Meta):
             else:
                 return Vec.null()
         else:
-            r = self.current_action / l \
-                if (l := self.current_action.length()) > 0 \
-                else self.current_action
-
-            return r.copy()
+            return self.current_action.copy()
 
     def save(self):
         return {}
@@ -59,21 +59,30 @@ class KeyboardController(QObject, BaseController, metaclass=__Meta):
     def restore(self, _):
         pass
 
-    def _process_discrete_input(self, e):
+    def _process_discrete_input(self, e: QKeyEvent):
         if e.type() == QEvent.KeyPress and e.key() in self.actions:
             self.actions_queue.append(self.actions[e.key()])
             return True
         return False
 
-    def _process_continuous_input(self, e):
+    def _process_continuous_input(self, e: QKeyEvent):
+        if e.modifiers() != Qt.NoModifier:
+            return False
+
         if e.type() == QEvent.KeyPress:
-            sign = +1
+            down = True
         elif e.type() == QEvent.KeyRelease:
-            sign = -1
+            down = False
         else:
             return False
 
         if e.key() in self.actions:
-            self.current_action += sign * self.actions[e.key()]
+            self.down_keys[e.key()] = down
+            self.current_action = sum([self.actions[k]
+                                       for k, down in self.down_keys.items()
+                                       if down],
+                                      Vec.null())
+            if (l := self.current_action.length()) > 0:
+                self.current_action /= l
             return True
         return False

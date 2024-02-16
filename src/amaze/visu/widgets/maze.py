@@ -204,9 +204,9 @@ class MazeWidget(QLabel):
         self._render(painter)
         return self._save_image(path, img, painter)
 
-    def pretty_render(self):
-        img, painter = self._image_drawer()
-        self._render(painter)
+    def pretty_render(self, width: Optional[int] = None):
+        img, painter = self._image_drawer(width=width)
+        self._render(painter, width=width-2)
         painter.end()
         return img
 
@@ -234,7 +234,7 @@ class MazeWidget(QLabel):
 
         QtPainter(painter, config).render(maze, config)
 
-    def _render(self, painter: QPainter):
+    def _render(self, painter: QPainter, width: Optional[int] = None):
         config = dict(self._config)
         config.update(dict(
             scale=self._scale,
@@ -244,9 +244,12 @@ class MazeWidget(QLabel):
             robot=self._simulation.robot_dict()
             if self._config["robot"] else None))
 
+        if width is not None:
+            config['scale'] = width / self._simulation.maze.width
+
         self.__render(
             painter, self._simulation.maze,
-            self._simulation.maze.height * self._scale,
+            self._simulation.maze.height * config['scale'],
             config)
 
     @staticmethod
@@ -275,13 +278,21 @@ class MazeWidget(QLabel):
 
     def _image_drawer(self,
                       fill: Optional[QColor] = None,
+                      width: Optional[int] = None,
                       img_format: QImage.Format = QImage.Format_RGB32) \
             -> Tuple[QImage, QPainter]:
         if fill is None:
             fill = self._background_color()
+
+        if width is None:
+            width = self._scale * self._simulation.maze.width + 2
+            height = self._scale * self._simulation.maze.height + 2
+        else:
+            scale = (width-2) / self._simulation.maze.width
+            height = round(self._simulation.maze.height * scale) + 2
+
         return self.__static_image_drawer(
-            self._scale * self._simulation.maze.width + 2,
-            self._scale * self._simulation.maze.height + 2,
+            width, height,
             fill, img_format)
 
     @staticmethod

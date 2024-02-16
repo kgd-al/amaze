@@ -367,7 +367,7 @@ class Simulation:
             done=self.done(),
             pretty_reward=
             2 * int(self.success())
-            - self.stats.steps / (len(self.maze.solution) - 1)
+            - self.dt * self.stats.steps / (len(self.maze.solution) - 1)
             - .01 * self.stats.backsteps
             - .02 * self.stats.collisions,
             len=len(self.maze.solution),
