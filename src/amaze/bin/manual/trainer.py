@@ -17,18 +17,18 @@ from typing import Optional
 import humanize
 import numpy as np
 import pandas as pd
-from PyQt5.QtWidgets import QApplication
 
-from amaze.simu.controllers.control import controller_factory, Controllers, dump
+from amaze.simu.controllers.control import (controller_factory, Controllers,
+                                            dump)
 from amaze.simu.controllers.tabular import TabularController
 from amaze.simu.env.maze import Maze
 from amaze.simu.robot import Robot
 from amaze.simu.simulation import Simulation
 from amaze.utils.tee import Tee
 from amaze.visu import resources
-from amaze.visu.widgets.maze import MazeWidget
 from amaze.visu.plotters.stats import plot_stats
 from amaze.visu.plotters.tabular import plot_inputs_values
+from amaze.visu.widgets.maze import MazeWidget
 
 logger = logging.getLogger(__name__)
 
@@ -78,8 +78,9 @@ class Options:
                             help="Identifier for the run (and seed if integer"
                                  "and seed is not provided)")
 
-        parser.add_argument("-f", "--folder", dest="base_folder", metavar="F",
-                            type=Path,
+        parser.add_argument("-f", "--folder",
+                            dest="base_folder",
+                            metavar="F", type=Path,
                             help="Base folder under which to store data")
 
         parser.add_argument("--overwrite", dest="overwrite",
@@ -124,7 +125,8 @@ class Options:
         group = parser.add_argument_group(
             "Maze", "Initial settings for maze generation")
         Maze.BuildData.populate_argparser(group)
-        group.add_argument('--maze', metavar='M', dest='mazes', action='append',
+        group.add_argument('--maze', metavar='M', dest='mazes',
+                           action='append',
                            help="Full maze description (file or name)."
                                 " Repeat to evaluate on multiple mazes"
                                 " (sequentially). Arguments of the form"
@@ -138,14 +140,14 @@ class Options:
                                 " value 'train' adds all training mazes to"
                                 " this list (which is also the default)."
                                 " No overriding arguments are processed")
-        parser.epilog += \
-            f"\n" \
-            f"Sign arguments (cues and traps):\n" \
-            f"Signs are regular grayscale images." \
-            f" User-provided files are required to be squarish to ensure" \
-            f" correct aspect ratio, grayscale transformation will be applied" \
-            f" as needed. In addition the following library of built-in" \
-            f" resources is available: \n  {', '.join(resources.builtins())}"
+        parser.epilog += (
+            f"\n"
+            f"Sign arguments (cues and traps):\n"
+            f"Signs are regular grayscale images."
+            f" User-provided files are required to be squarish to ensure"
+            f" correct aspect ratio, grayscale transformation will be applied"
+            f" as needed. In addition the following library of built-in"
+            f" resources is available: \n  {', '.join(resources.builtins())}")
 
         group = parser.add_argument_group(
             "Robot", "Robot settings")
@@ -194,7 +196,8 @@ class Options:
         logging.addLevelName(60, "KGD")
         logging.addLevelName(logging.WARNING, "WARN")
         logger.log(
-            60, f"Using log level of {logging.getLevelName(logger.root.level)}")
+            60, f"Using log level of"
+                f" {logging.getLevelName(logger.root.level)}")
         for m in ['matplotlib']:
             logger_ = logging.getLogger(m)
             logger_.setLevel(logging.WARNING)
@@ -213,7 +216,8 @@ class Options:
             logger.info(f"Deduced seed: {self.seed}")
 
         # # Check the thread parameter
-        # options.threads = max(1, min(options.threads, len(os.sched_getaffinity(0))))
+        # options.threads = max(1, min(options.threads,
+        #                              len(os.sched_getaffinity(0))))
         # logger.info(f"Parallel: {options.threads}")
 
         self.training = TrainingType[self.training]
@@ -354,9 +358,9 @@ def main():
 
     robot = Robot.BuildData.from_argparse(args)
 
-    if True:
-        # noinspection PyUnusedLocal
-        app = QApplication([])
+    # if True:
+    #     # noinspection PyUnusedLocal
+    #     app = QApplication([])
 
     if args.training in [TrainingType.SARSA, TrainingType.Q_LEARNING]:
         logger.info(f" Maze: {Maze.BuildData.from_argparse(args)}")
@@ -380,7 +384,8 @@ def main():
 
         stats = pd.DataFrame(columns=["R", "e"])
         test_stats = pd.DataFrame(
-            columns=["Avg", "Std"] + [f"M{i}" for i in range(len(train_mazes))])
+            columns=["Avg", "Std"] + [f"M{i}"
+                                      for i in range(len(train_mazes))])
 
         s_name = None
         e_digits = math.ceil(math.log10(args.episodes))

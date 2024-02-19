@@ -1,10 +1,8 @@
 import enum
-import pprint
-import math
-from math import log2 as log
 from collections import defaultdict, namedtuple
+from math import log2 as log
 from pathlib import Path
-from typing import Callable, Tuple, Generator
+from typing import Tuple
 
 import numpy as np
 from PyQt5.QtGui import QImage, QPainter

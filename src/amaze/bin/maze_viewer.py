@@ -3,14 +3,12 @@
 import argparse
 import logging
 import os
-import pprint
 # TODO Careful
 import warnings
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Optional, List, Sequence
+from typing import Optional, Sequence
 
-from PyQt5.QtGui import QImage
 from PyQt5.QtWidgets import QApplication
 
 from amaze.simu.controllers.control import load

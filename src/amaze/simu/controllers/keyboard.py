@@ -7,7 +7,7 @@ from PyQt5.QtWidgets import QApplication
 
 from amaze.simu.controllers.base import BaseController
 from amaze.simu.pos import Vec
-from amaze.simu.robot import InputType, OutputType
+from amaze.simu.robot import OutputType
 
 logger = getLogger(__name__)
 

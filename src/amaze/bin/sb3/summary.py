@@ -17,7 +17,7 @@ from tensorboard.backend.event_processing.event_accumulator \
     import EventAccumulator
 
 from amaze.bin.sb3.common import (X_ORDER, HUE_ORDER, SWARM_ARGS, VIOLIN_ARGS,
-                                  set_seaborn_style, move_legend)
+                                  set_seaborn_style)
 
 
 def __to_km_string(v):

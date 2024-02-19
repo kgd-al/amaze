@@ -61,10 +61,8 @@ def main():
     for s in set(bd.seed for bd in [bd_0, bd_1]):
         for i in range(args.mazes):
             bd = Maze.BuildData(seed=s)
-            # noinspection PyUnusedLocal
-            u = i / (args.mazes-1)
-            # print(i, u)
             for k, v in rules.items():
+                v0, v1 = None, None
                 try:
                     v0, v1 = getattr(bd_0, k), getattr(bd_1, k)
                     v = eval(v)
@@ -73,11 +71,9 @@ def main():
                         raise ValueError(f"Incompatible types for field {k}:"
                                          f" {t} != ({t0}, {t1})")
                     setattr(bd, k, v)
-                    # print(f"> {k:>10s}: {v}")
                 except Exception:
                     raise IOError(
                         f"Invalid interpolation {v0} -> {v1}.")
-            # pprint.pprint(bd)
             maze = Maze.generate(bd)
             mazes.append((i, maze))
 

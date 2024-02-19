@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 
 import argparse
-import pprint
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Optional, List, Sequence

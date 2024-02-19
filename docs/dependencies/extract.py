@@ -10,9 +10,9 @@ def process_folder(parent, folder, depth=0):
     prefix = "\t"*depth
 
     folder_str = str(folder)
-    with parent.subgraph(name=folder_str) as cluster:
+    with (parent.subgraph(name=folder_str) as cluster):
         cluster.attr(cluster="True")
-        cluster.attr(label=folder.name)
+        cluster.node(name=folder_str, label=folder.name, shape="plaintext")
         for item in folder.glob("*"):
             if item.is_file() and item.suffix == ".py":
                 print(f"[P] {prefix}{item}")
@@ -23,13 +23,30 @@ def process_folder(parent, folder, depth=0):
 
 
 def process_file(cluster, file):
-    module = str(file)
+    module = (str(file)
+              .replace(str(src) + "/", "")
+              .replace(".py", "")
+              .replace("/", ".")
+              .replace(".__init__", ""))
+
+    package = ".".join(module.split(".")[:-1])
+
     cluster.node(module, label=file.with_suffix("").name)
     with open(file, "r") as f:
         for line in f:
             if "import" in line:
-                dep = line.lstrip().replace('\n', '').split(" ")[1]
-                dot.edge(module, dep)
+                # if "amaze" in line:
+                #     continue
+                dep = (line.lstrip()
+                           .replace('\n', '')
+                           .split(" ")[1])
+                if dep.startswith("amaze"):
+                    print(dep)
+                    dep = ".".join(dep.split(".")[1:-1])
+                    print(">", dep)
+                else:
+                    dep = dep.split(".")[0]
+                dot.edge(package, dep)
                 dependencies.add(dep)
 
 
@@ -48,21 +65,24 @@ def process_dependencies():
     for dep in dependencies:
         _process(dep.split('.'), dct)
 
-    pprint.pprint(dct)
+    # pprint.pprint(dct)
 
     def _process(_dct, key=None, cluster=dot):
         if key is None:
             key = []
         for k, v in _dct.items():
+            # if k == "amaze":
+            #     continue
             _key = key + [k]
-            print(k, v)
+            _name = ".".join(_key)
+            # print(k, v)
             if len(v) > 0:
-                with cluster.subgraph(name=k) as _cluster:
-                    _cluster.attr(label=k)
+                with cluster.subgraph(name=_name) as _cluster:
                     _cluster.attr(cluster="True")
+                    _cluster.node(name=_name, label=k, shape="plaintext")
                     _process(v, _key, _cluster)
             else:
-                cluster.node(name=".".join(_key), label=k)
+                cluster.node(name=_name, label=k)
 
     _process(dct)
 
@@ -74,7 +94,7 @@ if __name__ == "__main__":
 
     dependencies = set()
 
-    dot = graphviz.Digraph('AMaze', format='pdf')
+    dot = graphviz.Digraph('AMaze', format='pdf', strict=True)
     dot.graph_attr['rankdir'] = 'LR'
     dot.attr(compound="True")
     process_folder(dot, src)

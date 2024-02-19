@@ -4,36 +4,30 @@ import argparse
 import concurrent
 import itertools
 import logging
-import numbers
 import os
-import pprint
-import random
 import signal
 import sys
 from collections import Counter
 from concurrent.futures import ProcessPoolExecutor
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from functools import reduce
 from operator import mul
 from pathlib import Path
-from typing import Optional, List, Sequence
+from typing import Optional, Sequence
 
 import numpy as np
 import pandas as pd
 import seaborn
+import tqdm.contrib.itertools as tqdm_iter
 from matplotlib import pyplot as plt
 from matplotlib.backends.backend_pdf import PdfPages
-from matplotlib.ticker import LinearLocator
 from tqdm import tqdm
-import tqdm.contrib.itertools as tqdm_iter
 
-from amaze.bin import maze_viewer
 from amaze.simu._maze_metrics import MazeMetrics
 from amaze.simu.env.maze import Maze
 from amaze.simu.robot import InputType
 from amaze.simu.simulation import Simulation
 from amaze.visu.resources import Sign
-from amaze.visu.widgets.maze import MazeWidget
 
 
 @dataclass

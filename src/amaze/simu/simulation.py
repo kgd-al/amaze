@@ -1,4 +1,4 @@
-import pprint
+from logging import getLogger
 from logging import getLogger
 from types import SimpleNamespace
 from typing import Union, TypeVar, Optional
@@ -11,7 +11,7 @@ from amaze.simu.env.maze import Maze
 from amaze.simu.pos import Pos, AlignedPos
 from amaze.simu.robot import Robot, InputType, OutputType, Action, State
 from amaze.visu import resources
-from amaze.visu.resources import Sign, SignType
+from amaze.visu.resources import SignType
 
 logger = getLogger(__name__)
 

@@ -9,8 +9,7 @@ import pprint
 import shutil
 import sys
 import time
-from collections import defaultdict
-from dataclasses import dataclass, fields, field
+from dataclasses import dataclass, fields
 from datetime import timedelta
 from enum import Enum, auto
 from pathlib import Path
@@ -18,7 +17,6 @@ from typing import Optional, Union
 
 import humanize
 import numpy as np
-import pandas as pd
 from stable_baselines3 import SAC, A2C, DQN, PPO, TD3
 from stable_baselines3.common.callbacks import EvalCallback, StopTrainingOnRewardThreshold
 from stable_baselines3.common.env_checker import check_env
@@ -30,7 +28,6 @@ from amaze.sb3.maze_env import MazeEnv
 from amaze.simu.env.maze import Maze, StartLocation
 from amaze.simu.robot import Robot, InputType, OutputType
 from amaze.utils.tee import Tee
-from amaze.visu import resources
 
 logger = logging.getLogger("sb3-it-main")
 

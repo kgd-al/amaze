@@ -26,10 +26,7 @@ from PyQt5.QtWidgets import QApplication
 from matplotlib.axes import Axes
 from matplotlib.backends.backend_pdf import PdfPages
 from matplotlib.figure import Figure
-from matplotlib.legend import Legend
-from matplotlib.lines import Line2D
 from matplotlib.text import Annotation
-from matplotlib.collections import PathCollection
 from scipy.stats import mannwhitneyu, ttest_ind, false_discovery_control
 from statannotations.Annotator import Annotator
 from tqdm import tqdm

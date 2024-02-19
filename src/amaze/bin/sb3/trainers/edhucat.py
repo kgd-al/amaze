@@ -35,7 +35,7 @@ from stable_baselines3.common.vec_env import DummyVecEnv
 from amaze.sb3.callbacks import TensorboardCallback
 from amaze.sb3.maze_env import MazeEnv
 from amaze.sb3.utils import CV2QTGuard
-from amaze.simu.env.maze import Maze, StartLocation
+from amaze.simu.env.maze import Maze
 from amaze.simu.robot import Robot, InputType, OutputType
 from amaze.simu.simulation import Simulation
 from amaze.utils.tee import Tee

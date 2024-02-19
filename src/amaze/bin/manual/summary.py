@@ -39,7 +39,8 @@ if __name__ == "__main__":
 
     fig, ax = plt.subplots()
     tr_avg, tr_std = tolerant_mean(data)
-    df = pd.DataFrame(index=indices, data={"L": tr_avg-tr_std, "A": tr_avg, "U": tr_avg+tr_std})
+    df = pd.DataFrame(index=indices, data={"L": tr_avg-tr_std, "A": tr_avg,
+                                           "U": tr_avg+tr_std})
 
     ax.set_xlabel("Episodes")
     ax.set_ylabel("Reward")
@@ -55,7 +56,8 @@ if __name__ == "__main__":
     i_spl = np.linspace(indices[0], indices[-1], 10*len(indices))
 
     ax.plot(indices, tr_avg, linewidth=.75, label='avg', linestyle='dashed')
-    ax.plot(i_spl, make_smoothing_spline(indices, tr_avg)(i_spl), label='smooth')
+    ax.plot(i_spl, make_smoothing_spline(indices, tr_avg)(i_spl),
+            label='smooth')
 
     endpoints = [[indices[len(a)-1] for a in data],
                  [a[-1] for a in data]]
@@ -82,7 +84,8 @@ if __name__ == "__main__":
 
         def get_bbox(text):
             # print(text.get_bbox_patch())
-            bb: Bbox = text.get_window_extent(renderer=fig.canvas.get_renderer())
+            bb: Bbox = text.get_window_extent(
+                renderer=fig.canvas.get_renderer())
             # print(bb)
             p_ = bb_pad * 10
             bb.update_from_data_xy([[bb.x0 - p_, bb.y0 - p_],
@@ -111,47 +114,3 @@ if __name__ == "__main__":
     output = f"{base}{name}.png"
     fig.savefig(output, bbox_inches='tight')
     print("Generated", output)
-
-    # train_data, test_data = [], []
-    # train_indices, test_indices = set(), set()
-    # for p in sys.argv[1:]:
-    #     df_train = pd.read_csv(p.joinpath('stats.csv'), sep=' ', index_col=0)
-    #     train_data.append(list(df_train['R']))
-    #     train_indices |= set(df_train.index)
-    #     df_test = pd.read_csv(p.joinpath('test_stats.csv'), sep=' ', index_col=0)
-    #     test_data.append(list(df_test['Avg']))
-    #     test_indices |= set(df_test.index)
-    #
-    # train_indices = list(sorted(train_indices))
-    # test_indices = list(sorted(test_indices))
-    # exit(0)
-    #
-    # def tolerant_mean(arrs):
-    #     lens = [len(i) for i in arrs]
-    #     arr = np.ma.empty((np.max(lens),len(arrs)))
-    #     arr.mask = True
-    #     for idx, l in enumerate(arrs):
-    #         arr[:len(l),idx] = list(l)
-    #     return arr.mean(axis = -1), arr.std(axis=-1)
-    #
-    # fig, ax = plt.subplots()
-    # tr_avg, tr_std = tolerant_mean(train_data)
-    # df = pd.DataFrame(index=train_indices, data={"L": tr_avg-tr_std, "A": tr_avg, "U": tr_avg+tr_std})
-    # ax.fill_between(train_indices, df.L, df.U, alpha=.2)
-    # for a in train_data:
-    #     ax.plot(train_indices[:len(a)], a, alpha=.1)
-    # ax.plot(train_indices, tr_avg)
-    # for a in train_data:
-    #     ax.plot(train_indices[len(a)-1], a[len(a)-1], marker='+')
-    # fig.savefig(base.joinpath('$type-$trainer-stats.png'), bbox_inches='tight')
-    #
-    # fig, ax = plt.subplots()
-    # te_avg, te_std = tolerant_mean(test_data)
-    # df = pd.DataFrame(index=test_indices, data={"L": te_avg-te_std, "A": te_avg, "U": te_avg+te_std})
-    # ax.fill_between(test_indices, df.L, df.U, alpha=.2)
-    # for a in test_data:
-    #     ax.plot(test_indices[:len(a)], a, alpha=.1)
-    # ax.plot(test_indices, te_avg)
-    # for a in test_data:
-    #     ax.plot(test_indices[len(a)-1], a[len(a)-1], marker='+')
-    # fig.savefig(base.joinpath('$type-$trainer-test-stats.png'), bbox_inches='tight')
