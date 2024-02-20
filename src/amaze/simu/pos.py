@@ -1,3 +1,9 @@
+"""
+Generic coordinate helpers
+
+Contains 2D vector (and points) and cell-aligned positions
+"""
+
 import math
 from typing import Tuple
 

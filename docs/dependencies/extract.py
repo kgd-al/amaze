@@ -5,86 +5,100 @@ from pathlib import Path
 import graphviz
 from graphviz import dot
 
+from PyPDF2 import PdfMerger
 
-def process_folder(parent, folder, depth=0):
+
+def _to_package_name(path):
+    return ("amaze."
+            + (str(path)
+               .replace(str(src) + "/", "")
+               .replace(".py", "")
+               .replace("/", ".")))
+
+
+def _package(module):
+    return ".".join(module.split(".")[:-1])
+
+
+def _name(module):
+    return module.split(".")[-1]
+
+
+def process_folder(folder, depth=0):
     prefix = "\t"*depth
 
-    folder_str = str(folder)
-    with (parent.subgraph(name=folder_str) as cluster):
-        cluster.attr(cluster="True")
-        cluster.node(name=folder_str, label=folder.name, shape="plaintext")
-        for item in folder.glob("*"):
-            if item.is_file() and item.suffix == ".py":
-                print(f"[P] {prefix}{item}")
-                process_file(cluster, item)
-            elif item.is_dir() and item.name != "__pycache__":
-                print(f"[D] {prefix}{item}")
-                process_folder(cluster, item, depth+1)
+    dct = {}
+
+    for item in folder.glob("*"):
+        k = _to_package_name(item)
+        if item.is_file() and item.suffix == ".py":
+            print(f"[P] {prefix}{item}")
+            if items := process_file(item):
+                dct[k] = items
+        elif item.is_dir() and item.name != "__pycache__":
+            print(f"[D] {prefix}{item}")
+            dct[k] = process_folder(item, depth+1)
+
+    return dct
 
 
-def process_file(cluster, file):
-    module = (str(file)
-              .replace(str(src) + "/", "")
-              .replace(".py", "")
-              .replace("/", ".")
-              .replace(".__init__", ""))
+def process_file(file):
+    module = _to_package_name(file)
 
-    package = ".".join(module.split(".")[:-1])
+    tokens = module.split(".")
+    if tokens[-1] == "__init__":
+        return
 
-    cluster.node(module, label=file.with_suffix("").name)
+    items = []
+
     with open(file, "r") as f:
         for line in f:
             if "import" in line:
-                # if "amaze" in line:
-                #     continue
+                if "amaze" in line:
+                    continue
                 dep = (line.lstrip()
-                           .replace('\n', '')
-                           .split(" ")[1])
+                       .replace('\n', '')
+                       .split(" ")[1])
                 if dep.startswith("amaze"):
-                    print(dep)
+                    # print(dep)
                     dep = ".".join(dep.split(".")[1:-1])
-                    print(">", dep)
+                    # print(">", dep)
                 else:
                     dep = dep.split(".")[0]
-                dot.edge(package, dep)
-                dependencies.add(dep)
+                items.append(dep)
+
+    return items
 
 
-def process_dependencies():
-    dct = {}
+def _subdicts(dct):
+    for k, v in dct.items():
+        if isinstance(v, dict):
+            yield k, v
+            yield from _subdicts(v)
 
-    def _process(dep_list, _dct):
-        if len(dep_list) == 0:
-            return
 
-        _item = dep_list.pop(0)
-        if _item not in _dct:
-            _dct[_item] = {}
-        _process(dep_list, _dct[_item])
+def process_nested_graphs(name, dct):
 
-    for dep in dependencies:
-        _process(dep.split('.'), dct)
+    dot = graphviz.Digraph('AMaze', format='pdf', strict=True)
+    dot.graph_attr['rankdir'] = 'LR'
+    dot.attr(compound="True")
 
-    # pprint.pprint(dct)
+    def _process(key, _dct, parent, depth=0):
+        __name = _name(key)
+        with parent.subgraph(name=__name) as cluster:
+            cluster.attr(cluster="True")
+            cluster.attr(label=key)
+            for k, v in _dct.items():
+                if isinstance(v, dict):
+                    _process(k, v, cluster, depth+1)
+                else:
+                    for d in v:
+                        cluster.node(k, label=_name(k))
+                        dot.edge(k, d)
 
-    def _process(_dct, key=None, cluster=dot):
-        if key is None:
-            key = []
-        for k, v in _dct.items():
-            # if k == "amaze":
-            #     continue
-            _key = key + [k]
-            _name = ".".join(_key)
-            # print(k, v)
-            if len(v) > 0:
-                with cluster.subgraph(name=_name) as _cluster:
-                    _cluster.attr(cluster="True")
-                    _cluster.node(name=_name, label=k, shape="plaintext")
-                    _process(v, _key, _cluster)
-            else:
-                cluster.node(name=_name, label=k)
+    _process(name, dct, dot)
 
-    _process(dct)
+    return dot.render(directory=me.parent, filename=name, cleanup=True)
 
 
 if __name__ == "__main__":
@@ -92,16 +106,18 @@ if __name__ == "__main__":
     src = me.parent.parent.parent.joinpath('src').joinpath('amaze')
     assert src.exists()
 
-    dependencies = set()
+    nested_dict = process_folder(src)
 
-    dot = graphviz.Digraph('AMaze', format='pdf', strict=True)
-    dot.graph_attr['rankdir'] = 'LR'
-    dot.attr(compound="True")
-    process_folder(dot, src)
+    files = [
+        process_nested_graphs(name, subgraph)
+        for name, subgraph in _subdicts(nested_dict)
+    ]
 
-    process_dependencies()
-    # print(dot.source)
+    merger = PdfMerger(strict=False)
+    for file in files:
+        with open(file, 'rb') as f:
+            merger.append(f)
+        Path(file).unlink()
 
-    # dot_file = me.parent.joinpath("data.dot")
-    # pdf_file = dot_file.with_suffix(".pdf")
-    dot.render(directory=me.parent, filename="amaze")
+    merger.write(me.parent.joinpath("amaze.pdf"))
+    merger.close()

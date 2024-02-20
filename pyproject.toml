@@ -1,0 +1,56 @@
+[project]
+name = "amaze"
+version = "0.9"
+authors = [{ name="Kevin Godin-Dubois", email="k.j.m.godin-dubois@vu.nl"}]
+description = "Benchmark generator for sighted maze-navigating agents"
+readme = "README.md"
+requires-python = ">=3.8"
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  
+  "Programming Language :: Python :: 3 :: Only",
+
+  "License :: OSI Approved :: MIT License",
+
+  "Operating System :: Unix",
+
+  "Intended Audience :: Science/Research", 
+  "Topic :: Scientific/Engineering :: Artificial Intelligence",
+  "Topic :: Scientific/Engineering :: Artificial Life",
+]
+dependencies = [
+  "numpy"
+]
+
+[projects.urls]
+"Homepage" = "https://github.com/kgd-al/amaze"
+"Documentation" = "https://amaze.rtfd.io"
+"Bug Tracker" = "https://github.com/kgd-al/amaze/issues"
+
+[build-system]
+requires = [
+]
+#build-backend = "setuptools.build_meta"
+
+[project.optional-dependencies]
+tests = [
+  "pytest",
+  "pytest-steps", "pytest-sugar",
+  "coverage",
+  "flake8",
+]
+
+docs = [
+  "sphinx",
+  "sphinx-pyproject",  # Auto-extract project version
+  "sphinx_design",  # for the nice flowing cards
+]
+
+kaleido = [ "kaleido" ]
+
+[tool.pytest.ini_options]
+minversion = "6.0"
+addopts = ["-ra", "--showlocals", "--strict-markers", "--strict-config"]
+xfail_strict = true
+filterwarnings = ["error"]
+testpaths = ["tests"]

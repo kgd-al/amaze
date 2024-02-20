@@ -7,7 +7,7 @@ print("stuff:6", os.environ["QT_QPA_PLATFORM_PLUGIN_PATH"])
 from stable_baselines3.common.env_checker import check_env
 
 from amaze.sb3.maze_env import MazeEnv
-from amaze.simu.env.maze import Maze
+from amaze.simu.maze import Maze
 from amaze.simu.robot import InputType, OutputType, Robot
 
 

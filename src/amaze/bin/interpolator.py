@@ -6,7 +6,7 @@ import pprint
 from dataclasses import dataclass
 from pathlib import Path
 
-from amaze.simu.env.maze import Maze
+from amaze.simu.maze import Maze
 from amaze.simu.robot import InputType
 from amaze.simu.simulation import Simulation
 from amaze.visu.resources import Sign

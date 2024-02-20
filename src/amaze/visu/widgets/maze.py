@@ -6,7 +6,7 @@ from PyQt5.QtCore import Qt, QPointF, QRectF, QSize
 from PyQt5.QtGui import QPainter, QColor, QPainterPath, QImage
 from PyQt5.QtWidgets import QLabel
 
-from amaze.simu.env.maze import Maze
+from amaze.simu.maze import Maze
 from amaze.simu.robot import InputType, OutputType
 from amaze.simu.simulation import Simulation
 from amaze.visu import resources

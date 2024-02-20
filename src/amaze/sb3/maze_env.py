@@ -12,7 +12,7 @@ from stable_baselines3.common.torch_layers import BaseFeaturesExtractor
 from torch import nn
 
 from amaze.sb3.utils import CV2QTGuard, IOMapper
-from amaze.simu.env.maze import Maze
+from amaze.simu.maze import Maze
 from amaze.simu.robot import Robot, OutputType, InputType
 from amaze.simu.simulation import Simulation
 from amaze.visu.widgets.maze import MazeWidget

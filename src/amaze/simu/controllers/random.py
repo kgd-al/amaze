@@ -3,7 +3,7 @@ from random import Random
 from typing import Tuple, Optional
 
 from amaze.simu.controllers.base import BaseController
-from amaze.simu.env.maze import Maze
+from amaze.simu.maze import Maze
 
 
 class RandomController(BaseController):

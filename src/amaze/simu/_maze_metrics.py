@@ -1,3 +1,7 @@
+"""
+Private module for computing maze metrics
+"""
+
 import enum
 from collections import defaultdict, namedtuple
 from math import log2 as log
@@ -8,7 +12,7 @@ import numpy as np
 from PyQt5.QtGui import QImage, QPainter
 from PyQt5.QtWidgets import QApplication
 
-from amaze.simu.env.maze import Maze
+from amaze.simu.maze import Maze
 from amaze.simu.robot import InputType
 from amaze.visu.resources import Sign
 from amaze.visu.widgets.labels import InputsLabel

@@ -22,7 +22,7 @@ warnings.warn = lambda msg, category, *args, **kwargs: (
     if category is not DeprecationWarning else None)
 
 
-from amaze.simu.env.maze import Maze
+from amaze.simu.maze import Maze
 from amaze.sb3.utils import CV2QTGuard
 from amaze.visu.viewer import MainWindow
 

@@ -3,7 +3,7 @@ from enum import Enum, auto
 from logging import getLogger
 from typing import Optional
 
-from amaze.simu.env.maze import Maze
+from amaze.simu.maze import Maze
 from amaze.simu.robot import OutputType, Robot
 from amaze.visu.resources import SignType
 

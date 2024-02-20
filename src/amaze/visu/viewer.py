@@ -27,7 +27,7 @@ from amaze.simu._maze_metrics import MazeMetrics
 from amaze.simu.controllers.control import (Controllers, controller_factory,
                                             load)
 from amaze.simu.controllers.random import RandomController
-from amaze.simu.env.maze import Maze, StartLocation
+from amaze.simu.maze import Maze, StartLocation
 from amaze.simu.robot import Robot, InputType, OutputType
 from amaze.simu.simulation import Simulation
 from amaze.visu.resources import SignType

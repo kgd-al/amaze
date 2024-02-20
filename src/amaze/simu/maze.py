@@ -1,3 +1,7 @@
+"""
+Data structures describing a maze and its parameters
+"""
+
 import copy
 import json
 import random
@@ -22,16 +26,24 @@ logger = getLogger(__name__)
 
 
 class StartLocation(int, Enum):
+    """Describe which of the maze's corner to use as the starting position
+    """
     SOUTH_WEST = 0
     SOUTH_EAST = 1
     NORTH_EAST = 2
     NORTH_WEST = 3
 
     def shorthand(self):
+        """Return a two-letters code for this orientation
+        """
         return ''.join(s[0] for s in self.name.split('_'))
 
     @classmethod
     def from_shorthand(cls, short):
+        """Return an orientation from a two-letters code
+
+        :raises KeyError: if the two-letters code is unknown
+        """
         return {'SW': cls.SOUTH_WEST, 'SE': cls.SOUTH_EAST,
                 'NE': cls.NORTH_EAST, 'NW': cls.NORTH_WEST}[short]
 
