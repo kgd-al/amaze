@@ -41,8 +41,15 @@ extensions = [
     'matplotlib.sphinxext.plot_directive',
     'sphinx_design',
     'sphinx.ext.autosectionlabel',
-    'sphinx.ext.autosummary'
+    # 'sphinx.ext.autosummary',
+    "autodoc2"
 ]
+# autosummary_generate = True
+autodoc2_packages = [
+    "../../src/amaze"
+]
+autodoc2_output_dir = "_apidoc"
+autodoc2_annotations = False
 
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
@@ -110,7 +117,7 @@ kgd_verbose = False
 # set up the types of member to check that are documented
 members_to_watch = ['function', ]
 
-autodoc_default_options['undoc-members'] = True
+# autodoc_default_options['undoc-members'] = True
 
 keep_warnings = True
 nitpicky = True
@@ -157,7 +164,8 @@ def append(who, what, multiline):
 
 
 def process(what, name, obj, lines, multiline):
-    print(what, name, lines, multiline)
+    if "simu.maze" in name:
+        print(what, name, lines, multiline)
     if len(lines) == 0:
         kgd_log(f"Undocumented {what} {name} = {obj}({type(obj)})")
         append(lines, f'.. warning:: Undocumented: {what} {name}', multiline)

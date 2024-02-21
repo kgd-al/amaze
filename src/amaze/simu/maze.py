@@ -1,5 +1,4 @@
-"""
-Data structures describing a maze and its parameters
+"""Data structures describing a maze and its parameters
 """
 
 import copy
@@ -23,10 +22,12 @@ from amaze.visu import resources
 from amaze.visu.resources import Sign, SignType
 
 logger = getLogger(__name__)
+""" Module-level logger 
+"""
 
 
 class StartLocation(int, Enum):
-    """Describe which of the maze's corner to use as the starting position
+    """Describes which of the maze's corner to use as the starting position
     """
     SOUTH_WEST = 0
     SOUTH_EAST = 1
@@ -49,11 +50,23 @@ class StartLocation(int, Enum):
 
 
 class Maze:
+    """Main data structure storing everything needed during simulation
+    """
+
     FIELD_SEP = '_'
 
     @dataclass
     class BuildData(BaseBuildData):
+        """ Structure describing all of a mazes parameters.
+
+         Used during building and thrown afterward. Also used for
+         string conversion.
+        """
+
         width: Annotated[int, "number of horizontal cells"] = 10
+        """ The width of the maze salami
+        """
+
         height: Annotated[int, "number of vertical cells"] = 10
 
         seed: Annotated[Optional[int], "seed for the RNG"] = None

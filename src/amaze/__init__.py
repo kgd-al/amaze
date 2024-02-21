@@ -1,3 +1,2 @@
-"""
-Root package for the AMaze benchmark generator
+"""Root package for the AMaze benchmark generator
 """
