@@ -29,8 +29,9 @@ dependencies = [
 
 [build-system]
 requires = [
+  "setuptools>=65.0",
 ]
-#build-backend = "setuptools.build_meta"
+build-backend = "setuptools.build_meta"
 
 [project.optional-dependencies]
 tests = [

@@ -16,7 +16,7 @@ from sphinx_pyproject import SphinxConfig
 
 # -- Project information -----------------------------------------------------
 
-config = SphinxConfig("../../pyproject.toml", globalns=globals())
+config = SphinxConfig("../../pyproject.toml")
 
 # -- Project information -----------------------------------------------------
 
@@ -38,18 +38,10 @@ extensions = [
     'sphinx.ext.viewcode',
     'sphinx.ext.intersphinx',
     'sphinx.ext.todo',
-    'matplotlib.sphinxext.plot_directive',
     'sphinx_design',
     'sphinx.ext.autosectionlabel',
-    # 'sphinx.ext.autosummary',
-    "autodoc2"
+    "autoapi.extension"
 ]
-# autosummary_generate = True
-autodoc2_packages = [
-    "../../src/amaze"
-]
-autodoc2_output_dir = "_apidoc"
-autodoc2_annotations = False
 
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
@@ -63,17 +55,39 @@ autosectionlabel_prefix_document = True  # Make sure the target is unique
 intersphinx_mapping = {
     'python': ('https://docs.python.org/3', None),
     'pandas': ('http://pandas.pydata.org/pandas-docs/dev', None),
-    'numpy': ('http://docs.scipy.org/doc/numpy', None)
+    'numpy': ('http://docs.scipy.org/doc/numpy', None),
+    'stable-baselines3':
+        ('https://stable-baselines3.readthedocs.io/en/master/', None),
+    'gymnasium': ('https://gymnasium.farama.org/', None)
 }
 
-# -- Options for HTML output --------------------------------------------------
+# -- Options for autodoc ------------------------------------------------------
 autodoc_default_options = {
     "no-imported-members": True,
     "members": True,
     "undoc-members": True,
     "no-private-members": True,
     "member-order": "bysource",
+    "ignore-module-all": True
 }
+# autodoc_typehints = 'description'
+# autodoc_typehints_description_target = 'documented_params'
+
+# -- Options for autoapi ------------------------------------------------------
+autoapi_dirs = ["../../src/amaze"]
+autoapi_options = [
+    'members',
+    # 'undoc-members',
+    # 'private-members',
+    'show-inheritance',
+    'show-module-summary',
+    # 'special-members',
+    # 'imported-members',
+]
+# autoapi_template_dir = "templates"
+autoapi_root = "_autoapi"
+autoapi_keep_files = True
+autoapi_python_class_content = "class"
 
 # -- Options for HTML output -------------------------------------------------
 
@@ -164,8 +178,6 @@ def append(who, what, multiline):
 
 
 def process(what, name, obj, lines, multiline):
-    if "simu.maze" in name:
-        print(what, name, lines, multiline)
     if len(lines) == 0:
         kgd_log(f"Undocumented {what} {name} = {obj}({type(obj)})")
         append(lines, f'.. warning:: Undocumented: {what} {name}', multiline)
@@ -185,33 +197,35 @@ def autodoc_process_docstring(app, what, name, obj, options, lines):
     process(what, name, obj, lines, True)
 
 
-class StaticClassMembersDocumenter(AttributeDocumenter):
-    objtype = 'kgd_static_member'
-    directivetype = "attribute"
-    priority = 10 + AttributeDocumenter.priority
-    option_spec = dict(AttributeDocumenter.option_spec)
+def autodoc_skip_member(app, what, name, obj, skip, options):
+    print("[kgd] autodoc_skip_member")
+    if kgd_verbose:
+        print(f"[kgd] autodoc-skip-member("
+              f"{what}, {name}, {obj}, {skip})")
 
-    def get_doc(self) -> Optional[List[List[str]]]:
-        r = None
-        if hasattr(self.parent, "_docstrings"):
-            docs = self.parent._docstrings
-            name = self.objpath[-1]
-            if name in docs:
-                doc = docs[name]
-                if "\n" in doc:
-                    return [doc.split("\n")]
-                else:
-                    return [[docs[name]]]
-        if r is None:
-            r = super().get_doc()
-        if kgd_verbose:
-            print(f"[kgd] get_doc(): {r}")
-            print(f"[kgd] \t with {self.parent=}, {self.objpath[-1]=}")
-        return r
+    if obj.__doc__ and "skip-internal" in obj.__doc__:
+        skip = True
+
+    return skip
+
+
+def process_signature(app, what, name, obj, options, signature, return_ant):
+    print("[kgd] autodoc_process_signature")
+    if kgd_verbose:
+        print(f"[kgd] autodoc-process-signature({what}, {name}, {obj},"
+              f" {signature}, {return_ant})")
+    lines = [i for i in [signature, return_ant] if i is not None]
+    process(what, name, obj, lines, False)
+    r = lines + [None for _ in range(2 - len(lines))]
+
+    print(f"process-signature({what}, {name}, {signature})")
+    if "width" in name:
+        print(f"process-signature({what}, {name}, {signature})")
+
+    return r
 
 
 def setup(app):
     kgd_init_log()
     app.connect('autodoc-process-docstring', autodoc_process_docstring)
-
-    app.add_autodocumenter(StaticClassMembersDocumenter)
+    app.connect('autodoc-process-signature', process_signature)

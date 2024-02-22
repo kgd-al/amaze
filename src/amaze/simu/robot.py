@@ -26,8 +26,11 @@ State = np.ndarray
 
 
 class Robot:
+    """ The virtual robot """
     @dataclass
     class BuildData(BaseBuildData):
+        """ Structure describing the agent's parameters
+        """
         vision: Annotated[int, "agent vision size"] = 15
         inputs: Annotated[InputType, "Input type"] = InputType.DISCRETE
         outputs: Annotated[OutputType, "Output type"] = OutputType.DISCRETE

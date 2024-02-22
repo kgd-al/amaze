@@ -21,7 +21,8 @@ logger = logging.getLogger(__name__)
 
 
 class CustomCNN(BaseFeaturesExtractor):
-    """
+    """ Bare-bones attempt at using a custom CNN.
+
     :param observation_space: (gym.Space)
     :param features_dim: (int) Number of features extracted.
         This corresponds to the number of unit for the last layer.
@@ -63,6 +64,8 @@ class CustomCNN(BaseFeaturesExtractor):
 
 
 class MazeEnv(Env):
+    """ AMaze wrapper for the stable baselines 3 library
+    """
     metadata = dict(
         render_modes=["human", "rgb_array"],
         render_fps=30,
@@ -71,6 +74,11 @@ class MazeEnv(Env):
 
     def __init__(self, maze: Maze.BuildData, robot: Robot.BuildData,
                  log_trajectory: bool = False):
+        """ Built with maze data and robot data
+
+        :param ~amaze.simu.maze.Maze.BuildData maze: maze data
+        :param ~amaze.simu.robot.Robot.BuildData robot: agent data
+        """
         super().__init__()
         self.render_mode = "rgb_array"
 
@@ -118,6 +126,7 @@ class MazeEnv(Env):
         self.resets = 0
 
     def reset(self, seed=None, options=None, full_reset=False):
+        """Stub """
         self.last_infos = self.infos()
         if self._simulation.trajectory is not None:
             self.prev_trajectory = self._simulation.trajectory.copy(True)
@@ -136,6 +145,8 @@ class MazeEnv(Env):
         return self._observations(), self.infos()
 
     def step(self, action):
+        """ Stub docstring
+        """
         vec_action = self.mapper.map_action(action)
 
         reward = self._simulation.step(vec_action)
@@ -151,6 +162,7 @@ class MazeEnv(Env):
         return observation, reward, terminated, truncated, info
 
     def render(self) -> Optional[np.ndarray]:
+        """ Stub """
         with CV2QTGuard():  # Using Qt in CV2 context -> Protect
             s = 256
 
@@ -167,6 +179,7 @@ class MazeEnv(Env):
             return self._qimage_to_numpy(img)
 
     def close(self):
+        """ Stub """
         # if self.app is not None:
         #     logger.debug("Closing Qt")
         #     self.app.

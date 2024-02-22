@@ -10,7 +10,6 @@ Contents
     :maxdepth: 2
 
     usage/index
-    apidocs/index
 
 .. toctree::
     :maxdepth: 1

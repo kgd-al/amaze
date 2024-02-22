@@ -2,5 +2,5 @@
 
 out=docs/_build/html
 sphinx-autobuild -Ea docs/src/ $out \
-    --ignore '*/_autogen/errors.rst' --ignore '*/_apidoc/*' \
+    --ignore '*/_autogen/errors.rst' --ignore '*/_autoapi/*' \
     --pre-build clear --pre-build date --watch src/amaze

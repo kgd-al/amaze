@@ -1,8 +1,6 @@
 import os
 
-print("stuff:4", os.environ["QT_QPA_PLATFORM_PLUGIN_PATH"])
 import cv2
-print("stuff:6", os.environ["QT_QPA_PLATFORM_PLUGIN_PATH"])
 
 from stable_baselines3.common.env_checker import check_env
 

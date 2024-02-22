@@ -21,9 +21,8 @@ from amaze.utils.build_data import BaseBuildData
 from amaze.visu import resources
 from amaze.visu.resources import Sign, SignType
 
+
 logger = getLogger(__name__)
-""" Module-level logger 
-"""
 
 
 class StartLocation(int, Enum):
@@ -35,16 +34,10 @@ class StartLocation(int, Enum):
     NORTH_WEST = 3
 
     def shorthand(self):
-        """Return a two-letters code for this orientation
-        """
         return ''.join(s[0] for s in self.name.split('_'))
 
     @classmethod
     def from_shorthand(cls, short):
-        """Return an orientation from a two-letters code
-
-        :raises KeyError: if the two-letters code is unknown
-        """
         return {'SW': cls.SOUTH_WEST, 'SE': cls.SOUTH_EAST,
                 'NE': cls.NORTH_EAST, 'NW': cls.NORTH_WEST}[short]
 
@@ -64,9 +57,10 @@ class Maze:
         """
 
         width: Annotated[int, "number of horizontal cells"] = 10
-        """ The width of the maze salami
+        """ The width of the maze
         """
 
+        #: The height
         height: Annotated[int, "number of vertical cells"] = 10
 
         seed: Annotated[Optional[int], "seed for the RNG"] = None
@@ -120,6 +114,8 @@ class Maze:
                         f" field {k}")
 
         def all_permutations(self):
+            """ Returns a list describing the same maze with all four rotations
+            """
             def start_from(s: StartLocation):
                 m_ = copy.deepcopy(self)
                 m_.start = s
@@ -132,6 +128,7 @@ class Maze:
     Signs = BuildData.Signs
 
     class Direction(Enum):
+        """One of the cardinal directions"""
         EAST = 0
         NORTH = 1
         WEST = 2
@@ -158,8 +155,11 @@ class Maze:
     PlacedSign = namedtuple(
         'PlacedSign',
         ['visual_index', 'solution_index', 'direction', 'truth'])
+    """ A physically instantiated sign with a position, ..."""
 
-    def __init__(self, data: BuildData, key=None):
+    def __init__(self, data: 'amaze.simu.maze.Maze.BuildData', key=None):
+        """ Private maze constructor. See `build` for the public API.
+        """
         if key is not self.__private_key:
             raise AssertionError("Cannot create maze directly")
 
