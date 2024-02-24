@@ -13,7 +13,7 @@ from PyQt5.QtGui import QImage, QPainter
 from PyQt5.QtWidgets import QApplication
 
 from amaze.simu.maze import Maze
-from amaze.simu.robot import InputType
+from amaze.simu.types import InputType
 from amaze.visu.resources import Sign
 from amaze.visu.widgets.labels import InputsLabel
 

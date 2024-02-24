@@ -8,7 +8,8 @@ import pandas as pd
 from amaze.simu import _maze_metrics
 from amaze.simu.maze import Maze
 from amaze.simu.pos import Pos, AlignedPos
-from amaze.simu.robot import Robot, InputType, OutputType, Action, State
+from amaze.simu.robot import Robot
+from amaze.simu.types import InputType, OutputType, Action, State
 from amaze.visu import resources
 from amaze.visu.resources import SignType
 

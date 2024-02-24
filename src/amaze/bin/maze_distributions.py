@@ -25,7 +25,7 @@ from tqdm import tqdm
 
 from amaze.simu._maze_metrics import MazeMetrics
 from amaze.simu.maze import Maze
-from amaze.simu.robot import InputType
+from amaze.simu.types import InputType
 from amaze.simu.simulation import Simulation
 from amaze.visu.resources import Sign
 

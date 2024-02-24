@@ -12,6 +12,12 @@ Every maze can be described by a unique, human-readable string:
 ![maze sample_dark](https://raw.githubusercontent.com/kgd-al/amaze/master/docs/latex/maze/dark.png#gh-dark-mode-only)
 ![maze sample_light](https://raw.githubusercontent.com/kgd-al/amaze/master/docs/latex/maze/light.png#gh-light-mode-only)
 
+Clues point agents towards the correct direction, which is required for them to solve intersections.
+Traps serve the opposite purpose and are meant to provide more challenge to the maze navigation tasks.
+Finally, Lures are low-danger traps that can be detected using local information only (i.e. go into a wall).
+
+> **_NOTE:_** The path to solution as well as the finish flag are only visible to the human
+
 ## Agents
 
 Agents in AMaze are loosely embodied with only access to local physical information (the current cell)
@@ -43,9 +49,12 @@ The sign, if any, is thus provided a potentially complex image that the agent mu
 ![inputs_continuous_example_dark](https://raw.githubusercontent.com/kgd-al/amaze/master/docs/latex/agents/dark-3.png#gh-dark-mode-only)
 ![inputs_continuous_example_light](https://raw.githubusercontent.com/kgd-al/amaze/master/docs/latex/agents/light-3.png#gh-light-mode-only)
 
+While the term continuous is a bit of stretch for coarse-grain grayscale images, it highlights the
+difference with the discrete case where every possible input is easily enumerable.
+
 ### Examples
 
-According to the combinations of input and output spaces, the library can work in one of three ways:
+According to the combinations of input and output spaces, the library can work in one of three ways.
 
 #### Fully discrete
 

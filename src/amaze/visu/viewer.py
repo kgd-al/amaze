@@ -24,11 +24,12 @@ from PyQt5.QtWidgets import (QHBoxLayout, QWidget, QLabel,
                              QFileDialog, QSizePolicy, QScrollArea, QMessageBox)
 
 from amaze.simu._maze_metrics import MazeMetrics
-from amaze.simu.controllers.control import (Controllers, controller_factory,
-                                            load)
+from amaze.simu.controllers.control import (CONTROLLERS, controller_factory,
+                                            load, check_types)
 from amaze.simu.controllers.random import RandomController
 from amaze.simu.maze import Maze, StartLocation
-from amaze.simu.robot import Robot, InputType, OutputType
+from amaze.simu.robot import Robot
+from amaze.simu.types import InputType, OutputType
 from amaze.simu.simulation import Simulation
 from amaze.visu.resources import SignType
 from amaze.visu.widgets.collapsible import CollapsibleBox
@@ -415,20 +416,24 @@ class MainWindow(QWidget):
                 logger.warning(f"Could not find controller at '{new_value}'.")
                 error = True
 
-        elif isinstance(new_value, Controllers):
-            ccb.setCurrentText(new_value.name.lower())
+        elif isinstance(new_value, str):
+            ccb.setCurrentText(new_value)
 
         if error:
             logger.warning(f"Reverting to keyboard controller")
-            ccb.setCurrentText(Controllers.KEYBOARD.name.lower())
+            ccb.setCurrentText("keyboard")
 
         ct = ccb.currentText()
         if (ct.lower() != "autonomous") or c is None:
             c = controller_factory(
-                Controllers[ct.upper()],
+                ct,
                 dict(
                     a_type=self._enum_value("outputs", OutputType)
-                ))
+                )
+            )
+
+        rd = self._robot_data()
+        check_types(c, rd.inputs, rd.outputs)
 
         simple = c.simple
         if not simple:
@@ -476,7 +481,7 @@ class MainWindow(QWidget):
         layout.addRow(self.visu["img_inputs"])
         layout.addRow("Reward:", self.stats["r_reward"])
 
-        self._generate_controller(Controllers.KEYBOARD)
+        self._generate_controller("keyboard")
         self._play(True)
 
     def _build_controls(self):
@@ -635,9 +640,7 @@ class MainWindow(QWidget):
         row("Outputs", cb)
 
         cb = widget(QComboBox, "control")
-        cb.addItems([v.lower() for v in [Controllers.RANDOM.name,
-                                         Controllers.KEYBOARD.name,
-                                         "Autonomous"]])
+        cb.addItems([v.lower() for v in ["Random", "Keyboard", "Autonomous"]])
         row("Control", cb)
 
         return layout

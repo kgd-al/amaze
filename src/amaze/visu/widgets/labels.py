@@ -7,7 +7,7 @@ from PyQt5.QtGui import QPainter, QImage, QPixmap, QColor
 from PyQt5.QtWidgets import QLabel
 
 from amaze.simu.controllers.base import BaseController
-from amaze.simu.robot import InputType, State, OutputType, Action
+from amaze.simu.types import InputType, OutputType, Action, State
 
 logger = getLogger(__name__)
 
@@ -114,7 +114,7 @@ class ValuesLabel(TinyLabel):
         return w
 
     def set_values(self, c: BaseController, s: State):
-        value_f = getattr(c, 'value', None)
+        value_f = getattr(c, 'values', None)
         if value_f is None:
             self.setText("N/A")
             return
@@ -127,6 +127,8 @@ class ValuesLabel(TinyLabel):
         d = u-l
         if d != 0:
             self.values = [(v, 2 * ((v-l)/d) - 1) for v in self.values]
+        else:
+            self.values = [(v, v) for v in self.values]
         self.update()
 
     def paintEvent(self, e) -> None:

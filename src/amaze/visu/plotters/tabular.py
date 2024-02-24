@@ -6,7 +6,7 @@ from PyQt5.QtGui import QImage, QPainter
 from PyQt5.QtWidgets import QWidget, QHBoxLayout
 
 from amaze.simu.controllers.tabular import TabularController
-from amaze.simu.robot import InputType
+from amaze.simu.types import InputType
 from amaze.visu.widgets.labels import InputsLabel, ValuesLabel
 
 

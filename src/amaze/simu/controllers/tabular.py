@@ -4,7 +4,7 @@ import numpy as np
 import pandas as pd
 
 from amaze.simu.controllers.base import BaseController
-from amaze.simu.robot import Action, State
+from amaze.simu.types import Action, State, InputType, OutputType
 
 
 class TabularController(BaseController):
@@ -18,8 +18,13 @@ class TabularController(BaseController):
         self.init_value = 0
         self.min_value, self.max_value = None, None
 
+    @staticmethod
+    def inputs_type(): return InputType.DISCRETE
+    @staticmethod
+    def outputs_type(): return OutputType.DISCRETE
+
     def value(self, state, action):
-        return self.__values(state)[self._actions_ix[action]]
+        return self.values(state)[self._actions_ix[action]]
 
     def states(self):
         return self._data.keys()
@@ -37,7 +42,7 @@ class TabularController(BaseController):
         self.epsilon = state["epsilon"]
         self._rng.setstate(state["rng"])
 
-    def __values(self, state: np.ndarray):
+    def values(self, state: np.ndarray):
         b_state = tuple(state)
         if b_state not in self._data:
             self._data[b_state] = [self.init_value for _ in self._actions]
@@ -63,7 +68,7 @@ class TabularController(BaseController):
             return self.greedy_action(state)
 
     def greedy_action(self, state: State):
-        values = self.__values(state)
+        values = self.values(state)
         a_indices = np.flatnonzero(values == np.max(values))
         return self._rng.choice([self._actions[i] for i in a_indices])
 
@@ -142,7 +147,7 @@ class TabularController(BaseController):
         return c
 
     def __bellman(self, s: State, a: Action, r, alpha, gamma, q_value):
-        __v = self.__values(s)
+        __v = self.values(s)
         delta = \
             alpha * (r + gamma * q_value - self.value(s, a))
         ix = self._actions_ix[a]
@@ -153,7 +158,7 @@ class TabularController(BaseController):
         self.__bellman(s, a, r, alpha, gamma, self.value(s_, a_))
 
     def q_learning(self, s: State, a: Action, r, s_, _, alpha, gamma):
-        self.__bellman(s, a, r, alpha, gamma, max(self.__values(s_)))
+        self.__bellman(s, a, r, alpha, gamma, max(self.values(s_)))
 
 
 # def save

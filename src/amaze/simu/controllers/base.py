@@ -2,14 +2,11 @@ from abc import ABC, abstractmethod
 from typing import Optional
 
 from amaze.simu.pos import Vec
-from amaze.simu.robot import State, InputType, OutputType
+from amaze.simu.types import InputType, OutputType, State
 
 
 class BaseController(ABC):
-    simple = True  # Whether this controller has a state (table, ANN, ...)
-
-    def __init__(self, a_type: OutputType):
-        self.action_type = a_type
+    simple = True  # Whether this controller has no state (table, ANN, ...)
 
     @abstractmethod
     def __call__(self, inputs: State) -> Vec:
@@ -50,9 +47,13 @@ class BaseController(ABC):
         print(f'[kgd-debug] from json called on base controller, type={cls}')
         return cls()
 
-    # noinspection PyMethodMayBeStatic
-    def inputs_type(self) -> Optional[InputType]: return None
-    # noinspection PyMethodMayBeStatic
-    def outputs_type(self) -> Optional[OutputType]: return None
+    @staticmethod
+    def inputs_type() -> InputType:
+        raise NotImplementedError
+
+    @staticmethod
+    def outputs_type() -> OutputType:
+        raise NotImplementedError
+
     # noinspection PyMethodMayBeStatic
     def vision(self) -> Optional[int]: return None

@@ -10,7 +10,7 @@ from stable_baselines3.common.save_util import load_from_zip_file
 
 from amaze.simu.controllers.base import BaseController
 from amaze.simu.pos import Vec
-from amaze.simu.robot import State, InputType, OutputType
+from amaze.simu.types import InputType, OutputType, State
 from amaze.sb3.utils import IOMapper
 
 _classes = {

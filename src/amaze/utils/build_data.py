@@ -1,6 +1,7 @@
 import ast
 import logging
 from abc import ABC
+from copy import copy
 from dataclasses import fields, dataclass
 from functools import lru_cache
 from typing import get_args, get_origin, Union, Annotated
@@ -26,6 +27,13 @@ class BaseBuildData(ABC):
             if (v := getattr(other, rhs.name)) != self.unset:
                 setattr(self, lhs.name, v)
         return self
+
+    def where(self, **kwargs):
+        other = copy(self)
+        for k, v in kwargs.items():
+            assert hasattr(self, k)
+            setattr(other, k, v)
+        return other
 
     @classmethod
     @lru_cache(maxsize=1)

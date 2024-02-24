@@ -1,28 +1,13 @@
 from dataclasses import dataclass, field
-from enum import Enum
 from logging import getLogger
 from typing import Annotated, Optional, Tuple
 
-import numpy as np
-
+from amaze.simu.controllers.control import CONTROLLERS
+from amaze.simu.types import InputType, OutputType
 from amaze.simu.pos import Pos, Vec
 from amaze.utils.build_data import BaseBuildData
 
 logger = getLogger(__name__)
-
-
-class InputType(Enum):
-    DISCRETE = "DISCRETE"
-    CONTINUOUS = "CONTINUOUS"
-
-
-class OutputType(Enum):
-    DISCRETE = "DISCRETE"
-    CONTINUOUS = "CONTINUOUS"
-
-
-Action = Vec
-State = np.ndarray
 
 
 class Robot:
@@ -35,12 +20,13 @@ class Robot:
         inputs: Annotated[InputType, "Input type"] = InputType.DISCRETE
         outputs: Annotated[OutputType, "Output type"] = OutputType.DISCRETE
 
-        control: Annotated[str, "Control type"] = "random"
+        control: Annotated[str, "Controller type"] = "random"
         control_data: Optional[dict] = field(default_factory=dict)
 
         def __post_init__(self):
-            if self.control:
-                self.control = self.control.upper()
+            if not isinstance(self.control, BaseBuildData.Unset):
+                self.control = self.control.lower()
+                # assert self.control in CONTROLLERS.keys(), self.control
 
     RADIUS = .1
     INERTIAL_LOSS = .5

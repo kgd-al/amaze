@@ -8,7 +8,7 @@ from typing import Optional, List, Sequence
 import pandas as pd
 
 from amaze.simu.maze import Maze
-from amaze.simu.robot import InputType
+from amaze.simu.types import InputType
 from amaze.simu.simulation import Simulation
 
 

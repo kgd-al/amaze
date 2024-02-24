@@ -6,7 +6,8 @@ from stable_baselines3.common.env_checker import check_env
 
 from amaze.sb3.maze_env import MazeEnv
 from amaze.simu.maze import Maze
-from amaze.simu.robot import InputType, OutputType, Robot
+from amaze.simu.robot import Robot
+from amaze.simu.types import InputType, OutputType
 
 
 def check_maze_env():
