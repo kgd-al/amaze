@@ -1,7 +1,9 @@
 import json
+import logging
 from enum import Enum
 from pathlib import Path
-from typing import Union, Type
+from typing import Union, Type, Optional
+from zipfile import ZipFile
 
 from amaze.simu.controllers.base import BaseController
 from amaze.simu.controllers.keyboard import KeyboardController
@@ -9,8 +11,7 @@ from amaze.simu.controllers.random import RandomController
 from amaze.simu.controllers.tabular import TabularController
 from amaze.simu.types import InputType, OutputType
 
-# from amaze.sb3.controller import SB3Controller
-
+logger = logging.getLogger(__name__)
 
 CONTROLLERS = {
     "random": RandomController,
@@ -34,21 +35,35 @@ def controller_factory(c_type: str, c_data: dict):
     return CONTROLLERS[c_type.lower()](**c_data)
 
 
-def dump(controller: BaseController, path: Union[Path, str]):
+def save(controller: BaseController, path: Union[Path, str],
+         infos: Optional[dict] = None):
     reverse_map = {t: n for n, t in CONTROLLERS.items()}
-    j = dict(type=reverse_map[type(controller)])
-    j.update(controller.to_json())
+    assert type(controller) in reverse_map, \
+        f"Unknown controller type {type(controller)}"
+    controller_class = reverse_map[type(controller)]
 
-    with open(path, 'w') as f:
-        json.dump(j, f)
+    if path.suffix != ".zip":
+        path = path.with_suffix(".zip")
+
+    with ZipFile(path, "w") as archive:
+        archive.writestr("controller_class", controller_class)
+        controller.save_to_archive(archive)
+
+        _infos = controller.infos.copy()
+        _infos.update(infos)
+        archive.writestr("infos",
+                         json.dumps(_infos).encode("utf-8"))
+
+    logger.debug(f"Saved controller to {path}")
+
+    return path
 
 
 def load(path: Union[Path, str]):
-    if isinstance(path, str):
-        path = Path(path)
-    # if path.suffix == ".zip":
-    #     return SB3Controller.load(path)
-    with open(path, 'r') as f:
-        dct: dict = json.load(f)
-        c_type = dct.pop("type")
-        return CONTROLLERS[c_type.lower()].from_json(dct)
+    logger.debug(f"Loading controller from {path}")
+    with ZipFile(path, "r") as archive:
+        controller_class = archive.read("controller_class").decode("utf-8")
+        logger.debug(f"> controller class: {controller_class}")
+        c = CONTROLLERS[controller_class].load_from_archive(archive)
+        c.infos = json.loads(archive.read("infos").decode("utf-8"))
+        return c

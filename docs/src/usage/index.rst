@@ -19,18 +19,18 @@ built-in compatibility with common RL libraries, visualization tools, ...
 Tutorials
 ---------
 
-    - compute reward of existing controller (provided)
-    - show trajectory of existing controller (provided)
-    - show code snippet for simulating one maze
-    - show code for generating trajectory
-    - ???
-    - show code for q-learning
-
 .. toctree::
+    basics
+    training
 
-    usage/foo
-    usage/bar
-    usage/baz
+
+
+- compute reward of existing controller (provided)
+- show trajectory of existing controller (provided)
+- show code snippet for simulating one maze
+- show code for generating trajectory
+- ???
+- show code for q-learning
 
    
 FAQ

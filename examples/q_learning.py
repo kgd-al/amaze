@@ -4,16 +4,12 @@ import random
 import shutil
 import time
 
-from PyQt5.QtWidgets import QApplication
-
-from amaze.simu.controllers.control import controller_factory, dump
+from amaze.simu.controllers.control import controller_factory, save
 from amaze.simu.controllers.tabular import TabularController
 from amaze.simu.maze import Maze, StartLocation
 from amaze.simu.robot import Robot
 from amaze.simu.simulation import Simulation
 from amaze.simu.types import InputType, OutputType
-from amaze.visu.plotters.tabular import plot_inputs_values
-from amaze.visu.resources import Sign
 
 ALPHA = 0.1
 GAMMA = 0.5
@@ -159,7 +155,7 @@ def evaluate_generalization(policy):
             action = policy.greedy_action(simulation.observations)
         reward = simulation.infos()["pretty_reward"]
         rewards.append(reward)
-        print(_log_format.format(100*i/n, reward,
+        print(_log_format.format(100*(i+1)/n, reward,
                                  Maze.bd_to_string(maze_data)),
               end='', flush=True)
     print()
@@ -177,8 +173,8 @@ def main():
 
     policy = train()
 
-    policy_file = FOLDER.joinpath("policy")
-    dump(policy, policy_file)
+    policy_file = save(policy, FOLDER.joinpath("policy"),
+                       dict(comment="Can solve unicursive mazes"))
     print("Saved optimized policy to", policy_file)
 
     evaluate_generalization(policy)

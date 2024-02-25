@@ -84,6 +84,43 @@ class Simulation:
     def time(self):
         return self.timestep * self.dt
 
+    def success(self):
+        return self.robot.cell() == self.maze.end
+
+    def failure(self):
+        return self.timestep >= self.deadline
+
+    def done(self):
+        return self.success() or self.failure()
+
+    def cumulative_reward(self):
+        return self.robot.reward
+
+    def normalized_reward(self):
+        return (
+            2 * int(self.success())
+            - self.dt * self.stats.steps / (len(self.maze.solution) - 1)
+            - .01 * self.stats.backsteps
+            - .02 * self.stats.collisions)
+
+    def infos(self):
+        infos = dict(
+            time=self.timestep,
+            success=self.success(),
+            failure=self.failure(),
+            done=self.done(),
+            pretty_reward=self.normalized_reward(),
+            len=len(self.maze.solution),
+            **self.stats.__dict__
+        )
+        if self.errors:
+            infos['errors'] = {
+                t.value.lower(): 100 * v[1] / total
+                if (total := sum(v)) > 0 else 0
+                for t, v in self.errors.items()
+            }
+        return infos
+
     def reset(self, *args, **kwargs):
         if "save_trajectory" not in kwargs:
             kwargs["save_trajectory"] = (self.trajectory is not None)
@@ -349,37 +386,6 @@ class Simulation:
             return dict(pos=r.pos, vel=r.vel, acc=r.acc)
         else:
             return None
-
-    def success(self):
-        return self.robot.cell() == self.maze.end
-
-    def failure(self):
-        return self.timestep >= self.deadline
-
-    def done(self):
-        return self.success() or self.failure()
-
-    def infos(self):
-        infos = dict(
-            time=self.timestep,
-            success=self.success(),
-            failure=self.failure(),
-            done=self.done(),
-            pretty_reward=
-            2 * int(self.success())
-            - self.dt * self.stats.steps / (len(self.maze.solution) - 1)
-            - .01 * self.stats.backsteps
-            - .02 * self.stats.collisions,
-            len=len(self.maze.solution),
-            **self.stats.__dict__
-        )
-        if self.errors:
-            infos['errors'] = {
-                t.value.lower(): 100 * v[1] / total
-                if (total := sum(v)) > 0 else 0
-                for t, v in self.errors.items()
-            }
-        return infos
 
     @staticmethod
     def discrete_actions():

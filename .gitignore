@@ -11,6 +11,8 @@ stash/
 tmp/
 tmp
 
+docs/src/_auto*
+
 *.aux
 *.pdf
 *.synctex.gz

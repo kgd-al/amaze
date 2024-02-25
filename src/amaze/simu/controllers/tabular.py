@@ -1,4 +1,6 @@
+import json
 from random import Random
+from zipfile import ZipFile
 
 import numpy as np
 import pandas as pd
@@ -113,16 +115,20 @@ class TabularController(BaseController):
             "max": self.max_value
         }
 
-    def to_json(self):
+    def save_to_archive(self, archive: ZipFile) -> bool:
         def fmt(f_): return self.__pretty_format(f_).to_dict(orient='index')
-        return dict(
-            init_val=self.init_value,
-            min_val=self.min_value, max_val=self.max_value,
-            data=fmt(self._data), updates=fmt(self.__updates),
-        )
+        with archive.open("data.json", "w") as file:
+            data_bytes = json.dumps(
+                dict(
+                    init_val=self.init_value,
+                    min_val=self.min_value, max_val=self.max_value,
+                    data=fmt(self._data), updates=fmt(self.__updates),
+                )).encode("utf-8")
+            file.write(data_bytes)
+            return True
 
     @classmethod
-    def from_json(cls, dct: dict):
+    def load_from_archive(cls, archive: ZipFile) -> 'TabularController':
         def parse_val(v):
             try:
                 return int(v)
@@ -136,14 +142,16 @@ class TabularController(BaseController):
         def parse_dict(d):
             return {parse_tuple(k): list(v.values()) for k, v in d.items()}
 
-        actions = [parse_tuple(a) for a in
-                   next(iter(dct['data'].values())).keys()]
-        c = TabularController(actions, 0, 0)
-        c._data = parse_dict(dct["data"])
-        c.__updates = parse_dict(dct["updates"])
-        c.init_value = dct["init_val"]
-        c.min_value = dct["min_val"]
-        c.max_value = dct["max_val"]
+        with archive.open("data.json", "r") as file:
+            dct = json.loads(file.read().decode("utf-8"))
+            actions = [parse_tuple(a) for a in
+                       next(iter(dct['data'].values())).keys()]
+            c = TabularController(actions, 0, 0)
+            c._data = parse_dict(dct["data"])
+            c.__updates = parse_dict(dct["updates"])
+            c.init_value = dct["init_val"]
+            c.min_value = dct["min_val"]
+            c.max_value = dct["max_val"]
         return c
 
     def __bellman(self, s: State, a: Action, r, alpha, gamma, q_value):

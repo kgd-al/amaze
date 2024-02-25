@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
 from typing import Optional
+from zipfile import ZipFile
 
 from amaze.simu.pos import Vec
 from amaze.simu.types import InputType, OutputType, State
@@ -7,6 +8,12 @@ from amaze.simu.types import InputType, OutputType, State
 
 class BaseController(ABC):
     simple = True  # Whether this controller has no state (table, ANN, ...)
+
+    infos: dict = {}
+    """ Generic storage for additional information.
+    
+    For instance the class of mazes this agent should solve.
+    """
 
     @abstractmethod
     def __call__(self, inputs: State) -> Vec:
@@ -39,13 +46,13 @@ class BaseController(ABC):
         """Restore state from provided object"""
         pass
 
-    def to_json(self) -> dict:
-        return dict()
+    @abstractmethod
+    def save_to_archive(self, archive: ZipFile) -> bool:
+        raise NotImplementedError
 
     @classmethod
-    def from_json(cls, dct: dict) -> 'BaseController':
-        print(f'[kgd-debug] from json called on base controller, type={cls}')
-        return cls()
+    def load_from_archive(cls, archive: ZipFile) -> 'BaseController':
+        raise NotImplementedError
 
     @staticmethod
     def inputs_type() -> InputType:

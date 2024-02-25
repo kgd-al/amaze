@@ -16,9 +16,9 @@ class Robot:
     class BuildData(BaseBuildData):
         """ Structure describing the agent's parameters
         """
-        vision: Annotated[int, "agent vision size"] = 15
         inputs: Annotated[InputType, "Input type"] = InputType.DISCRETE
         outputs: Annotated[OutputType, "Output type"] = OutputType.DISCRETE
+        vision: Annotated[int, "agent vision size"] = 15
 
         control: Annotated[str, "Controller type"] = "random"
         control_data: Optional[dict] = field(default_factory=dict)

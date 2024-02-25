@@ -400,6 +400,10 @@ class Maze:
 
         return maze
 
+    @classmethod
+    def generate_from_string(cls, maze: str):
+        return cls.generate(cls.bd_from_string(maze))
+
     def _build_data(self):
         return Maze.BuildData(
             width=self.width, height=self.height,
