@@ -1,6 +1,4 @@
 Full exemple: Training
 ======================
 
-.. |FILE| replace:: ../../../examples/q_learning.py
-
-.. literalinclude:: |FILE|
+.. literalinclude:: ../../../examples/q_learning.py

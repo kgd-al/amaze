@@ -9,6 +9,7 @@ from typing import Tuple
 
 
 class Vec:
+    """ Generic 2d vector with limited arithmetic operations """
     def __init__(self, x: float, y: float):
         self.x, self.y = x, y
 
@@ -57,5 +58,6 @@ AlignedPos = Tuple[int, int]
 
 
 class Pos(Vec):
+    """ A position inside the maze """
     def aligned(self) -> AlignedPos:
         return int(self.x), int(self.y)

@@ -24,7 +24,7 @@ from PyQt5.QtWidgets import (QHBoxLayout, QWidget, QLabel,
                              QFileDialog, QSizePolicy, QScrollArea, QMessageBox)
 
 from amaze.simu._maze_metrics import MazeMetrics
-from amaze.simu.controllers.control import (CONTROLLERS, controller_factory,
+from amaze.simu.controllers.control import (controller_factory,
                                             load, check_types)
 from amaze.simu.controllers.random import RandomController
 from amaze.simu.maze import Maze, StartLocation
@@ -432,8 +432,7 @@ class MainWindow(QWidget):
                 )
             )
 
-        rd = self._robot_data()
-        check_types(c, rd.inputs, rd.outputs)
+        check_types(c, self._robot_data())
 
         simple = c.simple
         if not simple:

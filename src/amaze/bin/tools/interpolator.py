@@ -33,13 +33,14 @@ class Options:
                             help="Path to the elementary interpolation rules")
 
 
-def value(v): return Sign(value=v)
-
-
-def linear(u, v0, v1): return u * (v1 - v0) + v0
-
-
 def main():
+    """ Interpolate between two mazes to generate a number of intermediates
+    according to some rules"""
+
+    def value(_v): return Sign(value=_v)
+
+    def linear(_u, _v0, _v1): return _u * (_v1 - _v0) + _v0
+
     args = Options()
     parser = argparse.ArgumentParser(description="2D Maze environment")
     Options.populate(parser)

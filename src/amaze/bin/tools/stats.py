@@ -30,7 +30,7 @@ class Options:
                             help="Store formatted table into target file")
 
 
-def get_stats(maze: str):
+def _get_stats(maze: str):
     m = Maze.from_string(maze)
     stats = m.stats()
     c = Simulation.compute_complexity(m, InputType.DISCRETE, 5)['entropy']
@@ -39,6 +39,7 @@ def get_stats(maze: str):
 
 
 def main(sys_args: Optional[Sequence[str]] = None):
+    """ Tool to print stats about mazes without having to simulate them """
     args = Options()
     parser = argparse.ArgumentParser(
         description="Outputs stats for selected maze in a multitude of formats")
@@ -56,7 +57,7 @@ def main(sys_args: Optional[Sequence[str]] = None):
         in_df.set_index("Name", inplace=True)
         for i, r in in_df.iterrows():
             # print(f"{i=}, {r=}")
-            stats = get_stats(str(i))
+            stats = _get_stats(str(i))
             if stats_df is None:
                 stats_df = pd.DataFrame(columns=stats.keys())
             stats_df.loc[i] = stats.values()

@@ -4,15 +4,26 @@
 # list see the documentation:
 # https://www.sphinx-doc.org/en/master/usage/configuration.html
 import os
+import pprint
+from pathlib import Path
 # If extensions (or modules to document with autodoc) are in another directory,
 # add these directories to sys.path here. If the directory is relative to the
 # documentation root, use os.path.abspath to make it absolute, like shown here.
 #
 from typing import List, Optional
 
+from docutils.nodes import substitution_definition
+from sphinx.directives.code import LiteralInclude
 from sphinx.ext.autodoc import AttributeDocumenter
 from sphinx.util import logging
 from sphinx_pyproject import SphinxConfig
+
+# -- Ensure up-to-date sources -----------------------------------------------
+
+import importlib
+import sys
+for module in list(m for m in sys.modules.values() if "amaze" in m.__name__):
+    importlib.reload(module)
 
 # -- Project information -----------------------------------------------------
 
@@ -40,9 +51,9 @@ extensions = [
     'sphinx.ext.todo',
     'sphinx_design',
     'sphinx.ext.autosectionlabel',
-    # "autoapi.extension",
     "sphinx.ext.autosummary",
-    "myst_parser"
+    "sphinx_qt_documentation",
+    'sphinx_substitution_extensions'
 ]
 
 # List of patterns, relative to source directory, that match files and
@@ -56,11 +67,12 @@ autosectionlabel_prefix_document = True  # Make sure the target is unique
 # -- Options for HTML output --------------------------------------------------
 intersphinx_mapping = {
     'python': ('https://docs.python.org/3', None),
-    'pandas': ('http://pandas.pydata.org/pandas-docs/dev', None),
-    'numpy': ('http://docs.scipy.org/doc/numpy', None),
+    'pandas': ('https://pandas.pydata.org/pandas-docs/dev', None),
+    'numpy': ('https://numpy.org/doc/stable/', None),
     'stable-baselines3':
         ('https://stable-baselines3.readthedocs.io/en/master/', None),
-    'gymnasium': ('https://gymnasium.farama.org/', None)
+    'gymnasium': ('https://gymnasium.farama.org/', None),
+    'pytorch': ('https://pytorch.org/docs/stable/', None)
 }
 
 # -- Options for autodoc ------------------------------------------------------
@@ -74,32 +86,6 @@ autodoc_default_options = {
 }
 # autodoc_typehints = 'description'
 # autodoc_typehints_description_target = 'documented_params'
-
-# # -- Options for myst ------------------------------------------------------
-
-source_suffix = {
-    '.rst': 'restructuredtext',
-    '.md': 'md'
-}
-myst_enable_extensions = [
-    "substitution"
-]
-
-# # -- Options for autoapi ------------------------------------------------------
-# autoapi_dirs = ["../../src/amaze"]
-# autoapi_options = [
-#     'members',
-#     # 'undoc-members',
-#     # 'private-members',
-#     'show-inheritance',
-#     'show-module-summary',
-#     # 'special-members',
-#     # 'imported-members',
-# ]
-# # autoapi_template_dir = "templates"
-# autoapi_root = "_autoapi"
-# autoapi_keep_files = True
-# autoapi_python_class_content = "class"
 
 # -- Options for HTML output -------------------------------------------------
 
@@ -190,9 +176,9 @@ def append(who, what, multiline):
 
 
 def process(what, name, obj, lines, multiline):
-    if len(lines) == 0:
-        kgd_log(f"Undocumented {what} {name} = {obj}({type(obj)})")
-        append(lines, f'.. warning:: Undocumented: {what} {name}', multiline)
+    # if len(lines) == 0:
+    #     kgd_log(f"Undocumented {what} {name} = {obj}({type(obj)})")
+    #     append(lines, f'.. warning:: Undocumented: {what} {name}', multiline)
 
     if kgd_verbose:
         print(f"[kgd] processing({what}, {name}, {obj}, {lines}, {multiline}")
@@ -233,7 +219,51 @@ def process_signature(app, what, name, obj, options, signature, return_ant):
     return r
 
 
+# Inspired by https://stackoverflow.com/a/53267394
+class DynamicLiteralInclude(LiteralInclude):
+    required_arguments = 0
+    optional_arguments = 1
+
+    def run(self) -> List:
+        doc = self.state.document
+        root = Path(self.state.document.settings.env.app.confdir).parent.parent
+        wd = Path(doc.current_source).parent
+        reverse_wd = Path("/".join([".." for _
+                                    in wd.relative_to(root).parents]))
+        print()
+        print(reverse_wd)
+
+        source = None
+        substitutions = {}
+        for sbs in doc.substitution_defs.values():
+            _, key, _, value = sbs.rawsource.split()
+            absolute_path = root.joinpath(value)
+            if absolute_path.exists():
+                source = (value, absolute_path, reverse_wd.joinpath(value))
+                print(f"{source=}")
+
+            else:
+                substitutions[key] = value
+
+        print(f"{source=}")
+        assert source[1].exists(), \
+            (f"Could not find source file at {source[0]}."
+             f"Did you include .. |FILE| replace:: <path-to-file>?")
+
+        if len(self.arguments) > 0:
+            self.options["lines"] = self.arguments[0]
+        else:
+            self.options["caption"] = f"Full listing for {source[0]}"
+
+        self.options["lineno-match"] = True
+        self.arguments = [str(source[2])]
+        print(self.arguments)
+
+        return super().run()
+
+
 def setup(app):
     kgd_init_log()
     app.connect('autodoc-process-docstring', autodoc_process_docstring)
     app.connect('autodoc-process-signature', process_signature)
+    app.add_directive('kgd-literal-include', DynamicLiteralInclude)

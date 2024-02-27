@@ -77,7 +77,7 @@ lures = _signs(*values[1::3])
 traps = _signs(*values[2::3])
 
 
-def _generate(*args, mazes_set):
+def __generate(*args, mazes_set):
     seed, size, (class_name, bd), p_lure, p_trap, ssize = args
     # print(f"[Start] _generate({args})")
 
@@ -137,7 +137,7 @@ def _generate(*args, mazes_set):
     return stats
 
 
-def generate(args):
+def _generate(args):
     df = None
     items = [
         range(args.n),      # Seeds
@@ -197,7 +197,7 @@ def generate(args):
         # progress_bar.
         with ProcessPoolExecutor(max_workers=args.parallel) as executor:
             for future in concurrent.futures.as_completed(
-                    executor.submit(_generate, *g_args)
+                    executor.submit(__generate, *g_args)
                     for g_args in itertools.product(*items)):
                 progress_bar.update()
                 result = future.result()
@@ -207,7 +207,7 @@ def generate(args):
 
     else:
         for g_args in tqdm_iter.product(*items):
-            r = _generate(*g_args, mazes_set=mazes_set)
+            r = __generate(*g_args, mazes_set=mazes_set)
             _add_to_df(r)
 
                 # if seed == 0:
@@ -224,7 +224,7 @@ def generate(args):
     return df
 
 
-def plot(df, args):
+def _plot(df, args):
     os.environ["QT_QPA_PLATFORM"] = "offscreen"
     seaborn.set_style("whitegrid")
 
@@ -427,6 +427,8 @@ def plot(df, args):
 
 
 def main(sys_args: Optional[Sequence[str]] = None):
+    """ Generates a lot of mazes and plots some descriptive distributions """
+
     args = Options()
     parser = argparse.ArgumentParser(
         description="Generates distributions of mazes statistics")
@@ -437,13 +439,13 @@ def main(sys_args: Optional[Sequence[str]] = None):
 
     args.df_path = args.out.joinpath(f"distributions_{args.n}.csv")
     if args.generate or args.append or not args.df_path.exists():
-        df = generate(args)
+        df = _generate(args)
     else:
         df = pd.read_csv(args.df_path, index_col="Name")
 
     args.pdf_path = args.df_path.with_suffix(".pdf")
     if args.plot:
-        plot(df, args)
+        _plot(df, args)
 
     pdf_symlink = args.out.joinpath("distributions.pdf")
     pdf_symlink.unlink(missing_ok=True)

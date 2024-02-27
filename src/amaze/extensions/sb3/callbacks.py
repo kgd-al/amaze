@@ -14,21 +14,21 @@ from stable_baselines3.common.vec_env.base_vec_env import tile_images
 logger = logging.getLogger(__name__)
 
 
-def recurse_avg_dict(dicts: List[Dict], root_key=""):
+def _recurse_avg_dict(dicts: List[Dict], root_key=""):
     avg_dict = defaultdict(list)
     for d in dicts:
-        for k, v in recurse_dict(d, root_key):
+        for k, v in _recurse_dict(d, root_key):
             avg_dict[k].append(v)
     return {
         k: np.average(v) for k, v in avg_dict.items()
     }
 
 
-def recurse_dict(dct, root_key):
+def _recurse_dict(dct, root_key):
     for k, v in dct.items():
         current_key = f"{root_key}/{k}" if root_key else k
         if isinstance(v, dict):
-            for k_, v_ in recurse_dict(v, current_key):
+            for k_, v_ in _recurse_dict(v, current_key):
                 yield k_, v_
         else:
             yield current_key, v
@@ -164,7 +164,7 @@ class TensorboardCallback(BaseCallback):
         env = self.parent.eval_env
 
         eval_infos = env.get_attr('last_infos')
-        for key, value in recurse_avg_dict(eval_infos, "infos").items():
+        for key, value in _recurse_avg_dict(eval_infos, "infos").items():
             self.logger.record_mean(key, value)
 
         print_trajectory = \
@@ -191,8 +191,8 @@ class TensorboardCallback(BaseCallback):
                 self.img_format.format(self.num_timesteps)
             self._print_trajectory(train_env, "train", t_str)
 
-            eval_infos = recurse_avg_dict(eval_infos, "eval")
-            train_infos = recurse_avg_dict(train_env.get_attr('last_infos'),
+            eval_infos = _recurse_avg_dict(eval_infos, "eval")
+            train_infos = _recurse_avg_dict(train_env.get_attr('last_infos'),
                                             "train")
 
             self.last_stats = {

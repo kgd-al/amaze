@@ -18,26 +18,36 @@ logger = getLogger(__name__)
 # =============================================================================
 # Public API
 
-def default_builtin() -> str: return "arrow"
-def default_lightness() -> float: return .5
-def default_size() -> int: return 15
+def _default_builtin() -> str: return "arrow"
+def _default_lightness() -> float: return .5
+def _default_size() -> int: return 15
 
 
 class SignType(Enum):
+    """ What kind of information the related sign provides """
+
     CLUE = "Clue"
+    """ Helpful sign. Shows the correct direction in an intersection """
+
     LURE = "Lure"
+    """ Unhelpful sign. Points to random direction along the path """
+
     TRAP = "Trap"
+    """ Deceitful sign. Shows the wrong direction in an intersection """
 
 
 class Sign:
+    """ Describe a specific kind of Sign (clue, lure, trap) with a name and
+    a lightness value. Shape is derived either as a built-in function or as an
+    image file"""
     sep = '-'
 
     CLUE = SignType.CLUE
     LURE = SignType.LURE
     TRAP = SignType.TRAP
 
-    def __init__(self, name: str = default_builtin(),
-                 value: float = default_lightness()):
+    def __init__(self, name: str = _default_builtin(),
+                 value: float = _default_lightness()):
         self.name: str | Path = name
         self.value: float = value
 
@@ -53,7 +63,7 @@ class Sign:
         if len(tokens) == 1:
             try:
                 val = float(tokens[0])
-                name = default_builtin()
+                name = _default_builtin()
             except ValueError:
                 name = tokens[0]
                 val = .5
@@ -83,7 +93,7 @@ class Sign:
 
     def to_string(self) -> str:
         s = []
-        if self.name != default_builtin():
+        if self.name != _default_builtin():
             s.append(self.name)
         s.append(f"{self.value:.2g}".lstrip('0'))
         return self.sep.join(s)
@@ -93,7 +103,9 @@ Signs = List[Sign]
 DataKey = Tuple[str, float, int]
 
 
-def resources_path(): return Path("cache/resources/")
+def resources_path():
+    """ Where to look for sign images and where to cache built-ins """
+    return Path("cache/resources/")
 
 
 # =============================================================================
@@ -162,7 +174,7 @@ def __generator__error(lightness: float = 0, size: int = 15):
     return img
 
 
-def arrow_path():
+def _arrow_path():
     path = QPainterPath()
     path.moveTo(0., .4)
     path.lineTo(0., .6)
@@ -177,7 +189,7 @@ def arrow_path():
 
 def __generator__arrow(lightness: float, size: int):
     img, painter = _image(size, lightness)
-    painter.fillPath(arrow_path(), __pen_color(lightness))
+    painter.fillPath(_arrow_path(), __pen_color(lightness))
     painter.end()
 
     return img
@@ -222,7 +234,9 @@ def __generator__forbidden(lightness: float, size: int):
 # =============================================================================
 # Public API
 
-def builtins(): return list(_factories().keys())
+def builtins():
+    """ List of all programmatically drawn signs """
+    return list(_factories().keys())
 
 
 def __extract_names():
@@ -237,15 +251,21 @@ def __extract_names():
 _names = __extract_names()
 
 
-def names(): return _names
+def names():
+    """ List of all possible sign shapes, including both built-ins and those
+    found in :meth:`~resources_path`"""
+    return _names
 
 
 def image(sign: Sign, size: int) -> QImage:
+    """ Return the image associated with given sign in the requested size """
     key = (sign.name, sign.value, size)
     return _get_image(key)
 
 
 def qt_images(signs: Signs, resolution: int) -> List[List[QImage]]:
+    """ Returns images *in Qt format* (QImage) for all provided signs, with the
+    requested resolution"""
     images = []
     for sign in signs:
         img: QImage = image(sign, resolution)
@@ -271,6 +291,8 @@ def qt_images(signs: Signs, resolution: int) -> List[List[QImage]]:
 
 def np_images(signs: Signs, resolution: int,
               rgb_fill: int = 0) -> List[List[np.ndarray]]:
+    """ Returns images *in numpy format* (array) for all provided signs, with
+    the requested resolution"""
     def _scale(x): return x / 255.0
     _v_scale = np.vectorize(_scale)
     _images = qt_images(signs, resolution)

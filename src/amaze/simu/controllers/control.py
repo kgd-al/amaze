@@ -1,15 +1,14 @@
 import json
 import logging
-from enum import Enum
 from pathlib import Path
 from typing import Union, Type, Optional
 from zipfile import ZipFile
 
+from amaze.simu import Robot
 from amaze.simu.controllers.base import BaseController
 from amaze.simu.controllers.keyboard import KeyboardController
 from amaze.simu.controllers.random import RandomController
 from amaze.simu.controllers.tabular import TabularController
-from amaze.simu.types import InputType, OutputType
 
 logger = logging.getLogger(__name__)
 
@@ -21,22 +20,30 @@ CONTROLLERS = {
 
 
 def check_types(controller: Type[BaseController],
-                input_type: InputType, output_type: OutputType) -> bool:
-    assert input_type == controller.inputs_type(), \
-        (f"Input type {input_type} is not valid for {controller}."
+                robot: Robot.BuildData) -> bool:
+    """ Ensure that the controller is compatible with the specified
+     inputs/outputs """
+    assert robot.inputs == controller.inputs_type(), \
+        (f"Input type {robot.inputs} is not valid for {controller}."
          f" Expected {controller.inputs_type()}")
-    assert output_type == controller.outputs_type(), \
-        (f"Output type {output_type} is not valid for {controller}."
+    assert robot.outputs == controller.outputs_type(), \
+        (f"Output type {robot.outputs} is not valid for {controller}."
          f" Expected {controller.outputs_type()}")
     return True
 
 
 def controller_factory(c_type: str, c_data: dict):
+    """ Create a controller of a given c_type from the given c_data """
     return CONTROLLERS[c_type.lower()](**c_data)
 
 
 def save(controller: BaseController, path: Union[Path, str],
          infos: Optional[dict] = None):
+    """ Save the controller under the provided path
+
+    Optionally store the provided information for latter reference (e.g.
+    type of mazes, performance, ...)
+    """
     reverse_map = {t: n for n, t in CONTROLLERS.items()}
     assert type(controller) in reverse_map, \
         f"Unknown controller type {type(controller)}"
@@ -60,6 +67,11 @@ def save(controller: BaseController, path: Union[Path, str],
 
 
 def load(path: Union[Path, str]):
+    """ Loads a controller from the provided path.
+
+    Handles any type currently registered. When using extensions, make sure
+    to load (import) all those used during training.
+    """
     logger.debug(f"Loading controller from {path}")
     with ZipFile(path, "r") as archive:
         controller_class = archive.read("controller_class").decode("utf-8")

@@ -1,4 +1,9 @@
 #!/usr/bin/env python3
+"""
+Main executable for the AMaze library.
+
+Provides and all-in-one entry point for simulation, evaluation and visualization
+"""
 
 import argparse
 import logging
@@ -16,14 +21,13 @@ from amaze.simu.robot import Robot
 from amaze.simu.simulation import Simulation
 from amaze.visu.widgets.maze import MazeWidget
 
-original_warn = warnings.warn
+_original_warn = warnings.warn
 warnings.warn = lambda msg, category, *args, **kwargs: (
-    original_warn(msg, category, *args, **kwargs)
+    _original_warn(msg, category, *args, **kwargs)
     if category is not DeprecationWarning else None)
 
-
 from amaze.simu.maze import Maze
-from amaze.sb3.utils import CV2QTGuard
+from amaze.extensions.sb3.utils import CV2QTGuard
 from amaze.visu.viewer import MainWindow
 
 
@@ -32,6 +36,9 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class Options:
+    """
+    Namespace containing all options for the AMaze main executable
+    """
     maze: Optional[str] = None
     controller: Optional[Path] = None
 
@@ -124,6 +131,9 @@ def __make_simulation(args, trajectory=False):
 
 
 def main(sys_args: Optional[Sequence[str]] = None):
+    """
+    Main function for the AMaze executable. Allows delegate call
+    """
     args = Options()
     parser = argparse.ArgumentParser(description="2D Maze environment")
     Options.populate(parser)

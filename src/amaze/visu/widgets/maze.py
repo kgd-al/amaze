@@ -325,6 +325,7 @@ class MazeWidget(QLabel):
             - px, py the robot's position
             - ax, ay the action
             - r the resulting reward
+
         :param simulation: the simulation to plot from
         :param size: the width of the generated image (height is deduced)
         :param trajectory: the trajectory (in dataframe format)

@@ -1,21 +1,22 @@
+""" SB3 wrapper for the maze environment """
+
 import logging
 from typing import Optional
 
 import numpy as np
-import torch
 from PyQt5 import QtWidgets
 from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QImage, QPainter
 from PyQt5.QtWidgets import QApplication
 from gymnasium import spaces, Env
 from stable_baselines3.common.torch_layers import BaseFeaturesExtractor
-from torch import nn
+from torch import nn, no_grad, as_tensor, Tensor
 
-from amaze.sb3.utils import CV2QTGuard, IOMapper
+from amaze.extensions.sb3.utils import CV2QTGuard, IOMapper
 from amaze.simu.maze import Maze
 from amaze.simu.robot import Robot
-from amaze.simu.types import InputType, OutputType
 from amaze.simu.simulation import Simulation
+from amaze.simu.types import InputType, OutputType
 from amaze.visu.widgets.maze import MazeWidget
 
 logger = logging.getLogger(__name__)
@@ -51,16 +52,17 @@ class CustomCNN(BaseFeaturesExtractor):
         )
 
         # Compute shape by doing one forward pass
-        with torch.no_grad():
+        with no_grad():
             n_flatten = self.cnn(
-                torch.as_tensor(observation_space.sample()[None]).float()
+                as_tensor(observation_space.sample()[None]).float()
             ).shape[1]
 
         self.linear = nn.Sequential(nn.Linear(n_flatten, features_dim), nn.ReLU())
 
         exit(42)
 
-    def forward(self, observations: torch.Tensor) -> torch.Tensor:
+    def forward(self, observations: Tensor) -> Tensor:
+        """ Performs one computational step """
         return self.linear(self.cnn(observations))
 
 

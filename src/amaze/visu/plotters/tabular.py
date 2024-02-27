@@ -14,6 +14,10 @@ logger = logging.getLogger(__name__)
 
 
 def plot_inputs_values(policy: TabularController, path):
+    """
+    Saves a summary of the state/action pairs stored in the provided
+    controller
+    """
     iv_holder = QWidget()
     iv_layout = QHBoxLayout()
     iv_holder.setLayout(iv_layout)

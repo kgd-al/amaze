@@ -2,10 +2,9 @@ from dataclasses import dataclass, field
 from logging import getLogger
 from typing import Annotated, Optional, Tuple
 
-from amaze.simu.controllers.control import CONTROLLERS
 from amaze.simu.types import InputType, OutputType
 from amaze.simu.pos import Pos, Vec
-from amaze.utils.build_data import BaseBuildData
+from amaze.simu._build_data import BaseBuildData
 
 logger = getLogger(__name__)
 

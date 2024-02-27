@@ -53,6 +53,7 @@ class CV2QTGuard:
 
 
 class IOMapper:
+    """ Transform AMaze's inputs/outputs types to SB3 objects """
     def __init__(self, observation_space: Space, action_space: Space):
         self.o_space = observation_space
         if len(self.o_space.shape) == 1:

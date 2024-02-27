@@ -30,6 +30,11 @@ Resettable = Union[None, T]
 
 
 class Simulation:
+    """ Serves as a bare-bones simulator for the maze-navigation environment.
+
+    Handles all three configurations: full discrete, full continuous and
+    hybrid
+    """
     def __init__(self,
                  maze: Resettable[Maze] = None,
                  robot: Resettable[Robot.BuildData] = None,

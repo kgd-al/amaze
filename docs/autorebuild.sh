@@ -7,4 +7,4 @@ rm -fr docs/src/_*
 
 sphinx-autobuild -Ea docs/src/ $out \
     --ignore '*/_autogen/errors.rst' --ignore '*/_auto*' \
-    --pre-build clear --pre-build date --watch src/amaze
+    --pre-build 'rm -fr docs/_build' --pre-build clear --pre-build date --watch src/amaze

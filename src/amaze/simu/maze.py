@@ -17,7 +17,7 @@ from typing import Annotated, Tuple, Optional, List, Dict
 
 import numpy as np
 
-from amaze.utils.build_data import BaseBuildData
+from amaze.simu._build_data import BaseBuildData
 from amaze.visu import resources
 from amaze.visu.resources import Sign, SignType
 
@@ -46,8 +46,6 @@ class Maze:
     """Main data structure storing everything needed during simulation
     """
 
-    FIELD_SEP = '_'
-
     @dataclass
     class BuildData(BaseBuildData):
         """ Structure describing all of a mazes parameters.
@@ -55,6 +53,8 @@ class Maze:
          Used during building and thrown afterward. Also used for
          string conversion.
         """
+
+        _FIELD_SEP = '_'
 
         width: Annotated[int, "number of horizontal cells"] = 10
         """ The width of the maze
@@ -124,6 +124,62 @@ class Maze:
             sl = [StartLocation.NORTH_WEST, StartLocation.NORTH_EAST,
                   StartLocation.SOUTH_WEST, StartLocation.SOUTH_EAST]
             return [start_from(s) for s in sl]
+
+        @classmethod
+        def to_string(cls, bd: 'BuildData') -> str:
+            sep = cls._FIELD_SEP
+            default = Maze.BuildData()
+            f = f"M{bd.seed}{sep}{bd.width}x{bd.height}"
+            if bd.start != default.start:
+                f += sep + bd.start.shorthand()
+            if bd.unicursive:
+                f += sep + "U"
+            f += ''.join(f"{sep}C{Sign.to_string(s)}" for s in bd.clue)
+            if bd.p_lure and bd.lure:
+                f += f"{sep}l" + f"{bd.p_lure:.2g}".lstrip('0')
+                f += ''.join(f"{sep}L{Sign.to_string(s)}" for s in bd.lure)
+            if bd.p_trap and bd.trap:
+                f += f"{sep}t" + f"{bd.p_trap:.2g}".lstrip('0')
+                f += ''.join(f"{sep}T{Sign.to_string(s)}" for s in bd.trap)
+            return f
+
+        @classmethod
+        def from_string(cls, s, overrides: Optional['BuildData'] = None) \
+                -> 'BuildData':
+            d_re = re.compile("[SN][WE]")
+            s_re = re.compile("[0-9]+x[0-9]+")
+            bd = cls()
+            s = s.split('__')[-1]
+            for token in s.split(Maze._FIELD_SEP):
+                t, tail = token[0], token[1:]
+                if t == 'M':
+                    bd.seed = s if (s := int(tail)) >= 0 else bd.seed
+                elif t == 'U':
+                    bd.unicursive = True
+                elif t == 'C':
+                    bd.clue.append(Sign.from_string(tail))
+                elif t == 'l':
+                    bd.p_lure = float(tail) if tail else bd.p_lure
+                elif t == 'L':
+                    bd.lure.append(Sign.from_string(tail))
+                elif t == 't':
+                    bd.p_trap = float(tail) if tail else bd.p_trap
+                elif t == 'T':
+                    bd.trap.append(Sign.from_string(tail))
+                elif s_re.match(token):
+                    bd.width, bd.height = [int(x) for x in token.split('x')]
+                elif d_re.match(token):
+                    bd.start = StartLocation.from_shorthand(token)
+                else:
+                    raise ValueError(f"Unknown or malformed token '{token}'")
+
+            if overrides:
+                for _field in fields(bd):
+                    if not isinstance(v := getattr(overrides, _field.name),
+                                      BaseBuildData.Unset):
+                        setattr(bd, _field.name, v)
+
+            return bd
 
     Signs = BuildData.Signs
 
@@ -423,62 +479,6 @@ class Maze:
         dct.update(asdict(bd))
         with open(path, 'w') as f:
             json.dump(dct, f)
-
-    @staticmethod
-    def bd_to_string(bd: BuildData):
-        sep = Maze.FIELD_SEP
-        default = Maze.BuildData()
-        f = f"M{bd.seed}{sep}{bd.width}x{bd.height}"
-        if bd.start != default.start:
-            f += sep + bd.start.shorthand()
-        if bd.unicursive:
-            f += sep + "U"
-        f += ''.join(f"{sep}C{Sign.to_string(s)}" for s in bd.clue)
-        if bd.p_lure and bd.lure:
-            f += f"{sep}l" + f"{bd.p_lure:.2g}".lstrip('0')
-            f += ''.join(f"{sep}L{Sign.to_string(s)}" for s in bd.lure)
-        if bd.p_trap and bd.trap:
-            f += f"{sep}t" + f"{bd.p_trap:.2g}".lstrip('0')
-            f += ''.join(f"{sep}T{Sign.to_string(s)}" for s in bd.trap)
-        return f
-
-    @classmethod
-    def bd_from_string(cls, s, overrides: Optional[BuildData] = None) \
-            -> BuildData:
-        d_re = re.compile("[SN][WE]")
-        s_re = re.compile("[0-9]+x[0-9]+")
-        bd = cls.BuildData()
-        s = s.split('__')[-1]
-        for token in s.split(cls.FIELD_SEP):
-            t, tail = token[0], token[1:]
-            if t == 'M':
-                bd.seed = s if (s := int(tail)) >= 0 else bd.seed
-            elif t == 'U':
-                bd.unicursive = True
-            elif t == 'C':
-                bd.clue.append(Sign.from_string(tail))
-            elif t == 'l':
-                bd.p_lure = float(tail) if tail else bd.p_lure
-            elif t == 'L':
-                bd.lure.append(Sign.from_string(tail))
-            elif t == 't':
-                bd.p_trap = float(tail) if tail else bd.p_trap
-            elif t == 'T':
-                bd.trap.append(Sign.from_string(tail))
-            elif s_re.match(token):
-                bd.width, bd.height = [int(x) for x in token.split('x')]
-            elif d_re.match(token):
-                bd.start = StartLocation.from_shorthand(token)
-            else:
-                raise ValueError(f"Unknown or malformed token '{token}'")
-
-        if overrides:
-            for _field in fields(bd):
-                if not isinstance(v := getattr(overrides, _field.name),
-                                  BaseBuildData.Unset):
-                    setattr(bd, _field.name, v)
-
-        return bd
 
     def to_string(self):
         return self.bd_to_string(self._build_data())

@@ -1,12 +1,15 @@
+""" Collection of functions to generate a user-friendly representation of
+a neural network from stable baselines 3"""
+
 from abc import ABC, abstractmethod
 from typing import Tuple, List, Union
 
 import graphviz
-from stable_baselines3.common.policies import BasePolicy, ActorCriticCnnPolicy
+from stable_baselines3.common.policies import BaseModel, ActorCriticCnnPolicy
 from torch.nn import Linear, Conv2d, ReLU, Flatten, Sequential
 
 
-class Module(ABC):
+class _Module(ABC):
     def __init__(self): pass
     @abstractmethod
     def input(self) -> Tuple[str, int]: pass
@@ -14,7 +17,7 @@ class Module(ABC):
     def output(self) -> Tuple[str, int]: pass
 
 
-class AtomicModule(Module):
+class _AtomicModule(_Module):
     def __init__(self, m, n_id):
         super().__init__()
         if isinstance(m, Linear):
@@ -34,8 +37,8 @@ class AtomicModule(Module):
     def output(self) -> Tuple[str, int]: return self.id, self.o_arity
 
 
-class SubGraph(Module):
-    def __init__(self, children: List[Tuple[str, Module]]):
+class _SubGraph(_Module):
+    def __init__(self, children: List[Tuple[str, _Module]]):
         super().__init__()
         self.children = dict(children)
         self._input = children[0][1].input()
@@ -48,12 +51,12 @@ class SubGraph(Module):
     def pretty(self, indent=0):
         for name, c in self.children.items():
             print(f"{indent*2*' '}{name}")
-            if isinstance(c, SubGraph):
+            if isinstance(c, _SubGraph):
                 c.pretty(indent+1)
 
 
 def __edge(graph: graphviz.Digraph,
-           lhs: Union[Module, str], rhs: Union[Module, str]):
+           lhs: Union[_Module, str], rhs: Union[_Module, str]):
     if isinstance(lhs, str):
         lhs_name, lhs_arity = lhs, -1
     else:
@@ -91,16 +94,17 @@ def __to_dot(module, g: graphviz.Digraph, name, p_name=""):
             if len(children) > 1 and isinstance(module, Sequential):
                 for (_, lhs), (_, rhs) in zip(children[:-1], children[1:]):
                     __edge(sg, lhs, rhs)
-        return SubGraph(children)
+        return _SubGraph(children)
     elif not isinstance(module, Sequential):
-        child = AtomicModule(module, full_name)
+        child = _AtomicModule(module, full_name)
         g.node(full_name, label=child.name)
         return child
     else:
         return None
 
 
-def to_dot(policy: BasePolicy):
+def to_dot(policy):
+    """ Generates a (dot) graph from the underlying pytorch elements """
     # print("="*80)
     # print("== Graph")
     # print("="*80)
