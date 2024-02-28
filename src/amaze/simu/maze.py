@@ -125,32 +125,74 @@ class Maze:
                   StartLocation.SOUTH_WEST, StartLocation.SOUTH_EAST]
             return [start_from(s) for s in sl]
 
-        @classmethod
-        def to_string(cls, bd: 'BuildData') -> str:
-            sep = cls._FIELD_SEP
+        def to_string(self) -> str:
+            sep = self._FIELD_SEP
             default = Maze.BuildData()
-            f = f"M{bd.seed}{sep}{bd.width}x{bd.height}"
-            if bd.start != default.start:
-                f += sep + bd.start.shorthand()
-            if bd.unicursive:
+            f = f"M{self.seed}{sep}{self.width}x{self.height}"
+            if self.start != default.start:
+                f += sep + self.start.shorthand()
+            if self.unicursive:
                 f += sep + "U"
-            f += ''.join(f"{sep}C{Sign.to_string(s)}" for s in bd.clue)
-            if bd.p_lure and bd.lure:
-                f += f"{sep}l" + f"{bd.p_lure:.2g}".lstrip('0')
-                f += ''.join(f"{sep}L{Sign.to_string(s)}" for s in bd.lure)
-            if bd.p_trap and bd.trap:
-                f += f"{sep}t" + f"{bd.p_trap:.2g}".lstrip('0')
-                f += ''.join(f"{sep}T{Sign.to_string(s)}" for s in bd.trap)
+            f += ''.join(f"{sep}C{Sign.to_string(s)}" for s in self.clue)
+            if self.p_lure and self.lure:
+                f += f"{sep}l" + f"{self.p_lure:.2g}".lstrip('0')
+                f += ''.join(f"{sep}L{Sign.to_string(s)}" for s in self.lure)
+            if self.p_trap and self.trap:
+                f += f"{sep}t" + f"{self.p_trap:.2g}".lstrip('0')
+                f += ''.join(f"{sep}T{Sign.to_string(s)}" for s in self.trap)
             return f
 
         @classmethod
-        def from_string(cls, s, overrides: Optional['BuildData'] = None) \
-                -> 'BuildData':
+        def from_string(cls, s, overrides: Optional['Maze.BuildData'] = None) \
+                -> 'Maze.BuildData':
+            """
+            Parses a string to create a BuildData object.
+
+            The complete syntax is as follows, where every element is optional
+            and can be in any order:
+
+            - M[int]: maze will use that seed
+            - [int]x[int]: maze will have those dimensions
+            - [SE|SW|NE|NW]: the agent will start in that corner
+            - U: maze will be unicursive (without intersections)
+            - C[sign]: add one helpful sign type
+            - L[sign]: add one mildly deceptive sign type
+            - T[sign]: add one deceptive sign type
+            - l: sets the probability for lures
+            - t: sets the probability for traps
+            - [sign]: specification for the sign shape/value
+
+            A sign specification contains two parameters:
+
+            - C[shape]-[value]: sign will use the requested shape (either from
+                the :meth:`~amaze.visu.resources.builtins()` or an image file
+                in :meth:`~amaze.visu.resources.resources_path()`)
+            - C[value]: sign will have a default shape with the given value
+
+            Examples:
+                - M16_5x10_U
+                    Creates a maze 5 cells wide and 10 cells high from a random
+                    number generator seeded with 16. The maze will have no
+                    intersections.
+
+                - 25x25_C1
+                    Creates a maze (from a random seed) of size 25 by 25 with
+                    white arrows at every intersection.
+
+                - C1_C.5_l.25_L.25_L.2_L.3_t.5_T.75
+                    Creates a maze with two types of clues with white and gray
+                    arrows at half of the intersections. The remainder use a
+                    trap sign (still an arrow) in light gray. A quarter of the
+                    cell along the path to the target, that are *not* an
+                    intersection will contain lures of varying degree of dark
+                    gray (exactly one third each).
+
+            """
             d_re = re.compile("[SN][WE]")
             s_re = re.compile("[0-9]+x[0-9]+")
             bd = cls()
             s = s.split('__')[-1]
-            for token in s.split(Maze._FIELD_SEP):
+            for token in s.split(cls._FIELD_SEP):
                 t, tail = token[0], token[1:]
                 if t == 'M':
                     bd.seed = s if (s := int(tail)) >= 0 else bd.seed
@@ -456,10 +498,6 @@ class Maze:
 
         return maze
 
-    @classmethod
-    def generate_from_string(cls, maze: str):
-        return cls.generate(cls.bd_from_string(maze))
-
     def _build_data(self):
         return Maze.BuildData(
             width=self.width, height=self.height,
@@ -475,14 +513,20 @@ class Maze:
 
     def save(self, path: Path):
         bd = self._build_data()
-        dct = dict(name=self.bd_to_string(bd))
+        dct = dict(name=self._build_data().to_string())
         dct.update(asdict(bd))
         with open(path, 'w') as f:
             json.dump(dct, f)
 
     def to_string(self):
-        return self.bd_to_string(self._build_data())
+        return self._build_data().to_string()
 
     @classmethod
     def from_string(cls, s, overrides: Optional[BuildData] = None) -> 'Maze':
-        return cls.generate(cls.bd_from_string(s, overrides))
+        """ Generate a maze from its string description.
+
+        Optionally, specific parameters can be overridden by values set in
+        the `overrides` argument.
+        The full syntax is described in :meth:`.BuildData.from_string`.
+        """
+        return cls.generate(cls.BuildData.from_string(s, overrides))

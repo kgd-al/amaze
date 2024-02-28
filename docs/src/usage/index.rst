@@ -19,19 +19,18 @@ built-in compatibility with common RL libraries, visualization tools, ...
 Tutorials
 ---------
 
+The reader is first encouraged to play around with the main executable (:mod:`amaze.bin.amaze`).
+Without arguments, it will provide an interface where one can manipulate a maze and control an
+agent via the keyboard.
+
+.. code-block:: console
+
+    (.venv)$ ???
+
 .. toctree::
     basics
+    visualization (trajectory of existing controller)
     training
 
-
-
-- compute reward of existing controller (provided)
-- show trajectory of existing controller (provided)
-- show code snippet for simulating one maze
-- show code for generating trajectory
-- ???
-- show code for q-learning
-
-   
 FAQ
 ---

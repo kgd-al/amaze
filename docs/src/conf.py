@@ -3,25 +3,21 @@
 # This file only contains a selection of the most common options. For a full
 # list see the documentation:
 # https://www.sphinx-doc.org/en/master/usage/configuration.html
+import importlib
 import os
-import pprint
+import sys
 from pathlib import Path
 # If extensions (or modules to document with autodoc) are in another directory,
 # add these directories to sys.path here. If the directory is relative to the
 # documentation root, use os.path.abspath to make it absolute, like shown here.
 #
-from typing import List, Optional
+from typing import List
 
-from docutils.nodes import substitution_definition
 from sphinx.directives.code import LiteralInclude
-from sphinx.ext.autodoc import AttributeDocumenter
 from sphinx.util import logging
 from sphinx_pyproject import SphinxConfig
 
 # -- Ensure up-to-date sources -----------------------------------------------
-
-import importlib
-import sys
 for module in list(m for m in sys.modules.values() if "amaze" in m.__name__):
     importlib.reload(module)
 
@@ -49,9 +45,9 @@ extensions = [
     'sphinx.ext.viewcode',
     'sphinx.ext.intersphinx',
     'sphinx.ext.todo',
-    'sphinx_design',
     'sphinx.ext.autosectionlabel',
     "sphinx.ext.autosummary",
+    'sphinx_design',
     "sphinx_qt_documentation",
 ]
 
@@ -59,6 +55,7 @@ extensions = [
 # directories to ignore when looking for source files.
 # This pattern also affects html_static_path and html_extra_path.
 exclude_patterns = []
+python_maximum_signature_line_length = 80
 
 # -- Options for HTML sections ------------------------------------------------
 autosectionlabel_prefix_document = True  # Make sure the target is unique
@@ -237,7 +234,6 @@ class DynamicLiteralInclude(LiteralInclude):
             absolute_path = root.joinpath(value)
             if absolute_path.exists():
                 source = (value, absolute_path, reverse_wd.joinpath(value))
-                print(f"{source=}")
 
             else:
                 substitutions[key] = value

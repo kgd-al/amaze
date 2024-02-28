@@ -90,9 +90,11 @@ class Simulation:
         return self.timestep * self.dt
 
     def success(self):
+        """ Return whether the agent has reached the target """
         return self.robot.cell() == self.maze.end
 
     def failure(self):
+        """ Return whether the agent has exceeded the deadline """
         return self.timestep >= self.deadline
 
     def done(self):
@@ -109,6 +111,7 @@ class Simulation:
             - .02 * self.stats.collisions)
 
     def infos(self):
+        """ Returns various data about the current state of the simulation """
         infos = dict(
             time=self.timestep,
             success=self.success(),
@@ -130,6 +133,13 @@ class Simulation:
         if "save_trajectory" not in kwargs:
             kwargs["save_trajectory"] = (self.trajectory is not None)
         self.__init__(*args, **kwargs)
+
+    def run(self, controller):
+        """ Let the agent navigate in the maze until completion """
+        action = controller(self.observations)
+        while not self.done():
+            self.step(action)
+            action = controller(self.observations)
 
     @staticmethod
     def generate_visuals_map(maze: Maze, inputs: InputType, vision: int = 15):
@@ -244,6 +254,8 @@ class Simulation:
         return collision
 
     def step(self, action: Action) -> Optional[float]:
+        """ Apply the requested action to the agent and return the
+        corresponding reward"""
         # logger.debug(f"{'-'*80}\n-- step {self.time()}")
 
         if self.data.control == "KEYBOARD" and \

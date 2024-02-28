@@ -1,10 +1,8 @@
-import pprint
 import sys
+from importlib.metadata import version, PackageNotFoundError
 from pathlib import Path
 
 import graphviz
-from graphviz import dot
-
 from PyPDF2 import PdfMerger
 
 
@@ -51,9 +49,10 @@ def process_file(file):
 
     items = []
 
-    with open(file, "r") as f:
+    with (open(file, "r") as f):
         for line in f:
-            if "import" in line:
+            if line.startswith("import") or \
+                    (line.startswith("from") and "import" in line):
                 if "amaze" in line:
                     continue
                 dep = (line.lstrip()
@@ -123,6 +122,51 @@ def process_nested_graphs(name, dct):
     return g_dot.render(directory=me.parent, filename=name, cleanup=True)
 
 
+def process_dependencies_list(dicts):
+    exts = "amaze.extensions"
+    d_sets = {k: set() for k in dicts[exts]}
+    exts_dicts = dicts.pop(exts)
+    d_sets["amaze"] = set()
+
+    def _subdicts_values(_d):
+        for _k, _v in _d.items():
+            if isinstance(_v, dict):
+                yield from _subdicts_values(_v)
+            else:
+                yield from _v
+
+    for d in _subdicts_values(dicts):
+        if d not in sys.stdlib_module_names:
+            d_sets["amaze"].add(d)
+
+    for e, ed in exts_dicts.items():
+        _e = e.replace(exts + ".", "")
+        for d in _subdicts_values(ed):
+            if d not in sys.stdlib_module_names:
+                d_sets[e].add(d)
+
+    for pkg, d_set in d_sets.items():
+        if pkg == "amaze":
+            continue
+        d_sets[pkg] = d_set.difference(d_sets["amaze"])
+
+    print("\nDependencies:")
+    _w = max(len(_d) for d in d_sets.values() for _d in d)
+    _fmt = f"{{:>{_w}s}}: {{}}"
+    with open(me.parent.joinpath("dependencies"), "w") as f:
+        for pkg, d_set in d_sets.items():
+            pkg = pkg.replace(exts + ".", "")
+            print("==", pkg, "="*(_w+5-len(pkg)))
+            f.write(f"{pkg}\n")
+            for d in d_set:
+                try:
+                    v = version(d)
+                except PackageNotFoundError:
+                    v = None
+                print(_fmt.format(d, v))
+                f.write(f"  {d}\n")
+
+
 if __name__ == "__main__":
     me = Path(sys.argv[0])
     src = me.parent.parent.parent.joinpath('src').joinpath('amaze')
@@ -130,11 +174,12 @@ if __name__ == "__main__":
 
     nested_dict = process_folder(src)
 
+    process_dependencies_list(nested_dict)
+
     files = [
         process_nested_graphs(name, subgraph)
         for name, subgraph in _subdicts(nested_dict)
     ]
-    pprint.pprint(files)
 
     merger = PdfMerger(strict=False)
     for file in files:
