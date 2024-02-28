@@ -53,7 +53,6 @@ extensions = [
     'sphinx.ext.autosectionlabel',
     "sphinx.ext.autosummary",
     "sphinx_qt_documentation",
-    'sphinx_substitution_extensions'
 ]
 
 # List of patterns, relative to source directory, that match files and
@@ -230,8 +229,6 @@ class DynamicLiteralInclude(LiteralInclude):
         wd = Path(doc.current_source).parent
         reverse_wd = Path("/".join([".." for _
                                     in wd.relative_to(root).parents]))
-        print()
-        print(reverse_wd)
 
         source = None
         substitutions = {}
@@ -245,7 +242,6 @@ class DynamicLiteralInclude(LiteralInclude):
             else:
                 substitutions[key] = value
 
-        print(f"{source=}")
         assert source[1].exists(), \
             (f"Could not find source file at {source[0]}."
              f"Did you include .. |FILE| replace:: <path-to-file>?")
@@ -257,7 +253,6 @@ class DynamicLiteralInclude(LiteralInclude):
 
         self.options["lineno-match"] = True
         self.arguments = [str(source[2])]
-        print(self.arguments)
 
         return super().run()
 

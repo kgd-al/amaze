@@ -78,27 +78,49 @@ def _subdicts(dct):
 
 
 def process_nested_graphs(name, dct):
+    IGNORE_STDLIB = True
 
-    dot = graphviz.Digraph('AMaze', format='pdf', strict=True)
-    dot.graph_attr['rankdir'] = 'LR'
-    dot.attr(compound="True")
+    g_dot = graphviz.Digraph('AMaze', format='pdf', strict=True)
+    g_dot.graph_attr['rankdir'] = 'LR'
+    g_dot.attr(compound="True")
+    g_dot.attr(label=name)
+
+    stdlib_modules = {True: [], False: []}
 
     def _process(key, _dct, parent, depth=0):
         __name = _name(key)
-        with parent.subgraph(name=__name) as cluster:
-            cluster.attr(cluster="True")
-            cluster.attr(label=key)
+        with parent.subgraph(name=__name) as _cluster:
+            _cluster.attr(cluster="True")
+            _cluster.attr(label=key)
             for k, v in _dct.items():
                 if isinstance(v, dict):
-                    _process(k, v, cluster, depth+1)
+                    _process(k, v, _cluster, depth+1)
                 else:
                     for d in v:
-                        cluster.node(k, label=_name(k))
-                        dot.edge(k, d)
+                        _cluster.node(k, label=_name(k))
+                        stdlib = (d in sys.stdlib_module_names)
 
-    _process(name, dct, dot)
+                        if stdlib:
+                            _args = dict(shape='diamond', color='gray')
+                        else:
+                            _args = dict()
 
-    return dot.render(directory=me.parent, filename=name, cleanup=True)
+                        if not stdlib or not IGNORE_STDLIB:
+                            stdlib_modules[stdlib].append(
+                                (d, dict(label=_name(d), **_args)))
+                            g_dot.edge(k, d, **_args)
+
+    _process(name, dct, g_dot)
+
+    for t, cluster_name in [(True, "stdlib"), (False, "dependencies")]:
+        with g_dot.subgraph(name=cluster_name) as cluster:
+            cluster.attr(label=cluster_name)
+            cluster.attr(cluster="True")
+            cluster.attr(rank="same")
+            for n, args in stdlib_modules[t]:
+                cluster.node(n, **args)
+
+    return g_dot.render(directory=me.parent, filename=name, cleanup=True)
 
 
 if __name__ == "__main__":
@@ -112,6 +134,7 @@ if __name__ == "__main__":
         process_nested_graphs(name, subgraph)
         for name, subgraph in _subdicts(nested_dict)
     ]
+    pprint.pprint(files)
 
     merger = PdfMerger(strict=False)
     for file in files:
