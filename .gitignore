@@ -12,6 +12,7 @@ tmp/
 tmp
 
 docs/src/_auto*
+docs/dependencies/dependencies
 
 *.aux
 *.pdf

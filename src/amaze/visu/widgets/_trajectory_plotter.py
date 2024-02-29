@@ -190,7 +190,7 @@ def _plot_trajectory_value(
 
     assert QApplication.instance(), "ERROR: No existing QApplication"
 
-    verbose = 10
+    verbose = 0
     if verbose > 0:
         if verbose > 5:
             print()

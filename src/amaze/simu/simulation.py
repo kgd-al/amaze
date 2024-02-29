@@ -198,7 +198,7 @@ class Simulation:
         o_w, o_e, o_s, o_n = chk()
 
         #######################################################################
-        # Simple stay-in-the cell sb3
+        # Simple stay-in-the cell
 
         if o_w:
             if wall(i, j, WEST):

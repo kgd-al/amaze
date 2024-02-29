@@ -1,5 +1,6 @@
 import json
 from random import Random
+from typing import List
 from zipfile import ZipFile
 
 import numpy as np
@@ -153,6 +154,14 @@ class TabularController(BaseController):
             c.min_value = dct["min_val"]
             c.max_value = dct["max_val"]
         return c
+
+    @staticmethod
+    def inputs_types() -> List[InputType]:
+        return [InputType.DISCRETE]
+
+    @staticmethod
+    def outputs_types() -> List[OutputType]:
+        return [OutputType.DISCRETE]
 
     def __bellman(self, s: State, a: Action, r, alpha, gamma, q_value):
         __v = self.values(s)

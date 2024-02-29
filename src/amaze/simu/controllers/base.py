@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import Optional
+from typing import Optional, List
 from zipfile import ZipFile
 
 from amaze.simu.pos import Vec
@@ -55,11 +55,13 @@ class BaseController(ABC):
         raise NotImplementedError
 
     @staticmethod
-    def inputs_type() -> InputType:
+    @abstractmethod
+    def inputs_types() -> List[InputType]:
         raise NotImplementedError
 
     @staticmethod
-    def outputs_type() -> OutputType:
+    @abstractmethod
+    def outputs_types() -> List[OutputType]:
         raise NotImplementedError
 
     # noinspection PyMethodMayBeStatic

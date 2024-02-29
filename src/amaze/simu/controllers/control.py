@@ -23,12 +23,12 @@ def check_types(controller: Type[BaseController],
                 robot: Robot.BuildData) -> bool:
     """ Ensure that the controller is compatible with the specified
      inputs/outputs """
-    assert robot.inputs == controller.inputs_type(), \
+    assert robot.inputs in controller.inputs_types(), \
         (f"Input type {robot.inputs} is not valid for {controller}."
-         f" Expected {controller.inputs_type()}")
-    assert robot.outputs == controller.outputs_type(), \
+         f" Expected one of {controller.inputs_types()}")
+    assert robot.outputs in controller.outputs_types(), \
         (f"Output type {robot.outputs} is not valid for {controller}."
-         f" Expected {controller.outputs_type()}")
+         f" Expected {controller.outputs_types()}")
     return True
 
 

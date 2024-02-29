@@ -8,8 +8,6 @@ Provides and all-in-one entry point for simulation, evaluation and visualization
 import argparse
 import logging
 import os
-# TODO Careful
-import warnings
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Optional, Sequence
@@ -17,19 +15,11 @@ from typing import Optional, Sequence
 from PyQt5.QtWidgets import QApplication
 
 from amaze.simu.controllers.control import load
+from amaze.simu.maze import Maze
 from amaze.simu.robot import Robot
 from amaze.simu.simulation import Simulation
-from amaze.visu.widgets.maze import MazeWidget
-
-_original_warn = warnings.warn
-warnings.warn = lambda msg, category, *args, **kwargs: (
-    _original_warn(msg, category, *args, **kwargs)
-    if category is not DeprecationWarning else None)
-
-from amaze.simu.maze import Maze
-from amaze.extensions.sb3.utils import CV2QTGuard
 from amaze.visu.viewer import MainWindow
-
+from amaze.visu.widgets.maze import MazeWidget
 
 logger = logging.getLogger(__name__)
 
@@ -47,6 +37,7 @@ class Options:
     eval: Optional[Path] = None
 
     autostart: bool = True
+    autoquit: bool = False
 
     movie: Optional[Path] = None
 
@@ -71,12 +62,24 @@ class Options:
         parser.add_argument("--maze", dest="maze",
                             help="Use provided string-format maze")
 
-        parser.add_argument("--no-autostart", dest="autostart",
+        parser.add_argument("--auto-start", dest="autostart",
                             action="store_false",
                             help="Whether to autostart the evaluation")
+        parser.add_argument("--no-auto-start", dest="autostart",
+                            action="store_false",
+                            help="see autostart")
+
+        parser.add_argument("--auto-quit", dest="autoquit",
+                            action="store_true",
+                            help="Whether to quit after completing a maze")
+        parser.add_argument("--no-auto-quit", dest="autoquit",
+                            action="store_false",
+                            help="see autoquit")
 
         parser.add_argument("--controller", dest="controller",
-                            type=Path, help="Load robot/controller from file")
+                            type=str, help="Load robot/controller from file"
+                                           "or force use of a builtin"
+                                           "(keyboard or random)")
 
         parser.add_argument("--robot-mode", dest="is_robot",
                             action="store_true",
@@ -115,7 +118,7 @@ class Options:
 
 def __make_simulation(args, trajectory=False):
     if args.maze:
-        maze_bd = Maze.bd_from_string(
+        maze_bd = Maze.BuildData.from_string(
             args.maze, Maze.BuildData.from_argparse(args, set_defaults=False))
     else:
         maze_bd = Maze.BuildData.from_argparse(args, set_defaults=True)
@@ -149,6 +152,8 @@ def main(sys_args: Optional[Sequence[str]] = None):
 
     if not args.controller:
         args.autostart = False
+    elif (p := Path(args.controller)).exists():
+        args.controller = p
 
     if args.movie:
         args.autostart = True
@@ -215,5 +220,4 @@ def main(sys_args: Optional[Sequence[str]] = None):
 
 
 if __name__ == '__main__':
-    with CV2QTGuard(platform=False):
-        main()
+    main()

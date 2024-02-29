@@ -1,10 +1,11 @@
+import sys
 from pathlib import Path
 from typing import Optional, Tuple, Union, Any
 
 import pandas as pd
 from PyQt5.QtCore import Qt, QPointF, QRectF, QSize
 from PyQt5.QtGui import QPainter, QColor, QPainterPath, QImage
-from PyQt5.QtWidgets import QLabel
+from PyQt5.QtWidgets import QLabel, QApplication
 
 from amaze.simu.maze import Maze
 from amaze.simu.types import InputType, OutputType
@@ -13,6 +14,13 @@ from amaze.visu import resources
 from amaze.visu.maze import MazePainter, Color, logger
 from amaze.visu.resources import SignType
 from amaze.visu.widgets import _trajectory_plotter
+
+
+def application():
+    """ Returns the currently running Qt application or creates a new one. """
+    if (app := QApplication.instance()) is None:
+        app = QApplication([])
+    return app
 
 
 class QtPainter(MazePainter):
@@ -63,23 +71,6 @@ class QtPainter(MazePainter):
         self.painter.drawImage(QRectF(x, y, w, h).toRect(), img, img.rect())
 
     def draw_start(self, x: float, y: float, w: float, h: float, c: Color):
-        # m = .2
-        # rh = .33  # Roof height
-        # rt = 1 - m
-        # rl = m + (rt - m) * (1 - rh)
-        # print(rt, rl)
-        #
-        # path = QPainterPath()
-        # path.addRect(QRectF(x + m * w, y + m * h,
-        #                     (1 - 2 * m) * w, (1 - 2 * m) * (1 - rh) * h))
-        # path.moveTo(x + m * w, y + rl * h)
-        # path.lineTo(x + .5 * w, y + rt * h)
-        # path.lineTo(x + (1 - m) * w, y + rl * h)
-        # path.closeSubpath()
-        #
-        # self.painter.setPen(Qt.black)
-        # self.painter.fillPath(path, self.colors[c])
-        # self.painter.drawPath(path)
         pass
 
     def draw_finish(self, x: float, y: float, w: float, h: float, c: Color):
@@ -101,6 +92,7 @@ class MazeWidget(QLabel):
                  config: Optional[dict[str, Any]] = None,
                  resolution: int = 15,
                  width: Optional[int] = None):
+
         super().__init__("Generate a maze\n"
                          "using controls\n"
                          "on the right >>>")
@@ -314,7 +306,7 @@ class MazeWidget(QLabel):
                         size: int,
                         trajectory: Optional[pd.DataFrame] = None,
                         config: Optional[dict] = None,
-                        path: Optional[Path] = None,
+                        path: Optional[Path | str] = None,
                         verbose: int = 0,
                         side: int = 0,
                         square: bool = False,

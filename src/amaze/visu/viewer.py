@@ -61,6 +61,7 @@ class MainWindow(QWidget):
 
     def __init__(self, args: Optional = None, runnable=True):
         super().__init__()
+        self.args = args
 
         # holder = QWidget()
         self.layout = QHBoxLayout()
@@ -295,8 +296,12 @@ class MainWindow(QWidget):
 
         self.stop()
 
-        if self.robot_mode:
-            self.start()
+        if self.args.autoquit:
+            self.close()
+
+        else:
+            if self.robot_mode:
+                self.start()
 
     def _update(self):
         self.maze_w.update()
@@ -805,7 +810,7 @@ class MainWindow(QWidget):
 
         overrides = Maze.BuildData.from_argparse(args, set_defaults=False)
         if args.maze is not None:
-            overrides = Maze.bd_from_string(args.maze, overrides)
+            overrides = Maze.BuildData.from_string(args.maze, overrides)
         self._restore_from_maze_build_data(
             Maze.BuildData(**_try("maze", default={}))
             .override_with(overrides))

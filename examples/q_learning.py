@@ -38,14 +38,14 @@ def train():
         unicursive=True,
         p_lure=0, p_trap=0
     )
-    print("Training with maze:", Maze.bd_to_string(maze_data))
+    print("Training with maze:", maze_data.to_string())
     train_mazes = [
         Maze.generate(maze_data.where(start=start))
         for start in StartLocation
     ]
 
     maze_data = maze_data.where(seed=14)
-    print("Evaluating with maze:", Maze.bd_to_string(maze_data))
+    print("Evaluating with maze:", maze_data.bd_to_string())
     eval_mazes = [
         Maze.generate(maze_data.where(start=start))
         for start in StartLocation
@@ -156,7 +156,7 @@ def evaluate_generalization(policy):
         reward = simulation.infos()["pretty_reward"]
         rewards.append(reward)
         print(_log_format.format(100*(i+1)/n, reward,
-                                 Maze.bd_to_string(maze_data)),
+                                 maze_data.bd_to_string()),
               end='', flush=True)
     print()
 

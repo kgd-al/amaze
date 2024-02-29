@@ -1,13 +1,16 @@
+from zipfile import ZipFile
+
+from amaze.simu import InputType, OutputType
 from amaze.simu.pos import Pos
 from random import Random
-from typing import Tuple, Optional
+from typing import Tuple, Optional, List
 
 from amaze.simu.controllers.base import BaseController
 from amaze.simu.maze import Maze
 
 
 class RandomController(BaseController):
-    def __init__(self):
+    def __init__(self, *args, **kwargs):
         self.rng = Random()
         self.stack = []
         self.visited = set()
@@ -16,7 +19,6 @@ class RandomController(BaseController):
 
     def __call__(self, _) -> Tuple[float, float]:
         ci, cj = pos = self.curr_pos.aligned()
-        print(self.stack, self.curr_pos, self.last_pos)
 
         if self.last_pos and self.last_pos == pos:
             self.stack.pop()  # Cancel last move
@@ -45,3 +47,17 @@ class RandomController(BaseController):
 
     def save(self): return {}
     def restore(self, _): pass
+
+    def save_to_archive(self, archive: ZipFile) -> bool:
+        raise NotImplementedError
+
+    def load_from_archive(self, archive: ZipFile) -> 'RandomController':
+        raise NotImplementedError
+
+    @staticmethod
+    def inputs_types() -> List[InputType]:
+        return list(InputType)
+
+    @staticmethod
+    def outputs_types() -> List[OutputType]:
+        return [OutputType.DISCRETE]

@@ -1,5 +1,7 @@
 from abc import ABCMeta
 from logging import getLogger
+from typing import List
+from zipfile import ZipFile
 
 from PyQt5.QtCore import QObject, Qt, QEvent
 from PyQt5.QtGui import QKeyEvent
@@ -7,7 +9,7 @@ from PyQt5.QtWidgets import QApplication
 
 from amaze.simu.controllers.base import BaseController
 from amaze.simu.pos import Vec
-from amaze.simu.types import OutputType
+from amaze.simu.types import OutputType, InputType
 
 logger = getLogger(__name__)
 
@@ -18,7 +20,7 @@ class __Meta(type(QObject), ABCMeta):
 
 class KeyboardController(QObject, BaseController, metaclass=__Meta):
     def __init__(self, a_type: OutputType):
-        super().__init__(a_type=a_type)
+        super().__init__()
         QApplication.instance().installEventFilter(self)
         self.actions = {
             Qt.Key_Right: Vec(1, 0),
@@ -27,6 +29,7 @@ class KeyboardController(QObject, BaseController, metaclass=__Meta):
             Qt.Key_Down: Vec(0, -1),
         }
 
+        self.action_type = a_type
         if self.action_type == OutputType.DISCRETE:
             self.actions_queue = []
         else:
@@ -58,6 +61,20 @@ class KeyboardController(QObject, BaseController, metaclass=__Meta):
 
     def restore(self, _):
         pass
+
+    def save_to_archive(self, archive: ZipFile) -> bool:
+        raise NotImplementedError
+
+    def load_from_archive(self, archive: ZipFile) -> 'KeyboardController':
+        raise NotImplementedError
+
+    @staticmethod
+    def inputs_types() -> List[InputType]:
+        return list(InputType)
+
+    @staticmethod
+    def outputs_types() -> List[OutputType]:
+        return list(OutputType)
 
     def _process_discrete_input(self, e: QKeyEvent):
         if e.type() == QEvent.KeyPress and e.key() in self.actions:
