@@ -162,7 +162,7 @@ class MainWindow(QWidget):
         logger.warning(f"Brute force saving everthing in {folder}")
         folder.mkdir(exist_ok=True, parents=True)
 
-        self.maze_w.draw_to(str(folder.joinpath("maze.png")))
+        self.maze_w.render_to(str(folder.joinpath("maze.png")))
         self.visu["img_inputs"].grab().save(
             str(folder.joinpath(
                 f"inputs_{self.simulation.data.inputs.name.lower()}.png")))

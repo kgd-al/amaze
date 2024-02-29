@@ -29,25 +29,65 @@ class Options:
     """
     Namespace containing all options for the AMaze main executable
     """
+
     maze: Optional[str] = None
+    """ String description of the maze
+    
+    :see: 
+        :meth:`amaze.simu.maze.Maze.to_string`
+        :meth:`amaze.simu.maze.Maze.from_string`
+    """
+
     controller: Optional[Path] = None
+    """ Path to a pre-trained controller or name of built-in
+     
+     :see: :meth:`amaze.simu.controllers.control.builtin_controllers`
+     """
+
+    # =====================
 
     is_robot: bool = False
+    """ Activate "robot-mode" interface.
+     
+     No global view of the maze, only local perceptions and the instantaneous
+     and cumulative rewards
+     """
 
     eval: Optional[Path] = None
+    """ Path under which to store evaluation results """
 
     autostart: bool = True
+    """ Whether to directly start moving the agent around """
+
     autoquit: bool = False
+    """ Whether to close the viewer once the simulation is done """
+
+    # =====================
 
     movie: Optional[Path] = None
+    """ Where to store the movie of the agent's trajectory """
 
     render: Optional[Path] = None
+    """ Where to render the maze """
+
     plot: Optional[Path] = None
+    """ Where to render the agent's trajectory """
+
     width: int = 256
+    """ Width of images / videos """
+
     cell_width: int = None
+    """ Width of a maze cell, to ensure readable graphics """
+
+    # =====================
 
     dark: bool = False
+    """ Whether to render a black on white maze (like the robots do) """
+
     colorblind: bool = False
+    """ Whether to use a colorblind-friendly palette """
+
+    # =====================
 
     @staticmethod
     def populate(parser: argparse.ArgumentParser):
@@ -185,7 +225,7 @@ def main(sys_args: Optional[Sequence[str]] = None):
                                     colorblind=args.colorblind
                                 ),
                                 width=args.width)
-            if widget.draw_to(args.render):
+            if widget.render_to(args.render):
                 logger.info(f"Saved {simulation.maze.to_string()}"
                             f" to {args.render}")
 

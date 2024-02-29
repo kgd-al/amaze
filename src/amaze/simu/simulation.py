@@ -104,6 +104,7 @@ class Simulation:
         return self.robot.reward
 
     def normalized_reward(self):
+        """ Return the agent's cumulative reward in :math:`(-\\inf, 1]` """
         return (
             2 * int(self.success())
             - self.dt * self.stats.steps / (len(self.maze.solution) - 1)

@@ -244,6 +244,10 @@ class DynamicLiteralInclude(LiteralInclude):
 
         if len(self.arguments) > 0:
             self.options["lines"] = self.arguments[0]
+        elif "pyobject" in self.options:
+            obj = str(source[0]).replace(".py", ":")
+            obj += self.options["pyobject"]
+            self.options["caption"] = f"Full listing for {obj}"
         else:
             self.options["caption"] = f"Full listing for {source[0]}"
 

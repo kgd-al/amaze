@@ -519,6 +519,7 @@ class Maze:
             json.dump(dct, f)
 
     def to_string(self):
+        """ Provides the string representation of this maze """
         return self._build_data().to_string()
 
     @classmethod

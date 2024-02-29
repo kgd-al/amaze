@@ -71,6 +71,7 @@ class TabularController(BaseController):
             return self.greedy_action(state)
 
     def greedy_action(self, state: State):
+        """ Requests the best possible action (without exploration) """
         values = self.values(state)
         a_indices = np.flatnonzero(values == np.max(values))
         return self._rng.choice([self._actions[i] for i in a_indices])

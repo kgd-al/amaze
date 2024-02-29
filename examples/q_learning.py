@@ -4,7 +4,7 @@ import random
 import shutil
 import time
 
-from amaze.simu.controllers.control import controller_factory, save
+from amaze.simu.controllers.control import controller_factory, save, check_types
 from amaze.simu.controllers.tabular import TabularController
 from amaze.simu.maze import Maze, StartLocation
 from amaze.simu.robot import Robot
@@ -45,16 +45,16 @@ def train():
     ]
 
     maze_data = maze_data.where(seed=14)
-    print("Evaluating with maze:", maze_data.bd_to_string())
+    print("Evaluating with maze:", maze_data.to_string())
     eval_mazes = [
         Maze.generate(maze_data.where(start=start))
         for start in StartLocation
     ]
 
     robot = robot_build_data()
-
     policy: TabularController = controller_factory(robot.control,
                                                    robot.control_data)
+    assert check_types(policy, robot)
 
     simulation = Simulation(train_mazes[0], robot)
 
@@ -69,6 +69,7 @@ def train():
     print("="*80)
     print("Training for a maximum of", n, "episodes")
 
+    i = None
     for i in range(n):
         simulation.reset(train_mazes[i % len(train_mazes)])
         t_reward = q_train(simulation, policy)
@@ -96,7 +97,8 @@ def train():
         elif i == n-1:
             print()
 
-    print(f"Training took {time.time() - start_time} seconds for:\n"
+    print(f"Training took {time.time() - start_time:.2g} seconds for:\n"
+          f" > {i} episodes\n"
           f" > {steps[0]} training steps\n"
           f" > {steps[1]} evaluating steps")
 
@@ -128,6 +130,7 @@ def q_eval(simulation, policy):
 
 
 def evaluate_generalization(policy):
+    policy.epsilon = 0
     rng = random.Random(0)
     robot = robot_build_data()
 
@@ -149,14 +152,11 @@ def evaluate_generalization(policy):
         )
         maze = Maze.generate(maze_data)
         simulation = Simulation(maze, robot)
-        action = policy.greedy_action(simulation.observations)
-        while not simulation.done():
-            simulation.step(action)
-            action = policy.greedy_action(simulation.observations)
-        reward = simulation.infos()["pretty_reward"]
+        simulation.run(policy)
+        reward = simulation.normalized_reward()
         rewards.append(reward)
         print(_log_format.format(100*(i+1)/n, reward,
-                                 maze_data.bd_to_string()),
+                                 maze_data.to_string()),
               end='', flush=True)
     print()
 

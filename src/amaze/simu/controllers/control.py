@@ -19,7 +19,12 @@ CONTROLLERS = {
 }
 
 
-def check_types(controller: Type[BaseController],
+def builtin_controllers():
+    """ Provides the list of controllers shipped with this library """
+    return CONTROLLERS.keys()
+
+
+def check_types(controller: BaseController | Type[BaseController],
                 robot: Robot.BuildData) -> bool:
     """ Ensure that the controller is compatible with the specified
      inputs/outputs """

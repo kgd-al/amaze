@@ -57,11 +57,19 @@ class BaseController(ABC):
     @staticmethod
     @abstractmethod
     def inputs_types() -> List[InputType]:
+        """ Specify what kind of inputs this controller can handle.
+
+        Abstract method that should be implemented and documented.
+        """
         raise NotImplementedError
 
     @staticmethod
     @abstractmethod
     def outputs_types() -> List[OutputType]:
+        """ Specify what kind of outputs this controller can handle.
+
+        Abstract method that should be implemented and documented.
+        """
         raise NotImplementedError
 
     # noinspection PyMethodMayBeStatic

@@ -5,7 +5,6 @@ import numpy as np
 import pandas as pd
 from PyQt5.QtCore import Qt, QRectF, QLineF, QPointF
 from PyQt5.QtGui import QImage, QColor, QPainterPath, QLinearGradient, QFontMetrics
-from PyQt5.QtWidgets import QApplication
 
 from amaze.simu.simulation import Simulation
 
@@ -187,8 +186,6 @@ def _plot_trajectory_value(
         square: bool = False,
         img_format: QImage.Format = QImage.Format_RGB32) \
             -> Optional[QImage]:
-
-    assert QApplication.instance(), "ERROR: No existing QApplication"
 
     verbose = 0
     if verbose > 0:

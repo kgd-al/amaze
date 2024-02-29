@@ -29,6 +29,11 @@ dependencies = [
 "Documentation" = "https://amaze.rtfd.io"
 "Bug Tracker" = "https://github.com/kgd-al/amaze/issues"
 
+[project.scripts]
+amaze = "amaze.bin.amaze:main"
+amaze-stats = "amaze.bin.tools.stats:main"
+amaze-interpolate = "amaze.bin.tools.interpolator:main"
+
 [build-system]
 requires = [
   "setuptools>=65.0",
@@ -48,8 +53,6 @@ docs = [
   "sphinx-pyproject",  # Auto-extract project version
   "sphinx_design",  # for the nice flowing cards
 ]
-
-kaleido = [ "kaleido" ]
 
 [tool.pytest.ini_options]
 minversion = "6.0"

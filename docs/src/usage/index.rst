@@ -25,19 +25,31 @@ agent via the keyboard.
 
 .. code-block:: console
 
-    (.venv)$ ???
+    (.venv)$ amaze
+
+Core functionalities
+********************
 
 .. toctree::
+    :maxdepth: 1
+
     basics
     visualization
     training
+
+Extensions
+**********
+
+.. toctree::
+    sb3
 
 FAQ
 ---
 
 .. warning::
 
-    There is a known deleterious interaction between PyQt5 and opencv with both specifying different plugins.
+    There is a known deleterious interaction between PyQt5 and opencv (imported
+    by stable baselines 3) with both specifying different plugins.
     The related error is
 
     .. error::

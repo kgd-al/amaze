@@ -1,26 +1,18 @@
-import sys
 from pathlib import Path
 from typing import Optional, Tuple, Union, Any
 
 import pandas as pd
 from PyQt5.QtCore import Qt, QPointF, QRectF, QSize
 from PyQt5.QtGui import QPainter, QColor, QPainterPath, QImage
-from PyQt5.QtWidgets import QLabel, QApplication
+from PyQt5.QtWidgets import QLabel
 
 from amaze.simu.maze import Maze
-from amaze.simu.types import InputType, OutputType
 from amaze.simu.simulation import Simulation
+from amaze.simu.types import InputType, OutputType
 from amaze.visu import resources
 from amaze.visu.maze import MazePainter, Color, logger
 from amaze.visu.resources import SignType
-from amaze.visu.widgets import _trajectory_plotter
-
-
-def application():
-    """ Returns the currently running Qt application or creates a new one. """
-    if (app := QApplication.instance()) is None:
-        app = QApplication([])
-    return app
+from amaze.visu.widgets import _trajectory_plotter, has_qt_application
 
 
 class QtPainter(MazePainter):
@@ -93,6 +85,7 @@ class MazeWidget(QLabel):
                  resolution: int = 15,
                  width: Optional[int] = None):
 
+        assert has_qt_application()
         super().__init__("Generate a maze\n"
                          "using controls\n"
                          "on the right >>>")
@@ -138,12 +131,20 @@ class MazeWidget(QLabel):
 
     @staticmethod
     def default_config():
+        """ Returns the default rendering configuration.
+
+        - solution: show the path the target (True)
+        - robot: show the robot (True)
+        - dark: use a dark background to see as the robot does (True)
+        - colorblind: use a colorblind-friendly palette (False)
+        - cycles: detect and simplify cycles when plotting trajectories (True)
+        """
         return dict(
-            solution=True,      # Show path to the target
-            robot=True,         # Show the robot
-            dark=True,          # Dark background (same vision as the robot)
-            colorblind=False,   # Colorblind-friendly scheme
-            cycles=True         # Cycle detection and simplification
+            solution=True,
+            robot=True,
+            dark=True,
+            colorblind=False,
+            cycles=True
         )
 
     def minimumSize(self) -> QSize:
@@ -190,7 +191,8 @@ class MazeWidget(QLabel):
 
         painter.end()
 
-    def draw_to(self, path):
+    def render_to(self, path):
+        """ Render this widget to a file """
         img, painter = self._image_drawer()
         self._render(painter)
         return self._save_image(path, img, painter)
@@ -202,13 +204,19 @@ class MazeWidget(QLabel):
         return img
 
     @classmethod
-    def static_draw_to(cls, maze, path, size=None, **kwargs):
+    def draw_to(cls, maze, path, size=None, **kwargs):
+        """ Render the provided maze to a file (in png format).
+
+        Additional arguments refer to the rendering configuration, see
+        :meth:`default_config`.
+        """
         width, height = cls.__compute_size(maze, size or maze.width * 15)
         scale = width / maze.width
-        config = dict(
+        config = cls.default_config()
+        config.update(dict(
             scale=scale,
             outputs=OutputType.DISCRETE,
-            solution=True, robot=None, dark=True)
+            solution=True, robot=None, dark=True))
         config.update(kwargs)
         fill = cls.__background_color(config["dark"])
         img, painter = cls.__static_image_drawer(width + 2, height + 2, fill)
@@ -261,6 +269,7 @@ class MazeWidget(QLabel):
                               img_format: QImage.Format = QImage.Format_RGB32)\
             -> Tuple[QImage, QPainter]:
 
+        assert has_qt_application()
         img = QImage(width, height, img_format)
         img.fill(fill)
 
@@ -312,11 +321,8 @@ class MazeWidget(QLabel):
                         square: bool = False,
                         img_format: QImage.Format = QImage.Format_RGB32) \
             -> Optional[QImage]:
-        """
-        The dataframe's columns must be [px, py, ax, ay, r], with:
-            - px, py the robot's position
-            - ax, ay the action
-            - r the resulting reward
+        """ Plots a trajectory stored in the provided simulation to the
+        requested file.
 
         :param simulation: the simulation to plot from
         :param size: the width of the generated image (height is deduced)
@@ -341,6 +347,7 @@ class MazeWidget(QLabel):
 
         trajectory = trajectory or simulation.trajectory
         _config = cls.default_config()
+        _config["robot"] = False
         if config is not None:
             _config.update(config)
 

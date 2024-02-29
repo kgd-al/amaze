@@ -86,7 +86,7 @@ def main():
             name = maze.to_string()
             path = base_path.joinpath(
                 f"{train}_{i:0{m_id_digits}d}_{name}.png")
-            MazeWidget.static_draw_to(maze, path, size=256)
+            MazeWidget.draw_to(maze, path, size=256)
 
             complexity = Simulation.compute_complexity(
                 maze, InputType.DISCRETE, 15)['entropy']
