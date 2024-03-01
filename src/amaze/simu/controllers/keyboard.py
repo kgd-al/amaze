@@ -56,12 +56,6 @@ class KeyboardController(QObject, BaseController, metaclass=__Meta):
         else:
             return self.current_action.copy()
 
-    def save(self):
-        return {}
-
-    def restore(self, _):
-        pass
-
     def save_to_archive(self, archive: ZipFile) -> bool:
         raise NotImplementedError
 

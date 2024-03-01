@@ -34,26 +34,6 @@ class BaseController(ABC):
     @abstractmethod
     def reset(self): pass
 
-    @abstractmethod
-    def save(self):
-        """Return a state from which self can be restored
-
-         (i.e. to temporarily deactivate gamma exploration)"""
-        pass
-
-    @abstractmethod
-    def restore(self, state):
-        """Restore state from provided object"""
-        pass
-
-    @abstractmethod
-    def save_to_archive(self, archive: ZipFile) -> bool:
-        raise NotImplementedError
-
-    @classmethod
-    def load_from_archive(cls, archive: ZipFile) -> 'BaseController':
-        raise NotImplementedError
-
     @staticmethod
     @abstractmethod
     def inputs_types() -> List[InputType]:
@@ -74,3 +54,11 @@ class BaseController(ABC):
 
     # noinspection PyMethodMayBeStatic
     def vision(self) -> Optional[int]: return None
+
+    @abstractmethod
+    def save_to_archive(self, archive: ZipFile, *args, **kwargs) -> bool:
+        raise NotImplementedError
+
+    @classmethod
+    def load_from_archive(cls, archive: ZipFile) -> 'BaseController':
+        raise NotImplementedError

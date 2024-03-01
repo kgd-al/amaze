@@ -126,6 +126,10 @@ class Maze:
             return [start_from(s) for s in sl]
 
         def to_string(self) -> str:
+            """ Generate a string representation of this object
+
+            :see: from_string
+            """
             sep = self._FIELD_SEP
             default = Maze.BuildData()
             f = f"M{self.seed}{sep}{self.width}x{self.height}"
@@ -222,6 +226,15 @@ class Maze:
                         setattr(bd, _field.name, v)
 
             return bd
+
+        def all_rotations(self):
+            return [
+                self.where(start=s)
+                for s in [
+                    StartLocation.NORTH_WEST, StartLocation.NORTH_EAST,
+                    StartLocation.SOUTH_WEST, StartLocation.SOUTH_EAST
+                ]
+            ]
 
     Signs = BuildData.Signs
 
@@ -498,7 +511,7 @@ class Maze:
 
         return maze
 
-    def _build_data(self):
+    def build_data(self):
         return Maze.BuildData(
             width=self.width, height=self.height,
             seed=self.seed,
@@ -512,15 +525,15 @@ class Maze:
         )
 
     def save(self, path: Path):
-        bd = self._build_data()
-        dct = dict(name=self._build_data().to_string())
+        bd = self.build_data()
+        dct = dict(name=self.build_data().to_string())
         dct.update(asdict(bd))
         with open(path, 'w') as f:
             json.dump(dct, f)
 
     def to_string(self):
         """ Provides the string representation of this maze """
-        return self._build_data().to_string()
+        return self.build_data().to_string()
 
     @classmethod
     def from_string(cls, s, overrides: Optional[BuildData] = None) -> 'Maze':
@@ -531,3 +544,7 @@ class Maze:
         The full syntax is described in :meth:`.BuildData.from_string`.
         """
         return cls.generate(cls.BuildData.from_string(s, overrides))
+
+    def all_rotations(self) -> List['Maze']:
+        """ Returns all rotated versions of this maze """
+        return [self.generate(d) for d in self.build_data().all_rotations()]

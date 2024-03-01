@@ -1,5 +1,7 @@
+import io
 from pathlib import Path
 from typing import Optional, Dict, Type
+from zipfile import ZipFile
 
 import torch
 from gymnasium import Space
@@ -9,6 +11,7 @@ from stable_baselines3.common.base_class import BaseAlgorithm
 from stable_baselines3.common.save_util import load_from_zip_file
 
 from amaze.simu.controllers.base import BaseController
+from amaze.simu.controllers.control import save
 from amaze.simu.pos import Vec
 from amaze.simu.types import InputType, OutputType, State
 from amaze.extensions.sb3.utils import IOMapper
@@ -31,8 +34,9 @@ _o_types_mapping: Dict[Type[Space], OutputType] = {
 class SB3Controller(BaseController):
     simple = False
 
-    def __init__(self, model: BaseAlgorithm):
-        super().__init__()
+    def __init__(self, model_type: Type[BaseAlgorithm], *args, **kwargs):
+        model = model_type(*args, **kwargs)
+        self.model = model
         self.policy = model.policy
 
         self._i_type = _i_types_mapping[len(model.observation_space.shape)]
@@ -45,6 +49,14 @@ class SB3Controller(BaseController):
 
         # print(f"[kgd-debug] policy={self.policy.__class__.__name__}"
         #       f" {self._i_type=} {self._o_type=} {self._vision=}")
+
+    def __getattr__(self, attr):
+        if (a := getattr(self.model, attr, None)) is not None:
+            return a
+        return getattr(self, attr)
+
+    def __repr__(self) -> str:
+        return f"SB3Controller[{self.model.__class__.__name__}]"
 
     def __call__(self, inputs: State) -> Vec:
         return self._mapper.map_action(
@@ -63,18 +75,24 @@ class SB3Controller(BaseController):
 
         return log_prob
 
-    def reset(self):
-        pass
+    def reset(self): pass
 
-    def save(self):
-        pass
-
-    def restore(self, state):
-        pass
-
-    def inputs_type(self): return self._i_type
-    def outputs_type(self): return self._o_type
+    def inputs_types(self): return [self._i_type]
+    def outputs_types(self): return [self._o_type]
     def vision(self): return self._vision
+
+    def save(self, path: str, *args, **kwargs) -> None:
+        print("[kgd-debug] SB3 wants to save")
+        save(self, path, {"algo": type(self.model).__name__},
+             *args, **kwargs)
+
+    def save_to_archive(self, archive: ZipFile, *args, **kwargs) -> bool:
+        print("[kgd-debug] saving in archive")
+        assert False, "Restart here"
+        buffer = io.BufferedWriter()
+        archive.writestr("sb3.zip")
+        self.model.save(archive.open("sb3", "w"), *args, **kwargs)
+        return True
 
     @staticmethod
     def load(path, model_class: Optional[type[BaseAlgorithm]] = None):
@@ -96,3 +114,13 @@ class SB3Controller(BaseController):
         model = model_class.load(path)
 
         return SB3Controller(model)
+
+
+def wrap(model_type: type[BaseAlgorithm], *args, **kwargs):
+    attributes = model_type.__dict__.copy()
+    attributes.update(SB3Controller.__dict__)
+    wrapped_type = type(f"WrappedController[SB3.{model_type.__name__}]",
+                        (model_type, SB3Controller),
+                        attributes)
+    wrapper = wrapped_type()
+    return wrapper

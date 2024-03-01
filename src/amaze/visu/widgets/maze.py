@@ -345,7 +345,9 @@ class MazeWidget(QLabel):
             save=cls._save_image
         )
 
-        trajectory = trajectory or simulation.trajectory
+        if trajectory is None:
+            trajectory = simulation.trajectory
+
         _config = cls.default_config()
         _config["robot"] = False
         if config is not None:

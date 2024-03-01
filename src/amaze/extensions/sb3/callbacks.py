@@ -11,6 +11,8 @@ from stable_baselines3.common.evaluation import evaluate_policy
 from stable_baselines3.common.logger import Image, HParam, TensorBoardOutputFormat
 from stable_baselines3.common.vec_env.base_vec_env import tile_images
 
+from amaze.extensions.sb3.maze_env import env_method, env_attr
+
 logger = logging.getLogger(__name__)
 
 
@@ -55,7 +57,7 @@ class TensorboardCallback(BaseCallback):
     @staticmethod
     def _rewards(env):
         dd_rewards = defaultdict(list)
-        for d in [e.__dict__ for e in env.env_method('atomic_rewards')]:
+        for d in [e.__dict__ for e in env_method(env, 'atomic_rewards')]:
             for key, value in d.items():
                 dd_rewards[key].append(value)
         reward_strings = []
@@ -81,7 +83,7 @@ class TensorboardCallback(BaseCallback):
         writer = self.tb_formatter.writer
         io_types = set(
             i.name[0] + o.name[0] for i, o in
-            self.training_env.env_method('io_types')
+            env_method(self.training_env, 'io_types')
         )
         assert len(io_types) == 1, "Non-uniform I/O types"
 
@@ -143,8 +145,8 @@ class TensorboardCallback(BaseCallback):
         return True
 
     def _print_trajectory(self, env, key, name):
-        images = env.env_method("plot_trajectory",
-                                verbose=True, cb_side=0, square=True)
+        images = env_method(env, "plot_trajectory",
+                            verbose=True, cb_side=0, square=True)
 
         big_image = tile_images(images)
 
@@ -163,7 +165,7 @@ class TensorboardCallback(BaseCallback):
         assert isinstance(self.parent, EvalCallback)
         env = self.parent.eval_env
 
-        eval_infos = env.get_attr('last_infos')
+        eval_infos = env_attr(env, 'last_infos')
         for key, value in _recurse_avg_dict(eval_infos, "infos").items():
             self.logger.record_mean(key, value)
 
@@ -180,19 +182,19 @@ class TensorboardCallback(BaseCallback):
 
         if final:
             train_env = self.training_env
-            train_env.env_method('log_trajectory', True)
+            env_method(train_env, 'log_trajectory', True)
 
             logger.info(f"Final log step. Storing performance on training env")
             r = evaluate_policy(model=self.model, env=train_env)
 
-            train_env.env_method('log_trajectory', False)
+            env_method(train_env, 'log_trajectory', False)
 
             t_str = f"final" if final else \
                 self.img_format.format(self.num_timesteps)
             self._print_trajectory(train_env, "train", t_str)
 
             eval_infos = _recurse_avg_dict(eval_infos, "eval")
-            train_infos = _recurse_avg_dict(train_env.get_attr('last_infos'),
+            train_infos = _recurse_avg_dict(env_attr(train_env, 'last_infos'),
                                             "train")
 
             self.last_stats = {

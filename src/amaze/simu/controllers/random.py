@@ -45,9 +45,6 @@ class RandomController(BaseController):
     def reset(self):
         self.__init__()
 
-    def save(self): return {}
-    def restore(self, _): pass
-
     def save_to_archive(self, archive: ZipFile) -> bool:
         raise NotImplementedError
 

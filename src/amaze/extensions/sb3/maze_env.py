@@ -1,17 +1,17 @@
 """ SB3 wrapper for the maze environment """
 
 import logging
-from typing import Optional
+from typing import Optional, List
 
 import numpy as np
 from PyQt5 import QtWidgets
 from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QImage, QPainter
-from PyQt5.QtWidgets import QApplication
 from gymnasium import spaces, Env
-from stable_baselines3.common.torch_layers import BaseFeaturesExtractor
-from torch import nn, no_grad, as_tensor, Tensor
+from stable_baselines3.common.env_checker import check_env
+from stable_baselines3.common.env_util import make_vec_env
 
+from amaze import application
 from amaze.extensions.sb3.utils import CV2QTGuard, IOMapper
 from amaze.simu.maze import Maze
 from amaze.simu.robot import Robot
@@ -22,48 +22,28 @@ from amaze.visu.widgets.maze import MazeWidget
 logger = logging.getLogger(__name__)
 
 
-class CustomCNN(BaseFeaturesExtractor):
-    """ Bare-bones attempt at using a custom CNN.
+def make_vec_maze_env(mazes: List[Maze.BuildData],
+                      robot: Robot.BuildData,
+                      seed, **kwargs):
+    """ Encapsulates the creation of a vectorized environment """
 
-    :param observation_space: (gym.Space)
-    :param features_dim: (int) Number of features extracted.
-        This corresponds to the number of unit for the last layer.
-    """
+    mazes = [m for m in mazes]
 
-    def __init__(self, observation_space: spaces.Box, features_dim: int = 256):
-        super().__init__(observation_space, features_dim)
-        # We assume CxHxW images (channels first)
-        # Re-ordering will be done by pre-preprocessing or wrapper
-        n_input_channels = observation_space.shape[0]
+    def env_fn():
+        env = MazeEnv(mazes.pop(0), robot, **kwargs)
+        check_env(env)
+        env.reset(full_reset=True)
+        return env
 
-        print("="*80)
-        print("== CustomCNN")
-        print("="*80)
+    return make_vec_env(env_fn, n_envs=len(mazes), seed=seed)
 
-        print(n_input_channels)
-        print(observation_space)
 
-        self.cnn = nn.Sequential(
-            nn.Conv2d(n_input_channels, 8, kernel_size=5, stride=3, padding=0),
-            nn.ReLU(),
-            nn.Conv2d(8, 16, kernel_size=3, stride=2, padding=0),
-            nn.ReLU(),
-            nn.Flatten(),
-        )
+def env_method(env, method: str, *args, **kwargs):
+    return [getattr(e.unwrapped, method)(*args, **kwargs) for e in env.envs]
 
-        # Compute shape by doing one forward pass
-        with no_grad():
-            n_flatten = self.cnn(
-                as_tensor(observation_space.sample()[None]).float()
-            ).shape[1]
 
-        self.linear = nn.Sequential(nn.Linear(n_flatten, features_dim), nn.ReLU())
-
-        exit(42)
-
-    def forward(self, observations: Tensor) -> Tensor:
-        """ Performs one computational step """
-        return self.linear(self.cnn(observations))
+def env_attr(env, attr: str):
+    return [getattr(e.unwrapped, attr) for e in env.envs]
 
 
 class MazeEnv(Env):
@@ -85,7 +65,7 @@ class MazeEnv(Env):
         super().__init__()
         self.render_mode = "rgb_array"
 
-        self.name = Maze.bd_to_string(maze)
+        self.name = maze.to_string()
 
         self._simulation = Simulation(Maze.generate(maze), robot,
                                       save_trajectory=log_trajectory)
@@ -183,9 +163,6 @@ class MazeEnv(Env):
 
     def close(self):
         """ Stub """
-        # if self.app is not None:
-        #     logger.debug("Closing Qt")
-        #     self.app.
         pass
 
     def name(self): return self.name
@@ -202,7 +179,7 @@ class MazeEnv(Env):
     def plot_trajectory(self, cb_side: int = 0, verbose: bool = True,
                         square: bool = False) -> np.ndarray:
         with CV2QTGuard():
-            app = QApplication.instance() or QApplication([])
+            app = application()
             plot = MazeWidget.plot_trajectory(
                 simulation=self._simulation,
                 size=256, trajectory=self.prev_trajectory,
@@ -234,7 +211,7 @@ class MazeEnv(Env):
         self.widget = MazeWidget(
             simulation=self._simulation,
             resolution=self._simulation.data.vision,
-            size=(size, size)
+            width=size
         )
         self.widget.update_config(
             robot=show_robot, solution=True, dark=True)

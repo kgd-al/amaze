@@ -35,16 +35,6 @@ class TabularController(BaseController):
     def reset(self):
         pass
 
-    def save(self):
-        return {
-            "epsilon": self.epsilon,
-            "rng": self._rng.getstate()
-        }
-
-    def restore(self, state):
-        self.epsilon = state["epsilon"]
-        self._rng.setstate(state["rng"])
-
     def values(self, state: np.ndarray):
         b_state = tuple(state)
         if b_state not in self._data:
