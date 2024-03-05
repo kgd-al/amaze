@@ -195,8 +195,11 @@ class Maze:
             d_re = re.compile("[SN][WE]")
             s_re = re.compile("[0-9]+x[0-9]+")
             bd = cls()
+
+            # Remove prefix (if any)
             s = s.split('__')[-1]
-            for token in s.split(cls._FIELD_SEP):
+
+            for token in s.replace(cls._FIELD_SEP, " ").split():
                 t, tail = token[0], token[1:]
                 if t == 'M':
                     bd.seed = s if (s := int(tail)) >= 0 else bd.seed

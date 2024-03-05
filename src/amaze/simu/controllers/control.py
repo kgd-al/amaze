@@ -1,5 +1,7 @@
 import json
 import logging
+import pickle
+from collections import namedtuple
 from pathlib import Path
 from typing import Union, Type, Optional
 from zipfile import ZipFile
@@ -12,7 +14,7 @@ from amaze.simu.controllers.tabular import TabularController
 
 logger = logging.getLogger(__name__)
 
-CONTROLLERS = {
+CONTROLLERS: dict[str, Type[BaseController]] = {
     "random": RandomController,
     "keyboard": KeyboardController,
     "tabular": TabularController
@@ -43,7 +45,8 @@ def controller_factory(c_type: str, c_data: dict):
 
 
 def save(controller: BaseController, path: Union[Path, str],
-         infos: Optional[dict] = None, *args, **kwargs) -> Path:
+         infos: Optional[dict] = None,
+         *args, **kwargs) -> Path:
     """ Save the controller under the provided path
 
     Optionally store the provided information for latter reference (e.g.
@@ -51,16 +54,20 @@ def save(controller: BaseController, path: Union[Path, str],
     Additional arguments are forwarded to the controller's
      :meth:`~.BaseController.save_to_archive`
     """
-    reverse_map = {t: n for n, t in CONTROLLERS.items()}
-    assert type(controller) in reverse_map, \
-        f"Unknown controller type {type(controller)}"
-    controller_class = reverse_map[type(controller)]
 
+    reverse_map = {t: n for n, t in CONTROLLERS.items()}
+    if (controller_class := reverse_map.get(type(controller), None)) is None:
+        raise ValueError(f"Controller class {type(controller)} is not"
+                         f" registered")
+
+    if isinstance(path, str):
+        path = Path(path)
     if path.suffix != ".zip":
         path = path.with_suffix(".zip")
 
     with ZipFile(path, "w") as archive:
-        archive.writestr("controller_class", controller_class)
+        archive.writestr("controller_class",
+                         controller_class)
         controller.save_to_archive(archive, *args, **kwargs)
 
         _infos = controller.infos.copy()
@@ -68,21 +75,22 @@ def save(controller: BaseController, path: Union[Path, str],
         archive.writestr("infos",
                          json.dumps(_infos).encode("utf-8"))
 
-    logger.warning(f"Saved controller to {path}")
+    logger.debug(f"Saved controller to {path}")
 
     return path
 
 
-def load(path: Union[Path, str]):
+def load(path: Union[Path, str], *args, **kwargs):
     """ Loads a controller from the provided path.
 
     Handles any type currently registered. When using extensions, make sure
     to load (import) all those used during training.
     """
-    logger.warning(f"Loading controller from {path}")
+    logger.debug(f"Loading controller from {path}")
     with ZipFile(path, "r") as archive:
         controller_class = archive.read("controller_class").decode("utf-8")
-        logger.warning(f"> controller class: {controller_class}")
-        c = CONTROLLERS[controller_class].load_from_archive(archive)
+        logger.debug(f"> controller class: {controller_class}")
+        c = CONTROLLERS[controller_class].load_from_archive(archive,
+                                                            *args, **kwargs)
         c.infos = json.loads(archive.read("infos").decode("utf-8"))
         return c

@@ -60,5 +60,6 @@ class BaseController(ABC):
         raise NotImplementedError
 
     @classmethod
-    def load_from_archive(cls, archive: ZipFile) -> 'BaseController':
+    def load_from_archive(cls, archive: ZipFile, *args, **kwargs)\
+            -> 'BaseController':
         raise NotImplementedError
