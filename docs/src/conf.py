@@ -20,8 +20,9 @@ from sphinx_pyproject import SphinxConfig
 
 # -- Ensure up-to-date sources -----------------------------------------------
 for module in list(m for m in sys.modules.values() if "amaze" in m.__name__):
-    print(f"Reloading {module.__name__}")
+    print(f"Reloading {module.__name__}\r", end='')
     importlib.reload(module)
+print("[kgd-debug] All amaze modules reloaded.")
 
 # -- Project information -----------------------------------------------------
 
@@ -49,7 +50,6 @@ extensions = [
     'sphinx.ext.todo',
     'sphinx.ext.autosectionlabel',
     "sphinx.ext.autosummary",
-    'sphinx_design',
     'sphinx_qt_documentation',
 ]
 
@@ -88,7 +88,8 @@ autodoc_default_options = {
 # -- Configuration for sphinx_qt_documentation --------------------------------
 
 warnings.filterwarnings('ignore',
-                        message="DeprecationWarning: nodes.Text:")
+                        message="nodes.Text:",
+                        category=DeprecationWarning)
 
 # -- Options for HTML output --------------------------------------------------
 

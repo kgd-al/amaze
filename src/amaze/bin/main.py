@@ -34,11 +34,11 @@ class Options:
     """
 
     controller: Optional[str] = None
-    """ Path to a pre-trained controller or name of built-in
+    """ Path to a pre-trained controller or name of built-in.
      
      :see: :meth:`amaze.simu.controllers.control.builtin_controllers`
      :note: if a pre-trained controller is provided, the extension should be
-     .zip
+        .zip
      """
 
     # =====================

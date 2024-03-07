@@ -41,6 +41,10 @@ requires = [
 build-backend = "setuptools.build_meta"
 
 [project.optional-dependencies]
+sb3 = [
+  "stable_baselines3"
+]
+
 tests = [
   "pytest",
   "pytest-steps", "pytest-sugar",
@@ -48,11 +52,15 @@ tests = [
   "flake8",
 ]
 
+all = [
+  "amaze[sb3,tests]"
+]
+
 docs = [
   "sphinx",
-  "sphinx-pyproject",  # Auto-extract project version
-  "sphinx_design",  # for the nice flowing cards
-  "sphinx_qt_documentation" # Link with qt documentation
+  "sphinx-pyproject",         # Auto-extract project version
+  "sphinx_qt_documentation",  # Link with qt documentation
+  "amaze[all]"                # Document everything, *everything*
 ]
 
 [tool.pytest.ini_options]
