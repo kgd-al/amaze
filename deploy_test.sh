@@ -3,40 +3,93 @@
 set -euo pipefail
 shopt -s inherit_errexit
 
-log(){ printf "\033[32m$@\033[0m\n"; }
+_log=
+log(){
+    if [ $# -gt 1 ]
+    then
+        color=$1
+        shift
+    else
+        color=32
+    fi
+    printf "\033[${color}m$1\033[0m\n" | tee $_log
+}
+
+cols=$(tput cols)
+short_output(){
+    tee -a $_log - | cut -c -$cols | tr "\n" "\r"
+}
 
 wd=$(pwd)
-folder=../__amaze_deploy_test__
-rm -rvf $folder
-mkdir -pv $folder
+download_cache=$(realpath $wd/../__amaze_deploy_test_download_cache__)
+mkdir -pv $download_cache
+log "$(date)"
+log 35 "working directory: $wd"
+log 35 "download cache = download_cache"
 
-cd $folder
-log Cloning
-git clone --depth 1 https://github.com/kgd-al/amaze.git .
+deploy(){
+    type=$1
+    type_name=$(tr "," "_" <<< $type)
+    if [ -z "$type_name" ]
+    then
+        type_name=default
+        spec=""
+    else
+        spec="[$type]"
+    fi
 
-python -mvirtualenv .venv
-source .venv/bin/activate
-log "Created virtual environment"
+    folder=$(realpath $wd/../__amaze_deploy_test__/$type_name)
+    log 35 "deploy folder = $folder"
+    rm -rf $folder
+    mkdir -pv $folder
 
-python -m pip install  --upgrade --no-cache-dir pip setuptools
-log "Installed build essentials"
+    _log=$folder/log
 
-if [ "$1" == "docs" ]
-then
-    python -m pip install --upgrade --no-cache-dir sphinx readthedocs-sphinx-ext
-    log "Installed docs build essentials"
-fi
+    install(){
+        python -m pip download -d $download_cache $@ | short_output
+        python -m pip install --upgrade --find-links=$download_cache $@ | short_output
+    }
 
-log "Installing package and dependencies"
-python -m pip install --upgrade --upgrade-strategy only-if-needed --no-cache-dir $wd[$1]
-r=$?
-log "Installed package and dependencies: $r"
+    cd $folder
+    git clone --depth 1 https://github.com/kgd-al/amaze.git .
 
-if [ "$1" == "docs" ]
-then
-    cd docs/src
-    log "Building documentation"
-    python -m sphinx -T -W --keep-going -b html -d _build/doctrees -D language=en . html
-    log "Documentation built"
-    cd -
-fi
+    date > $_log
+    log Cloned
+
+    python -mvirtualenv .venv
+    source .venv/bin/activate
+    log "Created virtual environment"
+
+    install pip setuptools
+    log "Installed build essentials"
+
+    if [ "$type" == "docs" ]
+    then
+        install sphinx readthedocs-sphinx-ext
+        log "Installed docs build essentials"
+    fi
+
+    log "Installing package and dependencies"
+    install $wd$spec
+    r=$?
+    log "Installed package and dependencies: $r"
+
+    if [ "$type" == "docs" ]
+    then
+        cd docs/src
+        log "Building documentation"
+        python -m sphinx -T -W --keep-going -b html -d _build/doctrees -D language=en . html | short_output
+        log "Documentation built"
+        cd -
+    elif [ "$type" == "tests" ]
+    then
+        pytest
+    fi
+
+    deactivate
+}
+
+for type in '' 'full' 'tests' 'docs'
+do
+    deploy "$type"
+done

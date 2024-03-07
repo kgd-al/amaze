@@ -1,6 +1,6 @@
 [project]
-name = "amaze"
-version = "0.9"
+name = "amaze-lib"
+version = "0.9.1post5"
 authors = [{ name="Kevin Godin-Dubois", email="k.j.m.godin-dubois@vu.nl"}]
 description = "Benchmark generator for sighted maze-navigating agents"
 readme = "README.md"
@@ -24,9 +24,9 @@ dependencies = [
   "PyQt5"
 ]
 
-[projects.urls]
-"Homepage" = "https://github.com/kgd-al/amaze"
-"Documentation" = "https://amaze.rtfd.io"
+[project.urls]
+Homepage = "https://github.com/kgd-al/amaze"
+Documentation = "https://amaze.readthedocs.io/"
 "Bug Tracker" = "https://github.com/kgd-al/amaze/issues"
 
 [project.scripts]
@@ -37,6 +37,8 @@ amaze-interpolate = "amaze.bin.tools.interpolator:main"
 [build-system]
 requires = [
   "setuptools>=65.0",
+  "setuptools_scm[toml]",
+  "wheel"
 ]
 build-backend = "setuptools.build_meta"
 
@@ -46,22 +48,23 @@ sb3 = [
   "graphviz"
 ]
 
+full = [
+  "amaze[sb3]"
+]
+
 tests = [
+  "amaze[full]",
   "pytest",
   "pytest-steps", "pytest-sugar",
   "coverage",
   "flake8",
 ]
 
-all = [
-  "amaze[sb3,tests]"
-]
-
 docs = [
+  "amaze[full]",              # Document everything, *everything*
   "sphinx",
   "sphinx-pyproject",         # Auto-extract project version
   "sphinx_qt_documentation",  # Link with qt documentation
-  "amaze[all]"                # Document everything, *everything*
 ]
 
 [tool.pytest.ini_options]
