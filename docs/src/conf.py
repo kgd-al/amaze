@@ -37,6 +37,12 @@ author = config.author
 # The full version, including alpha/beta/rc tags
 release = config.version
 
+# -- Configuration for sphinx_qt_documentation --------------------------------
+
+warnings.filterwarnings('ignore',
+                        message="nodes.Text:",
+                        category=DeprecationWarning)
+
 # -- General configuration ---------------------------------------------------
 
 # Add any Sphinx extension module names here, as strings. They can be
@@ -84,12 +90,6 @@ autodoc_default_options = {
 }
 # autodoc_typehints = 'description'
 # autodoc_typehints_description_target = 'documented_params'
-
-# -- Configuration for sphinx_qt_documentation --------------------------------
-
-warnings.filterwarnings('ignore',
-                        message="nodes.Text:",
-                        category=DeprecationWarning)
 
 # -- Options for HTML output --------------------------------------------------
 
