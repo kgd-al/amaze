@@ -61,7 +61,7 @@ def wrapped_sb3_model(model_type: Type[BaseAlgorithm]):
 
         @classmethod
         def __repr__(cls) -> str:
-            return f"SB3Controller[{cls._model_type.__name__}]"
+            return f"SB3.Controller[{cls._model_type.__name__}]"
 
         def __call__(self, inputs: State) -> Vec:
             return self._mapper.map_action(

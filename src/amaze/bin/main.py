@@ -33,10 +33,12 @@ class Options:
         :meth:`amaze.simu.maze.Maze.from_string`
     """
 
-    controller: Optional[Path] = None
+    controller: Optional[str] = None
     """ Path to a pre-trained controller or name of built-in
      
      :see: :meth:`amaze.simu.controllers.control.builtin_controllers`
+     :note: if a pre-trained controller is provided, the extension should be
+     .zip
      """
 
     # =====================
@@ -177,10 +179,14 @@ def __make_simulation(args, trajectory=False):
     )
 
 
-def main(sys_args: Optional[Sequence[str]] = None):
+def main(sys_args: Optional[Sequence[str] | str] = None):
     """
-    Main function for the AMaze executable. Allows delegate call
+    Main function for the AMaze executable. Allows delegate call.
     """
+
+    if isinstance(sys_args, str):
+        sys_args = sys_args.split()
+
     args = Options()
     parser = argparse.ArgumentParser(description="2D Maze environment")
     Options.populate(parser)
@@ -200,8 +206,12 @@ def main(sys_args: Optional[Sequence[str]] = None):
 
     if not args.controller:
         args.autostart = False
-    elif (p := Path(args.controller)).exists():
-        args.controller = p
+    else:
+        if args.controller.endswith(".zip"):
+            p = Path(args.controller)
+            if not p.exists():
+                raise ValueError(f"No controller archive found for '{p}'")
+            args.controller = p
 
     if args.movie:
         args.autostart = True

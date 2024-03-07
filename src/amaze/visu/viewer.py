@@ -283,11 +283,12 @@ class MainWindow(QWidget):
 
         if not self.robot_mode:
             print(f"reward = {reward}. Infos:\n{pprint.pformat(infos)}")
-        QMessageBox.information(
-            self, "Failed" if infos["failure"] else "Success",
-            f"          Actions: {infos['steps']}\n"
-            f"Cumulative reward: {reward}"
-            f" ({100 * infos['pretty_reward']:3.2f}%)")
+        if not self.args.autoquit:
+            QMessageBox.information(
+                self, "Failed" if infos["failure"] else "Success",
+                f"          Actions: {infos['steps']}\n"
+                f"Cumulative reward: {reward}"
+                f" ({100 * infos['pretty_reward']:3.2f}%)")
 
         if self._trajectory_plotter is not None:
             self._trajectory_plotter()

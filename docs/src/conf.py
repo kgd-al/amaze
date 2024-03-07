@@ -6,6 +6,7 @@
 import importlib
 import os
 import sys
+import warnings
 from pathlib import Path
 # If extensions (or modules to document with autodoc) are in another directory,
 # add these directories to sys.path here. If the directory is relative to the
@@ -19,6 +20,7 @@ from sphinx_pyproject import SphinxConfig
 
 # -- Ensure up-to-date sources -----------------------------------------------
 for module in list(m for m in sys.modules.values() if "amaze" in m.__name__):
+    print(f"Reloading {module.__name__}")
     importlib.reload(module)
 
 # -- Project information -----------------------------------------------------
@@ -83,7 +85,12 @@ autodoc_default_options = {
 # autodoc_typehints = 'description'
 # autodoc_typehints_description_target = 'documented_params'
 
-# -- Options for HTML output -------------------------------------------------
+# -- Configuration for sphinx_qt_documentation --------------------------------
+
+warnings.filterwarnings('ignore',
+                        message="DeprecationWarning: nodes.Text:")
+
+# -- Options for HTML output --------------------------------------------------
 
 # General API configuration
 # object_description_options = [

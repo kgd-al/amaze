@@ -7,20 +7,24 @@ from stable_baselines3.common.callbacks import (EvalCallback,
                                                 StopTrainingOnRewardThreshold)
 from stable_baselines3.common.logger import configure
 
-from amaze import Maze, Robot, Simulation, Sign
+from amaze import Maze, Robot, Simulation, Sign, amaze_main
 from amaze.extensions.sb3 import (make_vec_maze_env, env_method,
                                   load_sb3_controller, PPO,
-                                  TensorboardCallback, sb3_controller)
+                                  TensorboardCallback, sb3_controller, CV2QTGuard)
 
 FOLDER = "tmp/demos/sb3"
+BEST = f"{FOLDER}/best_model.zip"
 SEED = 0
 BUDGET = 100000
 VERBOSE = False
 
+TRAIN_MAZE = "M14_20x20_C1"
+TEST_SEED = 18
+
 
 def train():
-    train_mazes = Maze.BuildData.from_string("M14_20x20_C1").all_rotations()
-    eval_mazes = [d.where(seed=42) for d in train_mazes]
+    train_mazes = Maze.BuildData.from_string(TRAIN_MAZE).all_rotations()
+    eval_mazes = [d.where(seed=TEST_SEED) for d in train_mazes]
     robot = Robot.BuildData.from_string("DD")
 
     train_env = make_vec_maze_env(train_mazes, robot, SEED)
@@ -54,9 +58,8 @@ def train():
     print("="*80)
 
 
-def evaluate(model = None):
-    if model is None:
-        model = load_sb3_controller(f"{FOLDER}/best_model.zip")
+def evaluate():
+    model = load_sb3_controller(BEST)
 
     rng = random.Random(0)
     robot = Robot.BuildData.from_string("DD")
@@ -97,7 +100,7 @@ def evaluate(model = None):
     return avg_reward
 
 
-if __name__ == "__main__":
+def main():
     folder = pathlib.Path(FOLDER)
     if folder.exists():
         shutil.rmtree(folder)
@@ -105,3 +108,11 @@ if __name__ == "__main__":
 
     train()
     evaluate()
+
+    with CV2QTGuard(platform=False):
+        amaze_main(f"--controller {BEST} --extension sb3 --maze {TRAIN_MAZE}"
+                   f" --auto-quit")
+
+
+if __name__ == "__main__":
+    main()

@@ -5,6 +5,8 @@ from typing import Type
 
 from amaze.extensions.sb3.guard import CV2QTGuard
 
+print("[kgd-debug] >>> sb3 is being imported <<<")
+
 with CV2QTGuard():
     print("[kgd-debug] >>> guarding against cv2 <<<")
 
@@ -19,10 +21,14 @@ with CV2QTGuard():
     from amaze.simu.controllers.control import \
         CONTROLLERS as __BASE_CONTROLLERS, load
 
-print("[kgd-debug] >>> sb3 is being imported <<<")
+
+def compatible_models():
+    """ Returns the list of SB3 models that can be used with this extension """
+    return [SAC, A2C, DQN, PPO, TD3]
+
 
 __SB3_CONTROLLERS: dict[Type[_BaseAlgorithm], Type[_BaseController]] = {}
-for c in [SAC, A2C, DQN, PPO, TD3]:
+for c in compatible_models():
     c_type = _wrap(c)
     __BASE_CONTROLLERS[c_type.__repr__()] = c_type
     __SB3_CONTROLLERS[c] = c_type
@@ -47,3 +53,5 @@ def load_sb3_controller(path: str | Path):
     """
     return load(path)
 
+
+print("[kgd-debug] >>> sb3 is imported <<<")

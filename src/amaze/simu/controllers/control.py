@@ -91,7 +91,12 @@ def load(path: Union[Path, str], *args, **kwargs):
     with ZipFile(path, "r") as archive:
         controller_class = archive.read("controller_class").decode("utf-8")
         logger.debug(f"> controller class: {controller_class}")
-        c = CONTROLLERS[controller_class].load_from_archive(archive,
-                                                            *args, **kwargs)
+        if (c_type := CONTROLLERS.get(controller_class)) is None:
+            msg = f"Unsupported controller type {controller_class}."
+            if len(tokens := controller_class.split(".")) > 1:
+                msg += (f" Did you forget to include the '{tokens[0]}'"
+                        f" extension?")
+            raise ValueError(msg)
+        c = c_type.load_from_archive(archive, *args, **kwargs)
         c.infos = json.loads(archive.read("infos").decode("utf-8"))
         return c

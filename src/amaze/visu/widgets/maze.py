@@ -347,6 +347,7 @@ class MazeWidget(QLabel):
 
         if trajectory is None:
             trajectory = simulation.trajectory
+        assert len(trajectory) > 0
 
         _config = cls.default_config()
         _config["robot"] = False
