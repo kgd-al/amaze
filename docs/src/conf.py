@@ -50,7 +50,7 @@ extensions = [
     'sphinx.ext.autosectionlabel',
     "sphinx.ext.autosummary",
     'sphinx_design',
-    "sphinx_qt_documentation",
+    'sphinx_qt_documentation',
 ]
 
 # List of patterns, relative to source directory, that match files and

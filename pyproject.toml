@@ -52,6 +52,7 @@ docs = [
   "sphinx",
   "sphinx-pyproject",  # Auto-extract project version
   "sphinx_design",  # for the nice flowing cards
+  "sphinx_qt_documentation" # Link with qt documentation
 ]
 
 [tool.pytest.ini_options]
