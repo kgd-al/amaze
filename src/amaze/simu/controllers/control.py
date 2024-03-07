@@ -30,12 +30,13 @@ def check_types(controller: BaseController | Type[BaseController],
                 robot: Robot.BuildData) -> bool:
     """ Ensure that the controller is compatible with the specified
      inputs/outputs """
+    def _fmt(e_list): return ", ".join([e.name for e in e_list])
     assert robot.inputs in controller.inputs_types(), \
-        (f"Input type {robot.inputs} is not valid for {controller}."
-         f" Expected one of {controller.inputs_types()}")
+        (f"Input type {robot.inputs.name} is not valid for {controller}."
+         f" Expected one of [{_fmt(controller.inputs_types())}]")
     assert robot.outputs in controller.outputs_types(), \
-        (f"Output type {robot.outputs} is not valid for {controller}."
-         f" Expected {controller.outputs_types()}")
+        (f"Output type {robot.outputs.name} is not valid for {controller}."
+         f" Expected [{_fmt(controller.outputs_types())}]")
     return True
 
 
@@ -52,7 +53,7 @@ def save(controller: BaseController, path: Union[Path, str],
     Optionally store the provided information for latter reference (e.g.
     type of mazes, performance, ...)
     Additional arguments are forwarded to the controller's
-     :meth:`~.BaseController.save_to_archive`
+    :meth:`~.BaseController.save_to_archive`
     """
 
     reverse_map = {t: n for n, t in CONTROLLERS.items()}

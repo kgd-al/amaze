@@ -1,6 +1,7 @@
 import functools
 import logging
 import math
+import os
 import pprint
 from datetime import time
 from enum import IntFlag, Enum
@@ -441,9 +442,9 @@ class MainWindow(QWidget):
 
         simple = c.simple
         if not simple:
-            if i_t := c.inputs_type():
+            if i_t := c.inputs_types()[0]:
                 self.config['inputs'].setCurrentText(i_t.name.lower())
-            if o_t := c.outputs_type():
+            if o_t := c.outputs_types()[0]:
                 self.config['outputs'].setCurrentText(o_t.name.lower())
 
         self.sections[self.Sections.CONTROLLER].setVisible(not simple)

@@ -1,3 +1,8 @@
+""" Half-hearted attempt a making a custom CNN.
+
+Improvements are being worked on.
+"""
+
 from gymnasium import spaces
 from stable_baselines3.common.torch_layers import BaseFeaturesExtractor
 from torch import nn, no_grad, as_tensor, Tensor

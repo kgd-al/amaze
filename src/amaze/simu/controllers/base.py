@@ -57,9 +57,11 @@ class BaseController(ABC):
 
     @abstractmethod
     def save_to_archive(self, archive: ZipFile, *args, **kwargs) -> bool:
+        """ Implement to save derived-specific content to the archive """
         raise NotImplementedError
 
     @classmethod
     def load_from_archive(cls, archive: ZipFile, *args, **kwargs)\
             -> 'BaseController':
+        """ Implement to load derived-specific content from the archive """
         raise NotImplementedError

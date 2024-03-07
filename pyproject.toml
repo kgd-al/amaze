@@ -30,7 +30,7 @@ dependencies = [
 "Bug Tracker" = "https://github.com/kgd-al/amaze/issues"
 
 [project.scripts]
-amaze = "amaze.bin.amaze:main"
+amaze = "amaze.bin.main:main"
 amaze-stats = "amaze.bin.tools.stats:main"
 amaze-interpolate = "amaze.bin.tools.interpolator:main"
 

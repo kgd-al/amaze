@@ -259,7 +259,7 @@ class Simulation:
         corresponding reward"""
         # logger.debug(f"{'-'*80}\n-- step {self.time()}")
 
-        if self.data.control == "KEYBOARD" and \
+        if self.data.control.upper() == "KEYBOARD" and \
                 not action and not self.robot.vel:
             return None
 

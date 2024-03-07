@@ -19,7 +19,7 @@ built-in compatibility with common RL libraries, visualization tools, ...
 Tutorials
 ---------
 
-The reader is first encouraged to play around with the main executable (:mod:`amaze.bin.amaze`).
+The reader is first encouraged to play around with the main executable (:mod:`amaze.bin.main`).
 Without arguments, it will provide an interface where one can manipulate a maze and control an
 agent via the keyboard.
 
@@ -64,4 +64,5 @@ FAQ
 
         Available platform plugins are: xcb, ...
 
-    See :class:`amaze.extensions.sb3.utils.CV2QTGuard` as a temporary band aid
+    The class :class:`amaze.extensions.sb3.guard.CV2QTGuard` is automatically called,
+    whenever necessary, as a temporary band aid

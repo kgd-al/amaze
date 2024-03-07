@@ -53,7 +53,7 @@ Finally, we also could call the main script from python and provide it with
 arguments.
 This way one can easily instrumentalize the library, e.g. when computing
 generalization performance.
-The list of arguments is detailed in :class:`amaze.bin.amaze.Options`.
+The list of arguments is detailed in :class:`amaze.bin.main.Options`.
 
 As before, the full listing of the example is provided below.
 

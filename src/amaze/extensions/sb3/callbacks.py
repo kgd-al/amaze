@@ -1,3 +1,10 @@
+""" Contains an out-of-the-box exemple of verbose callback relying on
+Tensorboard.
+
+Provided as-is without *any* guarantee of functionality or fitness for a
+particular purpose
+"""
+
 import logging
 import math
 from collections import defaultdict

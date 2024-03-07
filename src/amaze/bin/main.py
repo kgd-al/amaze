@@ -8,18 +8,13 @@ Provides and all-in-one entry point for simulation, evaluation and visualization
 import argparse
 import logging
 import os
-from dataclasses import dataclass
+from dataclasses import dataclass, field
+from importlib import import_module
 from pathlib import Path
 from typing import Optional, Sequence
 
-from PyQt5.QtWidgets import QApplication
-
-from amaze.simu.controllers.control import load
-from amaze.simu.maze import Maze
-from amaze.simu.robot import Robot
-from amaze.simu.simulation import Simulation
+from amaze import application, load, Maze, Robot, Simulation, MazeWidget
 from amaze.visu.viewer import MainWindow
-from amaze.visu.widgets.maze import MazeWidget
 
 logger = logging.getLogger(__name__)
 
@@ -89,6 +84,10 @@ class Options:
 
     # =====================
 
+    extensions: list[str] = field(default_factory=list)
+
+    # =====================
+
     @staticmethod
     def populate(parser: argparse.ArgumentParser):
         group = parser.add_argument_group(
@@ -155,6 +154,11 @@ class Options:
         parser.add_argument("--colorblind", action='store_true',
                             help="Use colorblind-friendly colormaps")
 
+        parser.add_argument("--extension", action='append',
+                            dest='extensions',
+                            help="Request extension specific controllers to be"
+                                 "made available")
+
 
 def __make_simulation(args, trajectory=False):
     if args.maze:
@@ -190,6 +194,10 @@ def main(sys_args: Optional[Sequence[str]] = None):
         print("Cannot plot trajectory without a controller")
         exit(1)
 
+    if args.extensions:
+        for m in args.extensions:
+            import_module("amaze.extensions." + m)
+
     if not args.controller:
         args.autostart = False
     elif (p := Path(args.controller)).exists():
@@ -210,7 +218,8 @@ def main(sys_args: Optional[Sequence[str]] = None):
     if not window:
         os.environ["QT_QPA_PLATFORM"] = "offscreen"
 
-    app = QApplication([])
+    app = application()
+
     logging.basicConfig(level=logging.DEBUG)
 
     if not window:

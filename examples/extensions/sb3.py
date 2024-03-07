@@ -3,22 +3,24 @@ import pathlib
 import random
 import shutil
 
-from stable_baselines3.common.callbacks import EvalCallback, StopTrainingOnRewardThreshold
+from stable_baselines3.common.callbacks import (EvalCallback,
+                                                StopTrainingOnRewardThreshold)
 from stable_baselines3.common.logger import configure
 
-from amaze import Maze, Robot, Simulation
-from amaze.extensions.sb3 import (make_vec_maze_env, env_method, load_sb3_controller, PPO, TensorboardCallback, sb3_controller)
-from amaze.visu.resources import Sign
+from amaze import Maze, Robot, Simulation, Sign
+from amaze.extensions.sb3 import (make_vec_maze_env, env_method,
+                                  load_sb3_controller, PPO,
+                                  TensorboardCallback, sb3_controller)
 
 FOLDER = "tmp/demos/sb3"
-SEED = 16
+SEED = 0
 BUDGET = 100000
 VERBOSE = False
 
 
 def train():
-    train_mazes = Maze.BuildData.from_string("M16_20x20_C1").all_rotations()
-    eval_mazes = [d.where(seed=14) for d in train_mazes]
+    train_mazes = Maze.BuildData.from_string("M14_20x20_C1").all_rotations()
+    eval_mazes = [d.where(seed=42) for d in train_mazes]
     robot = Robot.BuildData.from_string("DD")
 
     train_env = make_vec_maze_env(train_mazes, robot, SEED)
@@ -52,8 +54,9 @@ def train():
     print("="*80)
 
 
-def evaluate():
-    model = load_sb3_controller(f"{FOLDER}/best_model.zip")
+def evaluate(model = None):
+    if model is None:
+        model = load_sb3_controller(f"{FOLDER}/best_model.zip")
 
     rng = random.Random(0)
     robot = Robot.BuildData.from_string("DD")
@@ -89,7 +92,9 @@ def evaluate():
     avg_reward = sum(rewards) / n
     optimal = " (optimal)" if math.isclose(avg_reward, 1) else ""
     print(f"Average score of {avg_reward}{optimal} on {n} random mazes")
+    print(f"> {100*sum(r for r in rewards if r == 1)/n}% solved")
     print("="*80)
+    return avg_reward
 
 
 if __name__ == "__main__":

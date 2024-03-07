@@ -12,7 +12,8 @@ from stable_baselines3.common.env_checker import check_env
 from stable_baselines3.common.env_util import make_vec_env
 
 from amaze import application
-from amaze.extensions.sb3.utils import CV2QTGuard, IOMapper
+from amaze.extensions.sb3.utils import IOMapper
+from amaze.extensions.sb3 import CV2QTGuard
 from amaze.simu.maze import Maze
 from amaze.simu.robot import Robot
 from amaze.simu.simulation import Simulation
@@ -39,10 +40,13 @@ def make_vec_maze_env(mazes: List[Maze.BuildData],
 
 
 def env_method(env, method: str, *args, **kwargs):
+    """ Calls a given function, with specified arguments, on each underlying
+    environments """
     return [getattr(e.unwrapped, method)(*args, **kwargs) for e in env.envs]
 
 
 def env_attr(env, attr: str):
+    """ Returns the requested attribute from each underlying environments """
     return [getattr(e.unwrapped, attr) for e in env.envs]
 
 
@@ -167,7 +171,12 @@ class MazeEnv(Env):
 
     def name(self): return self.name
     def atomic_rewards(self): return self._simulation.rewards
-    def optimal_reward(self): return self._simulation.optimal_reward
+
+    def optimal_reward(self):
+        """ Return the cumulative reward for an agent following an optimal
+        trajectory"""
+        return self._simulation.optimal_reward
+
     def maximal_duration(self): return self._simulation.deadline
 
     def io_types(self): return (self._simulation.data.inputs,
@@ -179,7 +188,7 @@ class MazeEnv(Env):
     def plot_trajectory(self, cb_side: int = 0, verbose: bool = True,
                         square: bool = False) -> np.ndarray:
         with CV2QTGuard():
-            app = application()
+            _ = application()
             plot = MazeWidget.plot_trajectory(
                 simulation=self._simulation,
                 size=256, trajectory=self.prev_trajectory,
