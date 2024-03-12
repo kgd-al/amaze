@@ -9,8 +9,17 @@ generate arbitrarily complex (or simple) mazes for agents to navigate in.
 
 Every maze can be described by a unique, human-readable string:
 
-![maze sample_dark](https://raw.githubusercontent.com/kgd-al/amaze/master/docs/latex/maze/dark.png#gh-dark-mode-only)
-![maze sample_light](https://raw.githubusercontent.com/kgd-al/amaze/master/docs/latex/maze/light.png#gh-light-mode-only)
+[//]: # (![maze sample_dark]&#40;https://raw.githubusercontent.com/kgd-al/amaze/master/docs/latex/maze/dark.png#gh-dark-mode-only&#41;)
+
+[//]: # (![maze sample_light]&#40;https://raw.githubusercontent.com/kgd-al/amaze/master/docs/latex/maze/light.png#gh-light-mode-only&#41;)
+
+<picture>
+    <source media="(prefers-color-scheme: dark)"
+            srcset="https://raw.githubusercontent.com/kgd-al/amaze/master/docs/latex/maze/dark.png">
+    <img alt="Maze sample"
+            src="https://raw.githubusercontent.com/kgd-al/amaze/master/docs/latex/maze/light.png">
+</picture>
+  
 
 Clues point agents towards the correct direction, which is required for them to solve intersections.
 Traps serve the opposite purpose and are meant to provide more challenge to the maze navigation tasks.
