@@ -9,15 +9,13 @@ generate arbitrarily complex (or simple) mazes for agents to navigate in.
 
 Every maze can be described by a unique, human-readable string:
 
-[//]: # (![maze sample_dark]&#40;https://raw.githubusercontent.com/kgd-al/amaze/master/docs/latex/maze/dark.png#gh-dark-mode-only&#41;)
-
-[//]: # (![maze sample_light]&#40;https://raw.githubusercontent.com/kgd-al/amaze/master/docs/latex/maze/light.png#gh-light-mode-only&#41;)
-
 <picture>
-    <source media="(prefers-color-scheme: dark)"
-            srcset="https://raw.githubusercontent.com/kgd-al/amaze/master/docs/latex/maze/dark.png">
-    <img alt="Maze sample"
-            src="https://raw.githubusercontent.com/kgd-al/amaze/master/docs/latex/maze/light.png">
+    <source
+        media="(prefers-color-scheme: dark)"
+        srcset="https://raw.githubusercontent.com/kgd-al/amaze/master/docs/latex/maze/dark.png">
+    <img
+        alt="Maze sample"
+        src="https://raw.githubusercontent.com/kgd-al/amaze/master/docs/latex/maze/light.png">
 </picture>
   
 
@@ -35,28 +33,52 @@ The input and output spaces can either be discrete or continuous.
 
 ### Discrete inputs
 
-![inputs_discrete_dark](https://raw.githubusercontent.com/kgd-al/amaze/master/docs/latex/agents/dark-0.png#gh-dark-mode-only)
-![inputs_discrete_light](https://raw.githubusercontent.com/kgd-al/amaze/master/docs/latex/agents/light-0.png#gh-light-mode-only)
+<picture>
+    <source
+        media="(prefers-color-scheme: dark)"
+        srcset="https://raw.githubusercontent.com/kgd-al/amaze/master/docs/latex/agents/dark-0.png">
+    <img
+        alt="Discrete inputs"
+        src="https://raw.githubusercontent.com/kgd-al/amaze/master/docs/latex/agents/light-0.png">
+</picture>
 
 In the discrete input case, information is provided in an easily intelligible format of fixed size.
 According to the cell highlighted in the previous example, an agent following the optimal trajectory 
 would receive the following inputs:
 
-![inputs_discrete_example_dark](https://raw.githubusercontent.com/kgd-al/amaze/master/docs/latex/agents/dark-1.png#gh-dark-mode-only)
-![inputs_discrete_example_light](https://raw.githubusercontent.com/kgd-al/amaze/master/docs/latex/agents/light-1.png#gh-light-mode-only)
+<picture>
+    <source
+        media="(prefers-color-scheme: dark)"
+        srcset="https://raw.githubusercontent.com/kgd-al/amaze/master/docs/latex/agents/dark-1.png">
+    <img
+        alt="Discrete inputs examples"
+        src="https://raw.githubusercontent.com/kgd-al/amaze/master/docs/latex/agents/light-1.png">
+</picture>
 
 ### Continuous inputs
 
-![inputs_continuous_dark](https://raw.githubusercontent.com/kgd-al/amaze/master/docs/latex/agents/dark-2.png#gh-dark-mode-only)
-![inputs_continuous_light](https://raw.githubusercontent.com/kgd-al/amaze/master/docs/latex/agents/light-2.png#gh-light-mode-only)
+<picture>
+    <source
+        media="(prefers-color-scheme: dark)"
+        srcset="https://raw.githubusercontent.com/kgd-al/amaze/master/docs/latex/agents/dark-2.png">
+    <img
+        alt="Continuous inputs"
+        src="https://raw.githubusercontent.com/kgd-al/amaze/master/docs/latex/agents/light-2.png">
+</picture>
 
 For continuous inputs, a raw grayscale image is directly provided to the agent.
 It contains wall information on the outer edge, as well as the same temporal information as with the
 discrete case (centered pixel on the corresponding border).
 The sign, if any, is thus provided a potentially complex image that the agent must parse and understand:
 
-![inputs_continuous_example_dark](https://raw.githubusercontent.com/kgd-al/amaze/master/docs/latex/agents/dark-3.png#gh-dark-mode-only)
-![inputs_continuous_example_light](https://raw.githubusercontent.com/kgd-al/amaze/master/docs/latex/agents/light-3.png#gh-light-mode-only)
+<picture>
+    <source
+        media="(prefers-color-scheme: dark)"
+        srcset="https://raw.githubusercontent.com/kgd-al/amaze/master/docs/latex/agents/dark-3.png">
+    <img
+        alt="Continuous inputs"
+        src="https://raw.githubusercontent.com/kgd-al/amaze/master/docs/latex/agents/light-3.png">
+</picture>
 
 While the term continuous is a bit of stretch for coarse-grain grayscale images, it highlights the
 difference with the discrete case where every possible input is easily enumerable.
