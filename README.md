@@ -99,26 +99,6 @@ According to the combinations of input and output spaces, the library can work i
 
 ![example_cc](https://raw.githubusercontent.com/kgd-al/amaze/master/docs/demo/cc.gif)
 
-## Development state (todolist)
-
-- No clear distinction between library code (maze generator, viewer, stats extractor, ...)
-and user code (experiments, training protocols, results generation, ...).
-- Dependency on stable baselines 3, should (will) be optional.
-
-Install with
-```
-git clone https://github.com/kgd-al/amaze.git
-cd amaze
-source ../<virtual_environment>/bin/activate
-pip install -e .
-```
-
-Patch requests are welcome.
-
-## Documentation
-
-Patchy at best. Should be improved upon in the coming months.
-
-## Examples
-
-Same. No nice examples are provided (yet!).
+## Further reading
+The documentation is available at (https://amaze.readthedocs.io/) including
+installation instruction (pip) and detailed examples.

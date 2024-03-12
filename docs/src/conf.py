@@ -55,8 +55,10 @@ extensions = [
     'sphinx.ext.intersphinx',
     'sphinx.ext.todo',
     'sphinx.ext.autosectionlabel',
-    "sphinx.ext.autosummary",
+    'sphinx.ext.autosummary',
+    'sphinx_copybutton',
     'sphinx_qt_documentation',
+    'myst_parser'
 ]
 
 # List of patterns, relative to source directory, that match files and
@@ -100,7 +102,7 @@ autodoc_default_options = {
 
 # -- Options for HTML output -------------------------------------------------
 
-html_theme = 'alabaster'
+html_theme = 'furo'
 
 html_theme_options = {
     # 'page_width': 'auto',
@@ -110,6 +112,9 @@ html_theme_options = {
     'show_relbars': True,
 
     # 'font_family': 'monospace',
+    "light_logo": "favicon-light.png",
+    "dark_logo": "favicon-dark.png",
+    "sidebar_hide_name": True,
 
     'github_banner': True,
     'github_button': True,
@@ -121,6 +126,8 @@ html_theme_options = {
 # relative to this directory. They are copied after the builtin static files,
 # so a file named "default.css" will overwrite the builtin "default.css".
 html_static_path = ['static']
+
+html_favicon = "static/favicon-dark.png"
 
 html_css_files = ['custom.css']
 

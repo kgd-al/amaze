@@ -1,19 +1,14 @@
-AMaze's documentation
-======================
-
-This package provides a benchmark generator for sighted maze-navigating agents.
+.. include:: ../../README.md
+   :parser: myst_parser.sphinx_
 
 Contents
 --------
 
 .. toctree::
-    :maxdepth: 2
+    :hidden:
 
     usage/index
     api
-
-.. toctree::
-    :maxdepth: 1
 
     misc
 
