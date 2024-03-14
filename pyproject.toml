@@ -64,7 +64,8 @@ docs = [
   "amaze-benchmarker[full]",  # Document everything, *everything*
   "sphinx",
   "sphinx-pyproject",         # Auto-extract project version
-  "sphinx_qt_documentation",  # Link with qt documentation
+  "sphinx-qt-documentation",  # Link with qt documentation
+  "sphinx-copybutton",        # Easily copy code
   "myst-parser",              # Better parser
 ]
 

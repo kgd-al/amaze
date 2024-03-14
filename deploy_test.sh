@@ -3,7 +3,7 @@
 set -euo pipefail
 shopt -s inherit_errexit
 
-_log=
+_log="no-log"
 log(){
     if [ $# -gt 1 ]
     then
@@ -17,7 +17,7 @@ log(){
 
 cols=$(tput cols)
 short_output(){
-    tee -a $_log - | tr "\n" "\r" | cut -c -$cols | sed 's/$/\r/'
+    tee -a $_log - # | tr "\n" "\r" | cut -c -$cols | sed 's/$/\r/'
 }
 
 wd=$(pwd)
@@ -37,6 +37,9 @@ deploy(){
     else
         spec="[$type]"
     fi
+
+    line
+    log 35 "Processing spec '$spec'"
 
     folder=$(realpath $wd/../__amaze_deploy_test__/$type_name)
     log 35 "deploy folder = $folder"
@@ -69,7 +72,7 @@ deploy(){
         log "Installed docs build essentials"
     fi
 
-    log "Installing package and dependencies"
+    log "Installing package and dependencies for spec '$spec'"
     install .$spec
     r=$?
     log "Installed package and dependencies: $r"
@@ -87,9 +90,10 @@ deploy(){
     fi
 
     deactivate
+    line
 }
 
-for type in '' 'full' 'tests' 'docs'
+for type in 'docs'
 do
     deploy "$type"
 done
