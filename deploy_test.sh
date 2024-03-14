@@ -17,7 +17,7 @@ log(){
 
 cols=$(tput cols)
 short_output(){
-    tee -a $_log - | cut -c -$cols | tr "\n" "\r"
+    tee -a $_log - | tr "\n" "\r" | cut -c -$cols | sed 's/$/\r/'
 }
 
 wd=$(pwd)
@@ -70,7 +70,7 @@ deploy(){
     fi
 
     log "Installing package and dependencies"
-    install $wd$spec
+    install .$spec
     r=$?
     log "Installed package and dependencies: $r"
 

@@ -49,11 +49,11 @@ sb3 = [
 ]
 
 full = [
-  "amaze[sb3]"
+  "amaze-benchmarker[sb3]"
 ]
 
 tests = [
-  "amaze[full]",
+  "amaze-benchmarker[full]",
   "pytest",
   "pytest-steps", "pytest-sugar",
   "coverage",
@@ -61,10 +61,11 @@ tests = [
 ]
 
 docs = [
-  "amaze[full]",              # Document everything, *everything*
+  "amaze-benchmarker[full]",  # Document everything, *everything*
   "sphinx",
   "sphinx-pyproject",         # Auto-extract project version
   "sphinx_qt_documentation",  # Link with qt documentation
+  "myst-parser",              # Better parser
 ]
 
 [tool.pytest.ini_options]
