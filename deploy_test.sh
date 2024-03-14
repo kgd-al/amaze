@@ -39,14 +39,16 @@ deploy(){
     fi
 
     line
-    log 35 "Processing spec '$spec'"
 
     folder=$(realpath $wd/../__amaze_deploy_test__/$type_name)
-    log 35 "deploy folder = $folder"
+
     rm -rf $folder
     mkdir -pv $folder
 
-    _log=$folder/log
+    _log=$folder.log
+
+    log 35 "deploy folder = $folder"
+    log 35 "Processing spec '$spec'"
 
     install(){
         python -m pip download -d $download_cache $@ | short_output

@@ -67,6 +67,7 @@ docs = [
   "sphinx-qt-documentation",  # Link with qt documentation
   "sphinx-copybutton",        # Easily copy code
   "myst-parser",              # Better parser
+  "furo"                      # Style
 ]
 
 [tool.pytest.ini_options]
