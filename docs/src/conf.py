@@ -109,17 +109,17 @@ html_theme_options = {
     'nosidebar': False,
     'body_max_width': '100%',
     'enable_search_shortcuts': True,
-    'show_relbars': True,
+    # 'show_relbars': True,
 
     # 'font_family': 'monospace',
     "light_logo": "favicon-light.png",
     "dark_logo": "favicon-dark.png",
     "sidebar_hide_name": True,
 
-    'github_banner': True,
-    'github_button': True,
-    'github_repo': project,
-    'github_user': 'kgd-al',
+    # 'github_banner': True,
+    # 'github_button': True,
+    # 'github_repo': project,
+    # 'github_user': 'kgd-al',
 }
 
 # Add any paths that contain custom static files (such as style sheets) here,
