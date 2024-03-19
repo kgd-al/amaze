@@ -95,6 +95,7 @@ deploy(){
     line
 }
 
+# '' 'full' 'tests' 'docs'
 for type in 'docs'
 do
     deploy "$type"

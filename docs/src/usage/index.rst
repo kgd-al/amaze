@@ -13,7 +13,7 @@ built-in compatibility with common RL libraries, visualization tools, ...
 
 .. code-block:: console
 
-   (.venv)$ pip install amaze
+   (.venv)$ pip install amaze-benchmarker
 
 
 Tutorials

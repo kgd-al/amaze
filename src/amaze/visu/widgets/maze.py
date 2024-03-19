@@ -80,15 +80,29 @@ class QtPainter(MazePainter):
 
 class MazeWidget(QLabel):
     def __init__(self,
-                 simulation: Simulation,
+                 simulation: Optional[Simulation] = None,
                  config: Optional[dict[str, Any]] = None,
-                 resolution: int = 15,
+                 resolution: Optional[int] = 15,
+                 input_type: Optional[InputType] = InputType.DISCRETE,
                  width: Optional[int] = None):
 
         assert has_qt_application()
-        super().__init__("Generate a maze\n"
-                         "using controls\n"
-                         "on the right >>>")
+        super().__init__("No maze to display")
+
+        if resolution is None and simulation is None:
+            raise ValueError("You must provide either a resolution size"
+                             "or a simulation containing that information"
+                             "for a continuous input rendering")
+
+        self._inputs = input_type or simulation.data.inputs
+
+        if self._inputs is InputType.CONTINUOUS:
+            if resolution is None and simulation is None:
+                raise ValueError("You must provide either a resolution size"
+                                 "or a simulation containing that information"
+                                 "for a continuous input rendering")
+            self._vision = resolution or simulation.data.vision
+
         self._simulation = simulation
         self._scale = 12
         self._config = self.default_config()
