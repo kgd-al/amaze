@@ -28,7 +28,7 @@ The graphical elements are introduced, first, by creating a QtApplication
 object which is essential for PyQt (the underlying widgets library) to work
 properly.
 Then, rendering a maze to a given file is trivially done by
-:meth:`~amaze.visu.widgets.maze.MazeWidget.draw_to`.
+:meth:`~amaze.visu.widgets.maze.MazeWidget.static_render_to_file`.
 The various rendering options which can be provided to tweak the
 appearance are detailed in
 :meth:`~amaze.visu.widgets.maze.MazeWidget.default_config`.

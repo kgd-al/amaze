@@ -154,13 +154,13 @@ class MazeEnv(Env):
             s = 256
 
             if self.widget is None:
-                self.widget = self._create_widget(size=s, show_robot=True)
+                self.widget = self._create_widget(show_robot=True)
 
             img = QImage(s, s, QImage.Format_RGB888)
             img.fill(Qt.white)
 
             painter = QPainter(img)
-            self.widget.render(painter)
+            self.widget.render_onto(painter, width=s)
             painter.end()
 
             return self._qimage_to_numpy(img)
@@ -206,7 +206,7 @@ class MazeEnv(Env):
             img = self._qimage_to_numpy(plot)
         return img
 
-    def _create_widget(self, size, show_robot=True):
+    def _create_widget(self, show_robot=False):
         if self.widget:
             return self.widget
 
@@ -217,10 +217,8 @@ class MazeEnv(Env):
 
         # logger.debug("Creating qt widget")
 
-        self.widget = MazeWidget(
-            simulation=self._simulation,
-            resolution=self._simulation.data.vision,
-            width=size
+        self.widget = MazeWidget.from_simulation(
+            simulation=self._simulation
         )
         self.widget.update_config(
             robot=show_robot, solution=True, dark=True)

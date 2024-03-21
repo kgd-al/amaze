@@ -18,28 +18,12 @@ from typing import Annotated, Tuple, Optional, List, Dict
 import numpy as np
 
 from amaze.simu._build_data import BaseBuildData
+from amaze.simu.types import StartLocation
 from amaze.visu import resources
 from amaze.visu.resources import Sign, SignType
 
 
 logger = getLogger(__name__)
-
-
-class StartLocation(int, Enum):
-    """Describes which of the maze's corner to use as the starting position
-    """
-    SOUTH_WEST = 0
-    SOUTH_EAST = 1
-    NORTH_EAST = 2
-    NORTH_WEST = 3
-
-    def shorthand(self):
-        return ''.join(s[0] for s in self.name.split('_'))
-
-    @classmethod
-    def from_shorthand(cls, short):
-        return {'SW': cls.SOUTH_WEST, 'SE': cls.SOUTH_EAST,
-                'NE': cls.NORTH_EAST, 'NW': cls.NORTH_WEST}[short]
 
 
 class Maze:
@@ -394,9 +378,9 @@ class Maze:
             w, h = maze.width, maze.height
             rotate = {
                 StartLocation.SOUTH_WEST: lambda _i, _j: (_i, _j),
-                StartLocation.SOUTH_EAST: lambda _i, _j: (w-1-_j, _i),
-                StartLocation.NORTH_WEST: lambda _i, _j: (_j, h-1-_i),
-                StartLocation.NORTH_EAST: lambda _i, _j: (w-1-_i, h-1-_j),
+                StartLocation.SOUTH_EAST: lambda _i, _j: (w - 1 - _j, _i),
+                StartLocation.NORTH_WEST: lambda _i, _j: (_j, h - 1 - _i),
+                StartLocation.NORTH_EAST: lambda _i, _j: (w - 1 - _i, h - 1 - _j),
             }[data.start]
 
             # Rotate start/end

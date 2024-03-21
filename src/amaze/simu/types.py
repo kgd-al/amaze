@@ -28,3 +28,20 @@ class OutputType(Enum):
 
 Action = Vec
 State = np.ndarray
+
+
+class StartLocation(int, Enum):
+    """Describes which of the maze's corner to use as the starting position
+    """
+    SOUTH_WEST = 0
+    SOUTH_EAST = 1
+    NORTH_EAST = 2
+    NORTH_WEST = 3
+
+    def shorthand(self):
+        return ''.join(s[0] for s in self.name.split('_'))
+
+    @classmethod
+    def from_shorthand(cls, short):
+        return {'SW': cls.SOUTH_WEST, 'SE': cls.SOUTH_EAST,
+                'NE': cls.NORTH_EAST, 'NW': cls.NORTH_WEST}[short]

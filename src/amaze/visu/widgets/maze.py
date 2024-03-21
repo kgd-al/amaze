@@ -1,11 +1,14 @@
+import math
+import pprint
 from pathlib import Path
-from typing import Optional, Tuple, Union, Any
+from typing import Optional, Tuple, Union, Any, overload, Dict
 
 import pandas as pd
 from PyQt5.QtCore import Qt, QPointF, QRectF, QSize
 from PyQt5.QtGui import QPainter, QColor, QPainterPath, QImage
 from PyQt5.QtWidgets import QLabel
 
+from amaze import Robot
 from amaze.simu.maze import Maze
 from amaze.simu.simulation import Simulation
 from amaze.simu.types import InputType, OutputType
@@ -79,65 +82,94 @@ class QtPainter(MazePainter):
 
 
 class MazeWidget(QLabel):
+
     def __init__(self,
-                 simulation: Optional[Simulation] = None,
-                 config: Optional[dict[str, Any]] = None,
+                 maze: Optional[Union[Maze, Maze.BuildData, str]] = None,
+                 robot: Optional[Robot] = None,
+                 config: Optional[Dict[str, Any]] = None,
                  resolution: Optional[int] = 15,
                  input_type: Optional[InputType] = InputType.DISCRETE,
-                 width: Optional[int] = None):
+                 is_reset=False):
 
         assert has_qt_application()
-        super().__init__("No maze to display")
+        if not is_reset:
+            super().__init__()
 
-        if resolution is None and simulation is None:
-            raise ValueError("You must provide either a resolution size"
-                             "or a simulation containing that information"
-                             "for a continuous input rendering")
+        if maze is None:
+            maze = ""
 
-        self._inputs = input_type or simulation.data.inputs
+        self._maze = self.__to_maze(maze)
 
-        if self._inputs is InputType.CONTINUOUS:
-            if resolution is None and simulation is None:
-                raise ValueError("You must provide either a resolution size"
-                                 "or a simulation containing that information"
-                                 "for a continuous input rendering")
-            self._vision = resolution or simulation.data.vision
+        self._robot = robot
 
-        self._simulation = simulation
-        self._scale = 12
-        self._config = self.default_config()
-        if config:
-            self._config.update(config)
+        if robot is not None:
+            self._inputs = robot.data.inputs
+        else:
+            self._inputs = input_type
 
-        self._vision = None
         self._clues, self._lures, self._traps = None, None, None
-        self.set_resolution(resolution)
+        if self._inputs is InputType.CONTINUOUS:
+            if robot is not None:
+                self._vision = robot.data.vision
+            else:
+                self._vision = resolution
+        else:
+            self._vision = None
 
-        if width:
-            self.setFixedSize(*self.__compute_size(simulation.maze, width))
+        r = self._vision
+        if self._inputs is InputType.DISCRETE or r is None:
+            m = self._maze
+            r = min(self.width(), self.height()) // min(m.width, m.height)
+        else:
+            r -= 2
+
+        self._clues, self._lures, self._traps = self.__qt_images(r, self._maze)
+
+        # self._simulation = simulation
+        self._scale = 12
+        if config:
+            self._config = self.default_config()
+            self._config.update(config)
+        elif not is_reset:
+            self._config = self.default_config()
 
         self._compute_scale()
 
-    def set_simulation(self, simulation: Simulation):
-        self._simulation = simulation
-        self.set_resolution(simulation.data.vision)
+    @classmethod
+    def from_simulation(cls, simulation: Simulation,
+                        config: Optional[Dict[str, Any]] = None) -> 'MazeWidget':
+        return cls(maze=simulation.maze, robot=simulation.robot, config=config)
+
+    def reset_from_simulation(self, simulation: Simulation):
+        self.__init__(simulation.maze, simulation.robot, is_reset=True)
+
+    def set_maze(self, maze: Union[Maze, Maze.BuildData, str]):
+        maze = self.__to_maze(maze)
+        self.__init__(maze=maze,
+                      robot=self._robot,
+                      config=self._config,
+                      resolution=self._vision,
+                      input_type=self._inputs,
+                      is_reset=True
+        )
         self.update()
+
+    @staticmethod
+    def __to_maze(maze: Union[Maze, Maze.BuildData, str]):
+        if isinstance(maze, Maze.BuildData):
+            maze = Maze.generate(maze)
+        elif isinstance(maze, str):
+            maze = Maze.from_string(maze)
+        elif not isinstance(maze, Maze):
+            raise ValueError("Invalid maze argument."
+                             " Expecting Maze, Maze.BuildData or str")
+        return maze
 
     @staticmethod
     def __qt_images(size, maze):
         return (resources.qt_images(v, size)
                 if (v := maze.signs[t]) is not None else None
                 for t in SignType)
-
-    def set_resolution(self, r: int):
-        self._vision = r
-        r -= 2
-        if self._simulation.data.inputs is InputType.DISCRETE:
-            m = self._simulation.maze
-            r = min(self.width(), self.height()) // min(m.width, m.height)
-
-        if maze := self._simulation.maze:
-            self._clues, self._lures, self._traps = self.__qt_images(r, maze)
 
     def update_config(self, **kwargs):
         self._config.update(kwargs)
@@ -162,8 +194,7 @@ class MazeWidget(QLabel):
         )
 
     def minimumSize(self) -> QSize:
-        return 3 * QSize(self._simulation.maze.width,
-                         self._simulation.maze.height)
+        return 3 * QSize(self._maze.width, self._maze.height)
 
     def resizeEvent(self, _):
         self._compute_scale()
@@ -183,12 +214,11 @@ class MazeWidget(QLabel):
             return width, width * maze.height // maze.width
 
     def _compute_scale(self):
-        maze = self._simulation.maze
-        self._scale = round(min(self.width() / maze.width,
-                                self.height() / maze.height))
+        self._scale = math.floor(min((self.width() - 2) / self._maze.width,
+                                (self.height() - 2) / self._maze.height))
 
     def paintEvent(self, e):
-        maze = self._simulation.maze
+        maze = self._maze
         if maze is None:
             super().paintEvent(e)
             return
@@ -201,24 +231,24 @@ class MazeWidget(QLabel):
 
         painter.fillRect(QRectF(0, 0, sw, sh), self._background_color())
 
-        self._render(painter)
+        self.render_onto(painter)
 
         painter.end()
 
-    def render_to(self, path):
+    def render_to_file(self, path, width: Optional[int] = None):
         """ Render this widget to a file """
-        img, painter = self._image_drawer()
-        self._render(painter)
+        img, painter = self._image_drawer(width=width)
+        self.render_onto(painter)
         return self._save_image(path, img, painter)
 
     def pretty_render(self, width: Optional[int] = None):
         img, painter = self._image_drawer(width=width)
-        self._render(painter, width=width-2)
+        self.render_onto(painter, width=width - 2)
         painter.end()
         return img
 
     @classmethod
-    def draw_to(cls, maze, path, size=None, **kwargs):
+    def static_render_to_file(cls, maze, path, size=None, **kwargs):
         """ Render the provided maze to a file (in png format).
 
         Additional arguments refer to the rendering configuration, see
@@ -247,22 +277,29 @@ class MazeWidget(QLabel):
 
         QtPainter(painter, config).render(maze, config)
 
-    def _render(self, painter: QPainter, width: Optional[int] = None):
+    def render_onto(self, painter: QPainter, width: Optional[int] = None):
+        outputs, robot = None, None
+        if self._robot is not None:
+            outputs = self._robot.data.outputs
+            if self._config["robot"]:
+                robot = self._robot.to_dict()
+            else:
+                robot = None
+
         config = dict(self._config)
         config.update(dict(
             scale=self._scale,
             clues=self._clues, lures=self._lures, traps=self._traps,
-            outputs=self._simulation.data.outputs,
+            outputs=outputs,
             solution=bool(self._config["solution"]),
-            robot=self._simulation.robot_dict()
-            if self._config["robot"] else None))
+            robot=robot))
 
         if width is not None:
-            config['scale'] = width / self._simulation.maze.width
+            config['scale'] = width / self._maze.width
 
         self.__render(
-            painter, self._simulation.maze,
-            self._simulation.maze.height * config['scale'],
+            painter, self._maze,
+            self._maze.height * config['scale'],
             config)
 
     @staticmethod
@@ -299,11 +336,11 @@ class MazeWidget(QLabel):
             fill = self._background_color()
 
         if width is None:
-            width = self._scale * self._simulation.maze.width + 2
-            height = self._scale * self._simulation.maze.height + 2
+            width = self._scale * self._maze.width + 2
+            height = self._scale * self._maze.height + 2
         else:
-            scale = (width-2) / self._simulation.maze.width
-            height = round(self._simulation.maze.height * scale) + 2
+            scale = (width-2) / self._maze.width
+            height = round(self._maze.height * scale) + 2
 
         return self.__static_image_drawer(
             width, height,

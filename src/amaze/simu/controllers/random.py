@@ -10,15 +10,24 @@ from amaze.simu.maze import Maze
 
 
 class RandomController(BaseController):
-    def __init__(self, *args, **kwargs):
+    cheats = True
+
+    def __init__(self, simulation, **kwargs):
+        if simulation is None and not hasattr(self, "simulation"):
+            raise ValueError("Random controller missing required 'simulation'"
+                             " parameter")
+        elif simulation is not None:
+            self.simulation = simulation
+        self.robot = self.simulation.robot
+
         self.rng = Random()
         self.stack = []
         self.visited = set()
-        self.curr_pos: Optional[Pos] = None
+        self.curr_pos: Optional[Pos] = self.robot.pos
         self.last_pos: Optional[Pos] = None
 
     def __call__(self, _) -> Tuple[float, float]:
-        ci, cj = pos = self.curr_pos.aligned()
+        ci, cj = pos = self.robot.pos.aligned()
 
         if self.last_pos and self.last_pos == pos:
             self.stack.pop()  # Cancel last move
@@ -43,7 +52,7 @@ class RandomController(BaseController):
             return self.stack.pop()
 
     def reset(self):
-        self.__init__()
+        self.__init__(simulation=None)
 
     def save_to_archive(self, archive: ZipFile) -> bool:
         raise NotImplementedError

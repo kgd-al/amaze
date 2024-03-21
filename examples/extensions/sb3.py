@@ -100,7 +100,7 @@ def evaluate():
     return avg_reward
 
 
-def main():
+def main(is_test=False):
     folder = pathlib.Path(FOLDER)
     if folder.exists():
         shutil.rmtree(folder)
@@ -111,7 +111,8 @@ def main():
 
     with CV2QTGuard(platform=False):
         amaze_main(f"--controller {BEST} --extension sb3 --maze {TRAIN_MAZE}"
-                   f" --auto-quit")
+                   f" --auto-quit --robot-inputs DISCRETE"
+                   f" --robot-outputs DISCRETE --no-restore-config")
 
 
 if __name__ == "__main__":

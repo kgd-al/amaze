@@ -8,6 +8,7 @@ from zipfile import ZipFile
 
 from amaze.simu import Robot
 from amaze.simu.controllers.base import BaseController
+from amaze.simu.controllers.cheater import CheaterController
 from amaze.simu.controllers.keyboard import KeyboardController
 from amaze.simu.controllers.random import RandomController
 from amaze.simu.controllers.tabular import TabularController
@@ -16,6 +17,7 @@ logger = logging.getLogger(__name__)
 
 CONTROLLERS: dict[str, Type[BaseController]] = {
     "random": RandomController,
+    "cheater": CheaterController,
     "keyboard": KeyboardController,
     "tabular": TabularController
 }
@@ -42,7 +44,10 @@ def check_types(controller: BaseController | Type[BaseController],
 
 def controller_factory(c_type: str, c_data: dict):
     """ Create a controller of a given c_type from the given c_data """
-    return CONTROLLERS[c_type.lower()](**c_data)
+    c_class = CONTROLLERS[c_type.lower()]
+    if not getattr(c_class, "cheats", False):
+        c_data.pop("simulation", None)
+    return c_class(**c_data)
 
 
 def save(controller: BaseController, path: Union[Path, str],

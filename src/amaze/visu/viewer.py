@@ -1,7 +1,6 @@
 import functools
 import logging
 import math
-import os
 import pprint
 from datetime import time
 from enum import IntFlag, Enum
@@ -27,10 +26,9 @@ from PyQt5.QtWidgets import (QHBoxLayout, QWidget, QLabel,
 from amaze.simu._maze_metrics import MazeMetrics
 from amaze.simu.controllers.control import (controller_factory,
                                             load, check_types)
-from amaze.simu.controllers.random import RandomController
-from amaze.simu.maze import Maze, StartLocation
+from amaze.simu.maze import Maze
 from amaze.simu.robot import Robot
-from amaze.simu.types import InputType, OutputType
+from amaze.simu.types import InputType, OutputType, StartLocation
 from amaze.simu.simulation import Simulation
 from amaze.visu.resources import SignType
 from amaze.visu.widgets.collapsible import CollapsibleBox
@@ -72,7 +70,7 @@ class MainWindow(QWidget):
         if runnable:
             self.playing = False
             self.speed = 1
-            self.timer_dt = .1
+            self.timer_dt = args.dt or .1
 
             self.timer = QTimer()
 
@@ -87,8 +85,6 @@ class MainWindow(QWidget):
         self.visu: dict[str, Union[InputsLabel, OutputsLabel, ValuesLabel]] = \
             {}
 
-        self.save_on_exit = True
-
         controls = self._build_controls()
 
         # holder.setLayout(layout)
@@ -96,14 +92,15 @@ class MainWindow(QWidget):
         self.setLayout(self.layout)
 
         maze_w_options = {}
-        if args is not None:  # Restore settings and maze/robot configuration
+        if args is not None and args.restore_config:
+            # Restore settings and maze/robot configuration
             maze_w_options = self._restore_settings(args)
 
         self.simulation = Simulation(maze=self._generate_maze(),
                                      robot=self._robot_data(),
                                      save_trajectory=args and args.plot)
 
-        self.maze_w = MazeWidget(self.simulation)
+        self.maze_w = MazeWidget.from_simulation(self.simulation)
         self.maze_w.update_config(**maze_w_options)
 
         self.layout.addWidget(self.maze_w)
@@ -163,7 +160,7 @@ class MainWindow(QWidget):
         logger.warning(f"Brute force saving everthing in {folder}")
         folder.mkdir(exist_ok=True, parents=True)
 
-        self.maze_w.render_to(str(folder.joinpath("maze.png")))
+        self.maze_w.render_to_file(str(folder.joinpath("maze.png")))
         self.visu["img_inputs"].grab().save(
             str(folder.joinpath(
                 f"inputs_{self.simulation.data.inputs.name.lower()}.png")))
@@ -209,7 +206,7 @@ class MainWindow(QWidget):
         if self.controller and flags & reset.CONTROL:
             self.controller.reset()
 
-        self.maze_w.set_resolution(self.simulation.data.vision)
+        self.maze_w.reset_from_simulation(self.simulation)
         self.simulation.generate_inputs()
         self.sections[self.Sections.CONFIG].setEnabled(True)
         if self.runnable:
@@ -255,15 +252,14 @@ class MainWindow(QWidget):
         self.buttons["play"].setIcon(self.style().standardIcon(icon))
 
     def _think(self):
-        if isinstance(self.controller, RandomController):
-            self.controller.curr_pos = self.simulation.robot.pos
-        next_action = self.controller(self.simulation.observations)
-        return next_action
+        return self.controller(self.simulation.observations)
 
     def _step(self):
         self.sections[self.Sections.CONFIG].setEnabled(False)
         reward = self.simulation.step(self.next_action)
-        self.next_action = self._think()
+
+        if not self.simulation.done():
+            self.next_action = self._think()
 
         if reward is None:
             return
@@ -314,6 +310,10 @@ class MainWindow(QWidget):
         def update(k, v, fmt="{}"): self.stats[k].setText(fmt.format(v))
         update("s_step", f"{self.simulation.time():g}s "
                          f"({self.simulation.timestep} timesteps)")
+        update("s_deadline",
+               f"({self.simulation.deadline - self.simulation.timestep:g}"
+               f" remaining)")
+
         update("r_pos",
                ", ".join([f"{v:.2g}" for v in self.simulation.robot.pos]))
         update("r_reward",
@@ -432,12 +432,11 @@ class MainWindow(QWidget):
 
         ct = ccb.currentText()
         if (ct.lower() != "autonomous") or c is None:
-            c = controller_factory(
-                ct,
-                dict(
-                    a_type=self._enum_value("outputs", OutputType)
-                )
+            args = dict(
+                a_type=self._enum_value("outputs", OutputType),
+                simulation=self.simulation
             )
+            c = controller_factory(ct, args)
 
         check_types(c, self._robot_data())
 
@@ -646,7 +645,8 @@ class MainWindow(QWidget):
         row("Outputs", cb)
 
         cb = widget(QComboBox, "control")
-        cb.addItems([v.lower() for v in ["Random", "Keyboard", "Autonomous"]])
+        cb.addItems([v.lower() for v in ["Random", "Cheater",
+                                         "Keyboard", "Autonomous"]])
         row("Control", cb)
 
         return layout
@@ -685,6 +685,9 @@ class MainWindow(QWidget):
                    + [f"m_{m.name.lower()}" for m in MazeMetrics])
         layout.addRow(self._section("Simulation"))
         add_fields(["s_step"])
+        layout.addRow("", lbl := QLabel())
+        self.stats["s_deadline"] = lbl
+        lbl.setAlignment(Qt.AlignRight)
         layout.addRow(self._section("Robot"))
         add_fields(["r_pos", "r_reward"])
 
@@ -826,7 +829,7 @@ class MainWindow(QWidget):
         return viewer_options
 
     def _save_settings(self):
-        if not self.save_on_exit:
+        if not self.args.restore_config:
             return
 
         config = self._settings()

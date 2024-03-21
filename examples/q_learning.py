@@ -6,10 +6,10 @@ import time
 
 from amaze.simu.controllers.control import controller_factory, save, check_types
 from amaze.simu.controllers.tabular import TabularController
-from amaze.simu.maze import Maze, StartLocation
+from amaze.simu.maze import Maze
 from amaze.simu.robot import Robot
 from amaze.simu.simulation import Simulation
-from amaze.simu.types import InputType, OutputType
+from amaze.simu.types import InputType, OutputType, StartLocation
 
 ALPHA = 0.1
 GAMMA = 0.5
@@ -166,7 +166,7 @@ def evaluate_generalization(policy):
     print("="*80)
 
 
-def main():
+def main(is_test=False):
     if FOLDER.exists():
         shutil.rmtree(FOLDER)
     FOLDER.mkdir(parents=True, exist_ok=False)

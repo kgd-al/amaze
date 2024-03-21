@@ -17,7 +17,7 @@ log(){
 
 cols=$(tput cols)
 short_output(){
-    tee -a $_log - # | tr "\n" "\r" | cut -c -$cols | sed 's/$/\r/'
+    tee -a $_log - | tr "\n" "\r" | cut -c -$cols | sed 's/$/\r/'
 }
 
 wd=$(pwd)
@@ -95,8 +95,8 @@ deploy(){
     line
 }
 
-# '' 'full' 'tests' 'docs'
-for type in 'docs'
+for type in '' 'full' 'tests' 'docs'
+# for type in 'docs'
 do
     deploy "$type"
 done

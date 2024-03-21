@@ -79,7 +79,9 @@ class Robot:
     INERTIAL_LOSS = .5
     ACCELERATION_SCALE = .5  # RADIUS * 2
 
-    def __init__(self):
+    def __init__(self, data: BuildData):
+        self.data = data
+
         self.pos = None
         self.prev_cell = None
 
@@ -108,3 +110,6 @@ class Robot:
         if self.vel.length() < min(.01, self.ACCELERATION_SCALE / 2):
             self.vel = Vec.null()
         return self.pos + dt * self.vel
+
+    def to_dict(self):
+        return dict(pos=self.pos, vel=self.vel, acc=self.acc)

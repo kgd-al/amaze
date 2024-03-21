@@ -12,7 +12,7 @@ maze_str = maze.to_string()
 # Draw the maze
 app = application()
 maze_img = f"{FOLDER}/{maze_str}.png"
-if MazeWidget.draw_to(
+if MazeWidget.static_render_to_file(
         maze=Maze.from_string(maze_str),
         path=maze_img, size=WIDTH,
         colorblind=True, robot=False, solution=True, dark=True):
@@ -39,4 +39,5 @@ print(f"Plotted {agent_path}"
       f" to {trajectory_img}")
 
 # Invoke the main from python (with arguments)
-amaze_main(["--maze", maze_str, "--controller", "random", "--auto-quit"])
+amaze_main(["--maze", maze_str, "--controller", "cheater", "--auto-quit",
+            "--dt", "0.01", "--no-restore-config"])

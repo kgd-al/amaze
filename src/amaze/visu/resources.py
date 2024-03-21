@@ -49,7 +49,7 @@ class Sign:
     def __init__(self, name: str = _default_builtin(),
                  value: float = _default_lightness()):
         self.name: str | Path = name
-        self.value: float = value
+        self.value: float = float(value)
 
     def __iter__(self): return iter((self.name, self.value))
 

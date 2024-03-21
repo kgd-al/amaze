@@ -50,8 +50,7 @@ class Simulation:
             self.maze = maze
 
         if robot:
-            self.data = robot
-            self.robot = Robot()
+            self.robot = Robot(robot)
 
         start = Pos(*self.maze.start) + Pos(.5, .5)
         self.robot.reset(start)
@@ -85,6 +84,9 @@ class Simulation:
                 self.errors = {t: [0, 0] for t in SignType}
 
         self.generate_inputs()
+
+    @property
+    def data(self): return self.robot.data
 
     def time(self):
         return self.timestep * self.dt
@@ -399,11 +401,11 @@ class Simulation:
                  (np.s_[-1, ix])][prev_dir.value]
             buffer[s] = 1
 
-    def robot_dict(self) -> Optional[dict]:
-        if r := self.robot:
-            return dict(pos=r.pos, vel=r.vel, acc=r.acc)
-        else:
-            return None
+    # def robot_dict(self) -> Optional[dict]:
+    #     if r := self.robot:
+    #         return dict(pos=r.pos, vel=r.vel, acc=r.acc)
+    #     else:
+    #         return None
 
     @staticmethod
     def discrete_actions():

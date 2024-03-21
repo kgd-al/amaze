@@ -59,6 +59,13 @@ class Options:
     autoquit: bool = False
     """ Whether to close the viewer once the simulation is done """
 
+    restore_config: bool = True
+    """ Whether to load configuration (window position, maze, robot, ...)
+     from the persistent cache """
+
+    dt: Optional[float] = None
+    """ Specifies the duration of a timestep when using the viewer"""
+
     # =====================
 
     movie: Optional[Path] = None
@@ -116,6 +123,15 @@ class Options:
         parser.add_argument("--no-auto-quit", dest="autoquit",
                             action="store_false",
                             help="see autoquit")
+
+        parser.add_argument("--dt", dest="dt", type=float,
+                            help="Specifies the duration of one timestep when"
+                                 " using the viewer")
+
+        parser.add_argument("--no-restore-config",
+                            dest="restore_config", action="store_false",
+                            help="Prevents configuration load from persistent"
+                                 " cache")
 
         parser.add_argument("--controller", dest="controller",
                             type=str, help="Load robot/controller from file"
@@ -236,15 +252,15 @@ def main(sys_args: Optional[Sequence[str] | str] = None):
         simulation = __make_simulation(args)
 
         if args.render:
-            widget = MazeWidget(simulation,
-                                config=dict(
-                                    robot=False,
-                                    solution=True,
-                                    dark=args.dark,
-                                    colorblind=args.colorblind
-                                ),
-                                width=args.width)
-            if widget.render_to(args.render):
+            widget = MazeWidget.from_simulation(
+                simulation,
+                config=dict(
+                    robot=False,
+                    solution=True,
+                    dark=args.dark,
+                    colorblind=args.colorblind
+                ))
+            if widget.render_to_file(args.render, width=args.width):
                 logger.info(f"Saved {simulation.maze.to_string()}"
                             f" to {args.render}")
 

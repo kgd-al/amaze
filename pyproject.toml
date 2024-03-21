@@ -45,6 +45,7 @@ build-backend = "setuptools.build_meta"
 [project.optional-dependencies]
 sb3 = [
   "stable_baselines3",
+  "tensorboard",
   "graphviz"
 ]
 

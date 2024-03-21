@@ -15,6 +15,13 @@ built-in compatibility with common RL libraries, visualization tools, ...
 
    (.venv)$ pip install amaze-benchmarker
 
+.. warning::
+
+    Unfortunately the name `amaze` is already taken by another project on PyPI.
+    Thus the correct package name is `amaze-benchmarker`, the import still
+    reference the library by its short name (e.g. `import amaze` and not
+    `import amaze-benchmarker`)
+
 
 Tutorials
 ---------
@@ -35,6 +42,7 @@ Core functionalities
 
     basics
     visualization
+    interface
     training
 
 Extensions

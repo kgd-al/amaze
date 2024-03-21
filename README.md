@@ -102,3 +102,10 @@ According to the combinations of input and output spaces, the library can work i
 ## Further reading
 The documentation is available at (https://amaze.readthedocs.io/) including
 installation instruction (pip) and detailed examples.
+
+## Acknowledgement
+
+This research was funded by the Hybrid Intelligence Center, a 10-year programme
+funded by the Dutch Ministry of Education, Culture and Science through the
+Netherlands Organisation for Scientific Research,
+[https://hybrid-intelligence-centre.nl](https://hybrid-intelligence-centre.nl), grant number 024.004.022.
