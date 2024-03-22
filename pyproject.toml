@@ -1,6 +1,6 @@
 [project]
 name = "amaze-benchmarker"
-version = "1.0rc0"
+version = "1.0rc0.post1"
 authors = [{ name="Kevin Godin-Dubois", email="k.j.m.godin-dubois@vu.nl"}]
 description = "Benchmark generator for sighted maze-navigating agents"
 readme = "README.md"
@@ -44,7 +44,7 @@ build-backend = "setuptools.build_meta"
 
 [project.optional-dependencies]
 sb3 = [
-  "stable_baselines3",
+  "stable_baselines3[extra]",
   "tensorboard",
   "graphviz"
 ]

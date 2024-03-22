@@ -15,9 +15,10 @@ log(){
     printf "\033[${color}m$1\033[0m\n" | tee $_log
 }
 
-cols=$(tput cols)
+cols=40 #$(($(tput cols) - 2))
 short_output(){
-    tee -a $_log - | tr "\n" "\r" | cut -c -$cols | sed 's/$/\r/'
+    tee -a $_log - 2>&1 | stdbuf -o0 sed "s|^\(.\{$cols\}\).*|\1\r|" | stdbuf -o0 tr -d "\n"
+    echo
 }
 
 wd=$(pwd)
@@ -40,10 +41,11 @@ deploy(){
 
     line
 
-    folder=$(realpath $wd/../__amaze_deploy_test__/$type_name)
+    folder=../__amaze_deploy_test__/$type_name
 
     rm -rf $folder
     mkdir -pv $folder
+    folder=$(realpath $wd/$folder)
 
     _log=$folder.log
 
@@ -55,11 +57,12 @@ deploy(){
         python -m pip install --upgrade --find-links=$download_cache $@ | short_output
     }
 
+    git ls-files | tar Tc - | tar Cx $folder
     cd $folder
-    git clone --depth 1 https://github.com/kgd-al/amaze.git .
+#     git clone --depth 1 https://github.com/kgd-al/amaze.git .
 
     date > $_log
-    log Cloned
+    log Copied
 
     python -mvirtualenv .venv
     source .venv/bin/activate
@@ -88,10 +91,11 @@ deploy(){
         cd -
     elif [ "$type" == "tests" ]
     then
-        pytest
+        pytest | short_output
     fi
 
     deactivate
+    cd -
     line
 }
 
