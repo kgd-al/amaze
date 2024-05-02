@@ -21,19 +21,33 @@ class CheaterController(BaseController):
         self.path = self.simulation.maze.solution[1:]
         self.current_cell = self.simulation.robot.pos.aligned()
         self.previous_cell = self.current_cell
+        self.timestep = self.simulation.timestep
+        self.previous_timestep = self.timestep - 1
+        self.action = None
 
     def __call__(self, _) -> Vec:
+        self.timestep = self.simulation.timestep
+
+        if self.action is not None and self.timestep == self.previous_timestep:
+            return self.action
+
         self.current_cell = self.simulation.robot.pos
         if self.simulation.robot.data.outputs is OutputType.DISCRETE:
-            return Vec(*self.path.pop(0)) - Vec(*self.current_cell.aligned())
+            self.action = (Vec(*self.path.pop(0))
+                           - Vec(*self.current_cell.aligned()))
         else:
-            vec = (Vec(*self.path[0]) + Vec(.5, .5) - self.current_cell)
-            vec /= vec.length()
+            self.action = (Vec(*self.path[0])
+                           + Vec(.5, .5)
+                           - self.current_cell)
+            self.action /= self.action.length()
             cell_index = self.current_cell.aligned()
             if cell_index != self.previous_cell:
                 self.previous_cell = cell_index
                 self.path.pop(0)
-            return vec
+
+        self.previous_timestep = self.timestep
+
+        return self.action
 
     def reset(self):
         self.__init__(simulation=None)

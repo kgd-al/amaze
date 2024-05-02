@@ -1,7 +1,7 @@
 # Personal exclusion
 
 .idea/
-cache/
+resources/cache/
 data/
 obsolete/
 remote/

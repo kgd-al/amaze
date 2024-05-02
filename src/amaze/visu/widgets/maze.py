@@ -14,7 +14,7 @@ from amaze.simu.simulation import Simulation
 from amaze.simu.types import InputType, OutputType
 from amaze.visu import resources
 from amaze.visu.maze import MazePainter, Color, logger
-from amaze.visu.resources import SignType
+from amaze.visu.resources import SignType, qimage_to_numpy
 from amaze.visu.widgets import _trajectory_plotter, has_qt_application
 
 
@@ -246,6 +246,9 @@ class MazeWidget(QLabel):
         self.render_onto(painter, width=width - 2)
         painter.end()
         return img
+
+    def numpy_render(self, width: Optional[int] = None):
+        return qimage_to_numpy(self.pretty_render(width))
 
     @classmethod
     def static_render_to_file(cls, maze, path, size=None, **kwargs):

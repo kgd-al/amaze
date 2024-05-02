@@ -70,7 +70,8 @@ class MainWindow(QWidget):
         if runnable:
             self.playing = False
             self.speed = 1
-            self.timer_dt = args.dt or .1
+
+            self.timer_dt = args.dt if args and args.dt else .1
 
             self.timer = QTimer()
 
@@ -141,10 +142,12 @@ class MainWindow(QWidget):
         self._update()
         self.buttons["play"].setFocus()
 
-        self._movie = _MovieRecorder(self, args.movie) if args.movie else None
+        self._movie = _MovieRecorder(self, args.movie) if args and args.movie else None
 
         if self.robot_mode:  # Trimmed down version for the robot
             self._set_robot_mode_layout()
+
+        self.maze_changed.emit()
 
     # =========================================================================
     # == Miscellaneous controllers
@@ -209,7 +212,7 @@ class MainWindow(QWidget):
         self.maze_w.reset_from_simulation(self.simulation)
         self.simulation.generate_inputs()
         self.sections[self.Sections.CONFIG].setEnabled(True)
-        if self.runnable:
+        if self.runnable and self.controller:
             self.next_action = self._think()
         self._update()
 
@@ -231,6 +234,9 @@ class MainWindow(QWidget):
         if self.controller:
             title += f" | {self.controller.name()}"
         self.setWindowTitle(title)
+
+        if flags & reset.MAZE:
+            self.maze_changed.emit()
 
     # =========================================================================
     # == Private control
@@ -324,8 +330,9 @@ class MainWindow(QWidget):
             def lbl(k): return self.visu["img_" + k]
             lbl("inputs").set_inputs(self.simulation.observations,
                                      self.simulation.data.inputs)
-            lbl("outputs").set_outputs(self.next_action,
-                                       self.simulation.data.outputs)
+            if self.controller is not None:
+                lbl("outputs").set_outputs(self.next_action,
+                                           self.simulation.data.outputs)
             lbl("values").set_values(self.controller,
                                      self.simulation.observations)
 
@@ -345,8 +352,6 @@ class MainWindow(QWidget):
             data = stats[key]
             self.stats[f"m_{key}"].setText(
                 str(data) if data is not None else "/")
-
-        self.maze_changed.emit()
 
         return maze
 
@@ -645,7 +650,7 @@ class MainWindow(QWidget):
         row("Outputs", cb)
 
         cb = widget(QComboBox, "control")
-        cb.addItems([v.lower() for v in ["Random", "Cheater",
+        cb.addItems([v.lower() for v in ["Cheater", "Random",
                                          "Keyboard", "Autonomous"]])
         row("Control", cb)
 
@@ -829,7 +834,7 @@ class MainWindow(QWidget):
         return viewer_options
 
     def _save_settings(self):
-        if not self.args.restore_config:
+        if not self.args or not self.args.restore_config:
             return
 
         config = self._settings()

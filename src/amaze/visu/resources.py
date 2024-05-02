@@ -1,4 +1,5 @@
 import copy
+import logging
 import os
 import pprint
 import sys
@@ -13,6 +14,11 @@ from PyQt5.QtCore import Qt, QRectF, QPointF
 from PyQt5.QtGui import QPainter, QPainterPath, QColor, QImage, QTransform, QPolygonF
 
 logger = getLogger(__name__)
+
+# Change cache location to /resources/cache
+# change custom folder location  /resources/custom
+# extension always png
+# change test from path.suffix to path.exists()
 
 
 # =============================================================================
@@ -77,17 +83,12 @@ class Sign:
         else:
             raise ValueError(f"Mis-formed sign: {tokens}")
 
-        p_name = Path(name)
-        if p_name.suffix:
-            if p_name.exists():
-                name = p_name
-            else:
-                raise ValueError(f"Path like argument '{p_name}' does not"
-                                 f" refer to an existing file")
-
-        elif name not in builtins():
+        if name not in names():
             raise ValueError(f"Unknown cue name '{name}'."
-                             f" Valid values are {pprint.pformat(builtins())}")
+                             f" Valid values are:\n"
+                             f" > {', '.join(builtins())} (built-ins)\n"
+                             f" > {', '.join(_custom_paths.keys())}"
+                             f" (custom from {custom_resources_path()})")
 
         return cls(name, val)
 
@@ -105,14 +106,29 @@ DataKey = Tuple[str, float, int]
 
 def resources_path():
     """ Where to look for sign images and where to cache built-ins """
-    return Path("cache/resources/")
+    return Path("resources")
+
+
+def cached_resources_path() -> Path:
+    """ Where to look for cached built-ins """
+    return resources_path().joinpath("cache")
+
+
+def custom_resources_path() -> Path:
+    """ Where to look for custom images """
+    return resources_path().joinpath("custom")
+
+
+def resources_format() -> str:
+    """ Image format for the cached and custom resources """
+    return "png"
 
 
 # =============================================================================
 # Image loader/generator
 
 def _key_to_path(key: DataKey) -> str:
-    return f"{key[0]}_{key[1]:.2}_{key[2]}.png"
+    return f"{key[0]}_{key[1]:.2}_{key[2]}.{resources_format()}"
 
 
 @cache
@@ -124,30 +140,58 @@ def _factories():
     return factories
 
 
-@cache
 def _get_image(key: DataKey):
-    filename = resources_path().joinpath(_key_to_path(key))
+    # First look in RAM cache
+    if (img := _cache.get(key)) is not None:
+        return img
 
-    if False and not os.environ["KGD_AMAZE_NOCACHE"]:
+    # Else look in file cache
+    filename = cached_resources_path().joinpath(_key_to_path(key))
+    if not os.environ.get("KGD_AMAZE_NOCACHE", False):
         if filename.exists():
             img = QImage(str(filename))
             if not img.isNull():
+                _cache[key] = img
                 return img
             else:
                 logger.warning(f"Error loading file {filename}")
+                return __generator__error()
 
-    img = _factories()[key[0]](*key[1:])
-    if not img.isNull():
+    if (factory := _factories().get(key[0])) is not None:
+        img = factory(*key[1:])
+        if img.isNull():
+            logger.warning(f"Error generating {key}")
+            return __generator__error()
+
         filename.parent.mkdir(parents=True, exist_ok=True)
         img.save(str(filename))
+        _cache[key] = img
         return img
-    else:
-        logger.warning(f"Error generating {key}")
-        return __generator__error()
+
+    if (source := _custom_paths.get(key[0])) is not None:
+        img = QImage(str(source))
+        w, h = img.width(), img.height()
+        if w != h and w != 4*h:
+            logger.warning(f"Malformed image for {key} at {source}: Size is"
+                           f" {w}x{h} which is neither a single or 4 squares")
+        img = _scale_qimage(img, *key[1:])
+        if img.isNull():
+            logger.warning(f"Error loading {key} from {source}")
+            return __generator__error()
+        img.save(str(filename))
+        _cache[key] = img
+        return img
 
 
 # =============================================================================
 # Internals
+
+
+def _scale_qimage(img: QImage, lightness: float, size: int):
+    if lightness != _default_lightness():
+        logging.warning("Specifying lightness for custom images is not yet"
+                        " supported.")
+    return img.scaled(size, size, transformMode=Qt.SmoothTransformation)
 
 
 def _image(width: int, lightness: float, multi=False):
@@ -241,14 +285,21 @@ def builtins():
 
 def __extract_names():
     nlist = []
-    for f in resources_path().glob("*.png"):
-        if f.name.count('_') == 0:  # Base (user-provided) file
-            nlist.append(f.name)
+    cdict = {}
+    for f in custom_resources_path().glob(f"*.{resources_format()}"):
+        nlist.append(f.stem)
+        cdict[f.stem] = f
     nlist.extend(builtins())
-    return nlist
+    return nlist, cdict
 
 
-_names = __extract_names()
+_names, _custom_paths = __extract_names()
+_cache: dict[DataKey, QImage] = {}
+
+# print("[kgd-debug] cached resources lists:")
+# pprint.pprint(_names)
+# pprint.pprint(_custom_paths)
+# print("[kgd-debug] =====")
 
 
 def names():
@@ -305,13 +356,21 @@ def np_images(signs: Signs, resolution: int,
             painter = QPainter(img)
             painter.drawImage(img.rect(), p, p.rect())
             painter.end()
-            w, h = img.width(), img.height()
-            b = img.constBits().asstring(img.byteCount())
-            bw = img.bytesPerLine()
-            arr = np.ndarray(shape=(h, bw),
-                             buffer=b,
-                             dtype=np.uint8)[:, :w]
-            subarray.append(copy.deepcopy(_v_scale(np.flipud(arr))))
+            subarray.append(
+                copy.deepcopy(
+                    _v_scale(
+                        np.flipud(
+                            qimage_to_numpy(img)))))
         arrays.append(subarray)
 
     return arrays
+
+
+def qimage_to_numpy(img: QImage) -> np.ndarray:
+    w, h, d = img.width(), img.height(), img.depth() // 8
+    b = img.constBits().asstring(img.byteCount())
+    bw = img.bytesPerLine() // d
+    shape = (h, bw) if d == 1 else (h, bw, d)
+    return np.ndarray(
+        shape=shape, buffer=b, dtype=np.uint8)[:, :w]
+

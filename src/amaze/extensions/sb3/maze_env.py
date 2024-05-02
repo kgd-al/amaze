@@ -18,6 +18,7 @@ from amaze.simu.maze import Maze
 from amaze.simu.robot import Robot
 from amaze.simu.simulation import Simulation
 from amaze.simu.types import InputType, OutputType
+from amaze.visu.resources import qimage_to_numpy
 from amaze.visu.widgets.maze import MazeWidget
 
 logger = logging.getLogger(__name__)
@@ -163,7 +164,7 @@ class MazeEnv(Env):
             self.widget.render_onto(painter, width=s)
             painter.end()
 
-            return self._qimage_to_numpy(img)
+            return qimage_to_numpy(img)
 
     def close(self):
         """ Stub """
@@ -203,7 +204,7 @@ class MazeEnv(Env):
                 img_format=QImage.Format_RGBA8888,
                 path=None
             )
-            img = self._qimage_to_numpy(plot)
+            img = qimage_to_numpy(plot)
         return img
 
     def _create_widget(self, show_robot=False):
@@ -223,14 +224,6 @@ class MazeEnv(Env):
         self.widget.update_config(
             robot=show_robot, solution=True, dark=True)
         return self.widget
-
-    @staticmethod
-    def _qimage_to_numpy(img: QImage) -> np.ndarray:
-        w, h, d = img.width(), img.height(), img.depth() // 8
-        b = img.constBits().asstring(img.byteCount())
-        bw = img.bytesPerLine() // d
-        return np.ndarray(
-            shape=(h, bw, d), buffer=b, dtype=np.uint8)[:, :w]
 
     def _observations(self):
         return self.mapper.map_observation(self._simulation.observations)
