@@ -1,6 +1,6 @@
 [project]
 name = "amaze-benchmarker"
-version = "1.0rc0.post1"
+version = "1.0rc0.post2"
 authors = [{ name="Kevin Godin-Dubois", email="k.j.m.godin-dubois@vu.nl"}]
 description = "Benchmark generator for sighted maze-navigating agents"
 readme = "README.md"

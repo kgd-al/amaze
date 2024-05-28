@@ -171,15 +171,22 @@ def _get_image(key: DataKey):
     if (source := _custom_paths.get(key[0])) is not None:
         img = QImage(str(source))
         w, h = img.width(), img.height()
-        if w != h and w != 4*h:
+        if w != h and 4*w != h:
             logger.warning(f"Malformed image for {key} at {source}: Size is"
                            f" {w}x{h} which is neither a single or 4 squares")
-        img = _scale_qimage(img, *key[1:])
+        img = _process_custom_image(img, *key[1:])
         if img.isNull():
             logger.warning(f"Error loading {key} from {source}")
             return __generator__error()
-        img.save(str(filename))
+        logger.info(f"Using custom sign ({source}) of size {img.size()}")
+        ok = img.save(str(filename))
+        if ok:
+            logger.info(f"Saved {key} to cache")
+        else:
+            logger.warning(f"Could not save {key} to cache")
+
         _cache[key] = img
+
         return img
 
 
@@ -187,11 +194,20 @@ def _get_image(key: DataKey):
 # Internals
 
 
-def _scale_qimage(img: QImage, lightness: float, size: int):
+def _process_custom_image(img: QImage, lightness: float, size: int):
+    img = img.convertTo(QImage.Format_ARGB32) \
+             .scaledToWidth(size, mode=Qt.SmoothTransformation)
+
     if lightness != _default_lightness():
         logging.warning("Specifying lightness for custom images is not yet"
                         " supported.")
-    return img.scaled(size, size, transformMode=Qt.SmoothTransformation)
+    # depth = 4
+    # for j in range(img.height()):
+    #     scan = img.scanLine(j)
+    #     for i in range(img.width()):
+    #         rgb =
+
+    return img
 
 
 def _image(width: int, lightness: float, multi=False):
@@ -295,6 +311,7 @@ def __extract_names():
 
 _names, _custom_paths = __extract_names()
 _cache: dict[DataKey, QImage] = {}
+cached_resources_path().mkdir(parents=True, exist_ok=True)
 
 # print("[kgd-debug] cached resources lists:")
 # pprint.pprint(_names)
