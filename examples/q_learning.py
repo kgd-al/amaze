@@ -4,7 +4,8 @@ import random
 import shutil
 import time
 
-from amaze.simu.controllers.control import controller_factory, save, check_types
+from amaze.simu.controllers.control import (controller_factory, save,
+                                            check_types)
 from amaze.simu.controllers.tabular import TabularController
 from amaze.simu.maze import Maze
 from amaze.simu.robot import Robot
@@ -140,7 +141,7 @@ def evaluate_generalization(policy):
     print()
     print("="*80)
     print("Testing for generalization")
-    _log_format = f"\r[{{:6.2f}}%] normalized reward: {{:.1g}} for {{}}"
+    _log_format = "\r[{:6.2f}%] normalized reward: {:.1g} for {}"
 
     for i in range(n):
         maze_data = Maze.BuildData(

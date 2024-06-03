@@ -1,5 +1,5 @@
 from PyQt5.QtCore import QTimer
-from PyQt5.QtWidgets import (QMainWindow, QWidget, QHBoxLayout, QFormLayout,
+from PyQt5.QtWidgets import (QWidget, QHBoxLayout, QFormLayout,
                              QSpinBox, QDoubleSpinBox, QCheckBox, QComboBox)
 
 import amaze

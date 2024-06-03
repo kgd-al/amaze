@@ -1,4 +1,5 @@
-from amaze import *
+from amaze import (Maze, Robot, MazeWidget, Simulation,
+                   application, load, amaze_main)
 
 # Global variables
 FOLDER = "tmp/demos/visualization"
@@ -34,7 +35,7 @@ trajectory_img = f"{FOLDER}/{agent_name}_{maze_str}.png"
 MazeWidget.plot_trajectory(
     simulation=simulation, size=WIDTH, path=trajectory_img,
 )
-print(f"Plotted {agent_path}" 
+print(f"Plotted {agent_path}"
       f" in {simulation.maze.to_string()}"
       f" to {trajectory_img}")
 

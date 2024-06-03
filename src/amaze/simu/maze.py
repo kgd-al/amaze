@@ -26,6 +26,11 @@ from amaze.visu.resources import Sign, SignType
 logger = getLogger(__name__)
 
 
+class classproperty(property):
+    def __get__(self, owner_self, owner_cls):
+        return self.fget(owner_cls)
+
+
 class Maze:
     """Main data structure storing everything needed during simulation
     """
@@ -316,6 +321,14 @@ class Maze:
 
     def direction_from_offset(self, i: int, j: int):
         return self._offsets_inv[(i, j)]
+
+    @classproperty
+    def offsets(self):
+        return self._offsets
+
+    @classproperty
+    def offsets_inv(self):
+        return self._offsets_inv
 
     def _set_wall(self, i: int, j: int, d: Direction, wall: bool):
         od = self._offsets[d]

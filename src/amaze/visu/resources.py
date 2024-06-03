@@ -63,6 +63,8 @@ class Sign:
 
     def __eq__(self, other): return tuple(self) == tuple(other)
 
+    def __hash__(self): return hash(tuple(self))
+
     @classmethod
     def from_string(cls, s: str):
         tokens = s.split(cls.sep)
@@ -195,7 +197,7 @@ def _get_image(key: DataKey):
 
 
 def _process_custom_image(img: QImage, lightness: float, size: int):
-    img = img.convertTo(QImage.Format_ARGB32) \
+    img = img.convertToFormat(QImage.Format_ARGB32) \
              .scaledToWidth(size, mode=Qt.SmoothTransformation)
 
     if lightness != _default_lightness():
@@ -234,7 +236,7 @@ def __generator__error(lightness: float = 0, size: int = 15):
     return img
 
 
-def _arrow_path():
+def arrow_path():
     path = QPainterPath()
     path.moveTo(0., .4)
     path.lineTo(0., .6)
@@ -249,7 +251,7 @@ def _arrow_path():
 
 def __generator__arrow(lightness: float, size: int):
     img, painter = _image(size, lightness)
-    painter.fillPath(_arrow_path(), __pen_color(lightness))
+    painter.fillPath(arrow_path(), __pen_color(lightness))
     painter.end()
 
     return img

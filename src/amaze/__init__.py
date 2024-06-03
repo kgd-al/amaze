@@ -7,3 +7,11 @@ from amaze.visu.widgets.maze import MazeWidget
 from amaze.visu.widgets import application
 from amaze.visu.resources import Sign
 from amaze.bin.main import main as amaze_main
+
+__all__ = [
+    "Maze", "Robot", "Simulation", "InputType", "OutputType",
+    "StartLocation", "load",
+    "MazeWidget", "application",
+    "Sign",
+    "amaze_main"
+]

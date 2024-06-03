@@ -1,17 +1,21 @@
 from logging import getLogger
+from logging import getLogger
+from pathlib import Path
 from types import SimpleNamespace
-from typing import Union, TypeVar, Optional
+from typing import Union, TypeVar, Optional, Tuple
 
 import numpy as np
 import pandas as pd
 
 from amaze.simu import _maze_metrics
 from amaze.simu.maze import Maze
-from amaze.simu.pos import Pos, AlignedPos
+from amaze.simu.pos import Pos
 from amaze.simu.robot import Robot
 from amaze.simu.types import InputType, OutputType, Action, State
 from amaze.visu import resources
 from amaze.visu.resources import SignType
+from ._inputs_evaluation import (inputs_evaluation)
+from .controllers.base import BaseController
 
 logger = getLogger(__name__)
 
@@ -35,6 +39,11 @@ class Simulation:
     Handles all three configurations: full discrete, full continuous and
     hybrid
     """
+
+    DiscreteVisual = Tuple[float, Maze.Direction, SignType, Maze.Direction]
+    ImageVisual = np.ndarray
+    NoVisual = float
+
     def __init__(self,
                  maze: Resettable[Maze] = None,
                  robot: Resettable[Robot.BuildData] = None,
@@ -284,7 +293,8 @@ class Simulation:
         if prev_cell != cell:
             self.robot.prev_cell = prev_cell
 
-        if self.errors and (v := self._discrete_visual(prev_cell)):
+        if (self.errors and
+                (v := self._discrete_visual(self.visuals[prev_cell]))):
             diff = (cell[0] - prev_cell[0], cell[1] - prev_cell[1])
             if not any(diff):
                 diff = action
@@ -314,8 +324,9 @@ class Simulation:
         return reward
 
     def generate_inputs(self) -> State:
-        i: State = self.observations
-        i.fill(0)
+        io = (self.data.inputs, self.data.outputs)
+        obs: State = self.observations
+        obs.fill(0)
         cell = self.robot.cell()
         prev_cell = self.robot.prev_cell
 
@@ -325,76 +336,102 @@ class Simulation:
             dy = prev_cell[1] - cell[1]
             prev_dir = self.maze.direction_from_offset(dx, dy)
 
-        if self.data.inputs is InputType.DISCRETE:
-            i[:4] = [self.maze.wall(cell[0], cell[1], d) for d in Maze.Direction]
-            if prev_dir:
-                i[prev_dir.value] = .5
+        walls = self.maze.walls[cell[0], cell[1]]
+        visual = self.visuals[cell]
+        if io == (InputType.DISCRETE, OutputType.DISCRETE):
+            return self._fill_discrete_visual_buffer(
+                obs, walls, self._discrete_visual(visual), prev_dir)
 
-            if d := self._discrete_visual(cell):
-                i[4+d[1].value] = d[0]
+        elif io == (InputType.CONTINUOUS, OutputType.DISCRETE):
+            self._fill_continuous_visual_buffer(
+                obs, walls, self._image_visual(visual), prev_dir)
+
+        elif io == (InputType.CONTINUOUS, OutputType.CONTINUOUS):
+            v = self.data.vision
+
+            x, y = self.robot.pos
+            dpx = int((x - int(x) - .5) * v)
+            dpy = int((y - int(y) - .5) * v)
+
+            if dpx == 0 and dpy == 0:
+                self._fill_continuous_visual_buffer(
+                    obs, walls, self._image_visual(visual), prev_dir)
+
+            else:
+                buffer = np.zeros((3*v, 3*v))
+                for di, dj in [(i - 1, j - 1) for i, j in np.ndindex(3, 3)]:
+                    cx, cy = cell[0] + di, cell[1] + dj
+                    if not 0 <= cx <= self.maze.width - 1 \
+                            or not 0 <= cy <= self.maze.height - 1:
+                        continue
+                    self._fill_continuous_visual_buffer(
+                        buffer[(-dj+1)*v:(-dj+2)*v, (di+1)*v:(di+2)*v],
+                        self.maze.walls[cx, cy],
+                        self._image_visual(self.visuals[(cx, cy)]),
+                        prev_dir if di == 0 and dj == 0 else None)
+
+                obs[:] = buffer[v-dpy:2*v-dpy, v+dpx:2*v+dpx]
 
         else:
+            raise ValueError(f"Invalid I/O combination: {io}")
 
-            if self.data.outputs is OutputType.DISCRETE:
-                self._fill_visual_buffer(i, cell, prev_dir)
-            else:
-                v = self.data.vision
+        return obs
 
-                x, y = self.robot.pos
-                dpx = int((x - int(x) - .5) * v)
-                dpy = int((y - int(y) - .5) * v)
+    @staticmethod
+    def _discrete_visual(visual: Union[DiscreteVisual, float]) \
+            -> Optional[DiscreteVisual]:
+        return (visual
+                if not isinstance(visual, float) or not np.isnan(visual)
+                else None)
 
-                if dpx == 0 and dpy == 0:
-                    self._fill_visual_buffer(i, cell, prev_dir)
+    @staticmethod
+    def _image_visual(visual: Union[ImageVisual, float]) \
+            -> Optional[ImageVisual]:
+        return (visual
+                if visual is not None and not np.any(np.isnan(visual))
+                else None)
 
-                else:
-                    buffer = np.zeros((3*v, 3*v))
-                    for di, dj in [(i - 1, j - 1) for i, j in np.ndindex(3, 3)]:
-                        cx, cy = cell[0] + di, cell[1] + dj
-                        if not 0 <= cx <= self.maze.width - 1 \
-                                or not 0 <= cy <= self.maze.height - 1:
-                            continue
-                        self._fill_visual_buffer(
-                            buffer[(-dj+1)*v:(-dj+2)*v, (di+1)*v:(di+2)*v],
-                            (cx, cy),
-                            prev_dir if di == 0 and dj == 0 else None)
+    @staticmethod
+    def _fill_discrete_visual_buffer(
+            buffer: State,
+            walls: np.ndarray,
+            visual: Optional[DiscreteVisual],
+            prev_dir: Optional[Maze.Direction]):
+        buffer[:4] = [walls[d.value] for d in Maze.Direction]
+        if prev_dir:
+            buffer[prev_dir.value] = .5
 
-                    i[:] = buffer[v-dpy:2*v-dpy, v+dpx:2*v+dpx]
+        if visual is not None:
+            buffer[4+visual[1].value] = visual[0]
 
-        return i
-
-    def _discrete_visual(self, cell):
-        v = self.visuals[cell]
-        return v if not isinstance(v, float) or not np.isnan(v) else None
-
-    def _fill_visual_buffer(self, buffer: np.ndarray,
-                            cell: AlignedPos,
-                            prev_dir: Optional[Maze.Direction]):
+    @staticmethod
+    def _fill_continuous_visual_buffer(
+            buffer: State,
+            walls: np.ndarray,
+            visual: Optional[ImageVisual],
+            prev_dir: Optional[Maze.Direction]):
         # noinspection PyPep8Naming
         EAST, NORTH, WEST, SOUTH = [d for d in Maze.Direction]
-        def _wall(d): return self.maze.wall(*cell, d)
 
         # Draw walls & corners
-        w = [_wall(d) for d in Maze.Direction]
         for s, d in [(np.s_[:, -1], EAST),
                      (np.s_[+0, :], NORTH),
                      (np.s_[:, +0], WEST),
                      (np.s_[-1, :], SOUTH)]:
-            buffer[s] = w[d.value]
+            buffer[s] = walls[d.value]
         for s, dc, dr in [((+0, -1), NORTH, EAST),
                           ((+0, +0), NORTH, WEST),
                           ((-1, -1), SOUTH, EAST),
                           ((-1, +0), SOUTH, WEST)]:
-            buffer[s] = (w[dc.value] or w[dr.value])
+            buffer[s] = (walls[dc.value] or walls[dr.value])
 
         # Place cues/traps
-        if self.visuals is not None and \
-                not np.any(np.isnan(v := self.visuals[cell])):
-            buffer[1:-1, 1:-1] = v
+        if visual is not None:
+            buffer[1:-1, 1:-1] = visual
 
         # Pixel shows the previous cell
         if prev_dir:
-            ix = self.data.vision // 2
+            ix = buffer.shape[0] // 2
             s = [(np.s_[ix, -1]),
                  (np.s_[+0, ix]),
                  (np.s_[ix, +0]),
@@ -411,16 +448,63 @@ class Simulation:
     def discrete_actions():
         return [(1, 0), (0, 1), (-1, 0), (0, -1)]
 
-    @classmethod
-    def compute_complexity(cls, maze: Maze, inputs: InputType, vision: int):
-        inputs = InputType.DISCRETE
-        return _maze_metrics.complexity(
-            maze, cls.generate_visuals_map(maze, inputs, vision), inputs
-        )
+    # @classmethod
+    # def compute_complexity(cls, maze: Maze, inputs: InputType, vision: int):
+    #     inputs = InputType.DISCRETE
+    #     return _maze_metrics.complexity(
+    #         maze, cls.generate_visuals_map(maze, inputs, vision), inputs
+    #     )
 
     @classmethod
     def compute_metrics(cls, maze: Maze, inputs: InputType, vision: int):
         inputs = InputType.DISCRETE
         return _maze_metrics.metrics(
             maze, cls.generate_visuals_map(maze, inputs, vision), inputs
+        )
+
+    def inputs_evaluation(self, results_path: Path,
+                          controller: BaseController,
+                          draw_inputs: bool = False,
+                          draw_individual_files: bool = False,
+                          draw_summary_file: bool = True,
+                          summary_file_ratio: float = 16 / 9):
+
+        """ Evaluates the provided controller on all possible inputs.
+
+        Uses the current maze to generate the list of clues/lures/traps and
+        tests the controller's capacity to take the appropriate action in
+        all cases.
+        Unlike conventional, maze-navigation evaluation for generalization
+        performance evaluation, this method does not suffer from cumulative
+        failure (e.g. missing one intersection may prevent reaching the goal).
+
+        .. warning:: Only available for fully discrete and hybrid spaces
+
+        :param results_path: Folder under which to store the resulting files.
+        :param controller: Controller to evaluate.
+        :param draw_inputs: Whether to draw inputs (without the actions)
+        :param draw_individual_files: Whether to generate a separate file for
+         every input/action
+        :param draw_summary_file: Whether to generate a summary file for
+         all input/action pairs
+        :param summary_file_ratio: Width/Height ratio of the summary file
+        """
+
+        if (self.data.inputs is InputType.CONTINUOUS
+                and self.data.outputs is OutputType.CONTINUOUS):
+            raise ValueError("Enumerating all inputs for the fully discrete"
+                             " case is not supported (because of combinatory"
+                             " explosion).")
+
+        drawer = (self._fill_discrete_visual_buffer
+                  if self.data.inputs is InputType.DISCRETE else
+                  self._fill_continuous_visual_buffer)
+
+        return inputs_evaluation(
+            results_path,
+            self.maze, drawer, self.observations.copy(), controller,
+            draw_inputs=draw_inputs,
+            draw_individual_files=draw_individual_files,
+            draw_summary_file=draw_summary_file,
+            summary_file_ratio=summary_file_ratio
         )

@@ -443,14 +443,16 @@ class MainWindow(QWidget):
             )
             c = controller_factory(ct, args)
 
-        check_types(c, self._robot_data())
-
         simple = c.simple
         if not simple:
             if i_t := c.inputs_types()[0]:
                 self.config['inputs'].setCurrentText(i_t.name.lower())
             if o_t := c.outputs_types()[0]:
                 self.config['outputs'].setCurrentText(o_t.name.lower())
+            if v := c.vision():
+                self.config["vision"].setValue(v)
+
+        check_types(c, self._robot_data())
 
         self.sections[self.Sections.CONTROLLER].setVisible(not simple)
         if not simple:

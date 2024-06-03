@@ -2,12 +2,14 @@
 """
 Main executable for the AMaze library.
 
-Provides and all-in-one entry point for simulation, evaluation and visualization
+Provides and all-in-one entry point for simulation, evaluation and
+ visualization
 """
 
 import argparse
 import logging
 import os
+import pprint
 from dataclasses import dataclass, field
 from importlib import import_module
 from pathlib import Path
@@ -27,15 +29,15 @@ class Options:
 
     maze: Optional[str] = None
     """ String description of the maze
-    
-    :see: 
+
+    :see:
         :meth:`~amaze.simu.maze.Maze.to_string`
         :meth:`~amaze.simu.maze.Maze.from_string`
     """
 
     controller: Optional[str] = None
     """ Path to a pre-trained controller or name of built-in.
-     
+
      :see: :meth:`~amaze.simu.controllers.control.builtin_controllers`
      :note: if a pre-trained controller is provided, the extension should be
         .zip
@@ -45,13 +47,16 @@ class Options:
 
     is_robot: bool = False
     """ Activate "robot-mode" interface.
-     
+
      No global view of the maze, only local perceptions and the instantaneous
      and cumulative rewards
      """
 
     eval: Optional[Path] = None
     """ Path under which to store evaluation results """
+
+    eval_inputs: Optional[Path] = None
+    """ Path under which to store input evaluation results """
 
     autostart: bool = True
     """ Whether to directly start moving the agent around """
@@ -147,6 +152,13 @@ class Options:
                                  " maze and store results under the provided"
                                  " folder")
 
+        parser.add_argument("--evaluate-inputs",
+                            dest="eval_inputs", type=Path,
+                            help="Evaluate provided controller on all possible"
+                                 " inputs according to the provided maze's"
+                                 " signs and store the results under the"
+                                 " provided folder")
+
         parser.add_argument("--render", dest="render", type=Path,
                             nargs='?', const='maze.png',
                             help="Render maze to requested file")
@@ -188,11 +200,18 @@ def __make_simulation(args, trajectory=False):
     if args.cell_width is not None:
         args.width = args.cell_width * maze_bd.width
 
+    robot = Robot.BuildData.from_argparse(args)
+
+    controller = None
+    if args.controller:
+        controller = load(args.controller)
+        robot.override_with(Robot.BuildData.from_controller(controller))
+
     return Simulation(
         Maze.generate(maze_bd),
-        Robot.BuildData.from_argparse(args),
+        robot,
         save_trajectory=trajectory
-    )
+    ), controller
 
 
 def main(sys_args: Optional[Sequence[str] | str] = None):
@@ -239,8 +258,11 @@ def main(sys_args: Optional[Sequence[str] | str] = None):
             args.plot = args.eval.joinpath(args.plot)
         args.eval.mkdir(parents=True, exist_ok=True)
 
+    if args.eval_inputs:
+        args.eval_inputs.mkdir(parents=True, exist_ok=True)
+
     simulate = args.eval or (args.plot and not args.is_robot)
-    window = not (args.render or simulate)
+    window = not (args.render or args.eval_inputs or simulate)
     if not window:
         os.environ["QT_QPA_PLATFORM"] = "offscreen"
 
@@ -249,7 +271,7 @@ def main(sys_args: Optional[Sequence[str] | str] = None):
     logging.basicConfig(level=logging.DEBUG)
 
     if not window:
-        simulation = __make_simulation(args)
+        simulation, controller = __make_simulation(args)
 
         if args.render:
             widget = MazeWidget.from_simulation(
@@ -264,9 +286,13 @@ def main(sys_args: Optional[Sequence[str] | str] = None):
                 logger.info(f"Saved {simulation.maze.to_string()}"
                             f" to {args.render}")
 
+        if args.eval_inputs:
+            res = simulation.inputs_evaluation(args.eval_inputs,
+                                               controller)
+            pprint.pprint(res)
+
         if simulate:
             simulation.reset(save_trajectory=True)
-            controller = load(args.controller)
             while not simulation.done():
                 simulation.step(controller(simulation.observations))
             reward = simulation.robot.reward

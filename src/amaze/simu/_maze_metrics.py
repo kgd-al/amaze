@@ -188,8 +188,8 @@ def __mutual_information(maze: Maze):
 
 def __inseparability(maze: Maze):
     c = maze.clues()
-    l = maze.lures() if maze.p_lure > 0 else []
-    t = maze.traps() if maze.p_trap > 0 else []
+    l = maze.lures() if maze.p_lure and maze.p_lure > 0 else []
+    t = maze.traps() if maze.p_trap and maze.p_trap > 0 else []
     if len(c+l+t) == 0:
         return 0
 

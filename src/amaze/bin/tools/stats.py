@@ -42,7 +42,8 @@ def main(sys_args: Optional[Sequence[str]] = None):
     """ Tool to print stats about mazes without having to simulate them """
     args = Options()
     parser = argparse.ArgumentParser(
-        description="Outputs stats for selected maze in a multitude of formats")
+        description="Outputs stats for selected maze in a multitude of"
+                    " formats")
     Options.populate(parser)
     parser.parse_args(args=sys_args, namespace=args)
 

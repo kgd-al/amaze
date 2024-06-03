@@ -7,3 +7,9 @@ from amaze.simu.robot import Robot
 from amaze.simu.simulation import Simulation
 from amaze.simu.types import InputType, OutputType, StartLocation
 from amaze.simu.controllers.control import load
+
+__all__ = [
+    "Maze", "Robot", "Simulation",
+    "InputType", "OutputType", "StartLocation",
+    "load"
+]

@@ -1,6 +1,6 @@
 import pprint
 
-from amaze.simu import *
+from amaze.simu import Maze, Robot, Simulation, load
 
 print("="*80)
 maze = Maze.from_string("M16_10x10_U")

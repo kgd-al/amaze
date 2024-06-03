@@ -10,12 +10,13 @@ from stable_baselines3.common.logger import configure
 from amaze import Maze, Robot, Simulation, Sign, amaze_main
 from amaze.extensions.sb3 import (make_vec_maze_env, env_method,
                                   load_sb3_controller, PPO,
-                                  TensorboardCallback, sb3_controller, CV2QTGuard)
+                                  TensorboardCallback, sb3_controller,
+                                  CV2QTGuard)
 
 FOLDER = "tmp/demos/sb3"
 BEST = f"{FOLDER}/best_model.zip"
 SEED = 0
-BUDGET = 100000
+BUDGET = 100_000
 VERBOSE = False
 
 TRAIN_MAZE = "M14_20x20_C1"
@@ -39,7 +40,7 @@ def train():
     eval_callback = EvalCallback(
         eval_env,
         best_model_save_path=FOLDER, log_path=FOLDER,
-        eval_freq=BUDGET//(10*len(eval_mazes)), verbose=1,
+        eval_freq=max(100, BUDGET//(10*len(eval_mazes))), verbose=1,
         n_eval_episodes=len(eval_mazes),
         callback_after_eval=tb_callback,
         callback_on_new_best=StopTrainingOnRewardThreshold(
@@ -62,7 +63,7 @@ def evaluate():
     model = load_sb3_controller(BEST)
 
     rng = random.Random(0)
-    robot = Robot.BuildData.from_string("DD")
+    robot = Robot.BuildData.from_controller(model)
 
     n = 1000
     rewards = []
@@ -70,7 +71,7 @@ def evaluate():
     print()
     print("="*80)
     print("Testing for generalization")
-    _log_format = f"\r[{{:6.2f}}%] normalized reward: {{:.1g}} for {{}}"
+    _log_format = "\r[{:6.2f}%] normalized reward: {:.1g} for {}"
 
     simulation = Simulation(Maze.from_string(""), robot)
     for i in range(n):
@@ -111,8 +112,7 @@ def main(is_test=False):
 
     with CV2QTGuard(platform=False):
         amaze_main(f"--controller {BEST} --extension sb3 --maze {TRAIN_MAZE}"
-                   f" --auto-quit --robot-inputs DISCRETE"
-                   f" --robot-outputs DISCRETE --no-restore-config")
+                   f" --auto-quit --no-restore-config")
 
 
 if __name__ == "__main__":

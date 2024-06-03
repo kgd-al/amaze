@@ -2,6 +2,7 @@ from dataclasses import dataclass, field
 from logging import getLogger
 from typing import Annotated, Optional, Tuple
 
+from amaze.simu.controllers.base import BaseController
 from amaze.simu.types import InputType, OutputType
 from amaze.simu.pos import Pos, Vec
 from amaze.simu._build_data import BaseBuildData
@@ -38,13 +39,15 @@ class Robot:
             """ Parses a string into input/output types and, optionally, vision
             size
 
-            Format is: IO[V]
+            Format is: IO[V] or S[V]
 
             where the input character I is taken from :class:`.InputType` and
             be either D (:const:`~amaze.simu.types.InputType.DISCRETE`)
             or C (:const:`~amaze.simu.types.InputType.CONTINUOUS`).
             Similarly, the output character O is taken from :class:`.OutputType`
             and can also either be C or D.
+            Shorthands (S) are also available with D, H, and C corresponding to
+            DD, CD, and CC, respectively.
             In case of continuous inputs, V provides the size of agent's retina
             as an *odd* integer
 
@@ -52,18 +55,60 @@ class Robot:
              even
             """
             bd = cls()
-            assert len(robot) >= 2
-            bd.inputs = cls.__string_to_input[robot[0]]
-            bd.outputs = cls.__string_to_output[robot[1]]
-            if (bd.inputs == InputType.DISCRETE
-                    and bd.outputs == OutputType.CONTINUOUS):
-                raise ValueError("Incompatible hybrid mode. Agent cannot have"
-                                 "discrete inputs and continuous outputs")
 
-            if bd.inputs is InputType.CONTINUOUS and len(robot) > 2:
-                bd.vision = int(robot[2:])
+            assert robot[0] in ["D", "C", "H"]
+            assert robot[1] in ["D", "C"] or robot[1].isdigit()
+            assert all(c.isdigit() for c in robot[2:])
+
+            ix = 1+robot[1].isalpha()
+            io = robot[0:ix]
+            if len(io) == 1:
+                bd.inputs, bd.outputs = {
+                    "D": (InputType.DISCRETE, OutputType.DISCRETE),
+                    "H": (InputType.CONTINUOUS, OutputType.DISCRETE),
+                    "C": (InputType.CONTINUOUS, OutputType.CONTINUOUS),
+                }[io]
+            else:
+                bd.inputs = cls.__string_to_input[io[0]]
+                bd.outputs = cls.__string_to_output[io[1]]
+                if (bd.inputs == InputType.DISCRETE
+                        and bd.outputs == OutputType.CONTINUOUS):
+                    raise ValueError("Incompatible hybrid mode. Agent cannot"
+                                     " have discrete inputs and continuous"
+                                     " outputs")
+
+            if bd.inputs is InputType.CONTINUOUS and ix < len(robot) > 2:
+                bd.vision = int(robot[ix:])
                 if (bd.vision % 2) != 1:
                     raise ValueError("Retina size must be odd")
+            return bd
+
+        @classmethod
+        def from_controller(cls, controller: BaseController) \
+                -> 'Robot.BuildData':
+            """ Create a robot build data from an existing controller"""
+
+            def _err(type):
+                raise ValueError(f"Controller can handle more than one {type}"
+                                 "type. Please use the other constructor to"
+                                 "specify")
+
+            bd = cls()
+
+            if len(i := controller.inputs_types()) > 1:
+                _err("input")
+            else:
+                bd.inputs = i[0]
+
+            if len(o := controller.outputs_types()) > 1:
+                _err("output")
+            else:
+                bd.outputs = o[0]
+
+            if bd.inputs is InputType.CONTINUOUS:
+                if (v := controller.vision()) is not None:
+                    bd.vision = v
+
             return bd
 
         def to_string(self):

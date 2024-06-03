@@ -1,6 +1,8 @@
 """ Implements a wrapper around common models from stable baselines 3 """
 
 import io
+import json
+import pprint
 from typing import Optional, Dict, Type, Union, Tuple
 from zipfile import ZipFile
 
@@ -24,7 +26,7 @@ _classes = {
 }
 _i_types_mapping: Dict[int, InputType] = {
     1: InputType.DISCRETE,
-    2: InputType.CONTINUOUS
+    3: InputType.CONTINUOUS
 }
 _o_types_mapping: Dict[Type[Space], OutputType] = {
     Discrete: OutputType.DISCRETE,
@@ -51,10 +53,11 @@ def wrapped_sb3_model(model_type: Type[BaseAlgorithm]):
 
         def _setup_model(self) -> None:
             super()._setup_model()
+            print("[kgd-debug] SB3 model setup")
             self._i_type = _i_types_mapping[len(self.observation_space.shape)]
             self._o_type = _o_types_mapping[self.action_space.__class__]
             self._vision = None if self._i_type is InputType.DISCRETE \
-                else self.observation_space.shape[0]
+                else self.observation_space.shape[1]
 
             self._mapper = IOMapper(observation_space=self.observation_space,
                                     action_space=self.action_space)
@@ -104,8 +107,14 @@ def wrapped_sb3_model(model_type: Type[BaseAlgorithm]):
             return self._vision
 
         def save(self, path: str, *_args, **_kwargs) -> None:
+            # print("[kgd-debug] infos:\n", pprint.pformat(infos))
             save(self, path,
-                 infos={"algo": self._model_type.__name__},
+                 infos={
+                     "algo": self._model_type.__name__,
+                     "inputs": self._i_type.name,
+                     "outputs": self._o_type.name,
+                     "vision": self._vision,
+                 },
                  *_args, **_kwargs)
 
         def save_to_archive(self, archive: ZipFile, *_args, **_kwargs) -> bool:
@@ -118,6 +127,8 @@ def wrapped_sb3_model(model_type: Type[BaseAlgorithm]):
         @classmethod
         def load_from_archive(cls, archive: ZipFile, *_args, **_kwargs):
             """ Loads the SB3 specific contents from the archive """
+            infos = json.loads(archive.read("infos"))
+            # print("[kgd-debug] infos:\n", pprint.pformat(infos))
             buffer = io.BytesIO(archive.read("sb3.zip"))
             loaded_model = cls._model_type.load(buffer, *_args, **_kwargs)
             model = cls(policy=loaded_model.policy,
@@ -125,6 +136,11 @@ def wrapped_sb3_model(model_type: Type[BaseAlgorithm]):
                         device=loaded_model.device,
                         _init_setup_model=False)
             model.__dict__.update(loaded_model.__dict__)
+            if it := infos.get("inputs"):
+                model._i_type = InputType[it]
+            if ot := infos.get("outputs"):
+                model._o_type = OutputType[ot]
+            model._vision = infos.get("vision")
             return model
 
     return SB3Controller
