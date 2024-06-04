@@ -1,7 +1,6 @@
 import math
-import pprint
 from pathlib import Path
-from typing import Optional, Tuple, Union, Any, overload, Dict
+from typing import Optional, Tuple, Union, Any, Dict
 
 import pandas as pd
 from PyQt5.QtCore import Qt, QPointF, QRectF, QSize
@@ -137,7 +136,8 @@ class MazeWidget(QLabel):
 
     @classmethod
     def from_simulation(cls, simulation: Simulation,
-                        config: Optional[Dict[str, Any]] = None) -> 'MazeWidget':
+                        config: Optional[Dict[str, Any]] = None) \
+            -> 'MazeWidget':
         return cls(maze=simulation.maze, robot=simulation.robot, config=config)
 
     def reset_from_simulation(self, simulation: Simulation):
@@ -150,8 +150,7 @@ class MazeWidget(QLabel):
                       config=self._config,
                       resolution=self._vision,
                       input_type=self._inputs,
-                      is_reset=True
-        )
+                      is_reset=True)
         self.update()
 
     @staticmethod
@@ -215,7 +214,7 @@ class MazeWidget(QLabel):
 
     def _compute_scale(self):
         self._scale = math.floor(min((self.width() - 2) / self._maze.width,
-                                (self.height() - 2) / self._maze.height))
+                                     (self.height() - 2) / self._maze.height))
 
     def paintEvent(self, e):
         maze = self._maze

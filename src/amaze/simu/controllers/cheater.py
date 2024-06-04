@@ -1,12 +1,9 @@
+from typing import List
 from zipfile import ZipFile
 
 from amaze.simu import InputType, OutputType
-from amaze.simu.pos import Pos, Vec
-from random import Random
-from typing import Tuple, Optional, List
-
 from amaze.simu.controllers.base import BaseController
-from amaze.simu.maze import Maze
+from amaze.simu.pos import Vec
 
 
 class CheaterController(BaseController):
@@ -52,10 +49,11 @@ class CheaterController(BaseController):
     def reset(self):
         self.__init__(simulation=None)
 
-    def save_to_archive(self, archive: ZipFile) -> bool:
+    def save_to_archive(self, archive: ZipFile, *args, **kwargs) -> bool:
         raise NotImplementedError
 
-    def load_from_archive(self, archive: ZipFile) -> 'RandomController':
+    def load_from_archive(self, archive: ZipFile, *args, **kwargs) \
+            -> 'CheaterController':
         raise NotImplementedError
 
     @staticmethod

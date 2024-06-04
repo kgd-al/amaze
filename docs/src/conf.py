@@ -73,7 +73,7 @@ autosectionlabel_prefix_document = True  # Make sure the target is unique
 # -- Options for HTML output --------------------------------------------------
 intersphinx_mapping = {
     'python': ('https://docs.python.org/3', None),
-    'pandas': ('https://pandas.pydata.org/pandas-docs/dev', None),
+    'pandas': ('https://pandas.pydata.org/pandas-docs/stable/', None),
     'numpy': ('https://numpy.org/doc/stable/', None),
     'stable-baselines3':
         ('https://stable-baselines3.readthedocs.io/en/master/', None),

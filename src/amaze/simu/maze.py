@@ -17,10 +17,10 @@ from typing import Annotated, Tuple, Optional, List, Dict
 
 import numpy as np
 
-from amaze.simu._build_data import BaseBuildData
-from amaze.simu.types import StartLocation
-from amaze.visu import resources
-from amaze.visu.resources import Sign, SignType
+from ._build_data import BaseBuildData
+from .types import StartLocation
+from ..visu import resources
+from ..visu.resources import Sign, SignType
 
 
 logger = getLogger(__name__)
@@ -260,7 +260,7 @@ class Maze:
         ['visual_index', 'solution_index', 'direction', 'truth'])
     """ A physically instantiated sign with a position, ..."""
 
-    def __init__(self, data: 'amaze.simu.maze.Maze.BuildData', key=None):
+    def __init__(self, data: 'Maze.BuildData', key=None):
         """ Private maze constructor. See `build` for the public API.
         """
         if key is not self.__private_key:
@@ -393,7 +393,8 @@ class Maze:
                 StartLocation.SOUTH_WEST: lambda _i, _j: (_i, _j),
                 StartLocation.SOUTH_EAST: lambda _i, _j: (w - 1 - _j, _i),
                 StartLocation.NORTH_WEST: lambda _i, _j: (_j, h - 1 - _i),
-                StartLocation.NORTH_EAST: lambda _i, _j: (w - 1 - _i, h - 1 - _j),
+                StartLocation.NORTH_EAST: lambda _i, _j: (w - 1 - _i,
+                                                          h - 1 - _j),
             }[data.start]
 
             # Rotate start/end
@@ -466,7 +467,8 @@ class Maze:
             dirs = list(cls._offsets_inv.values())
             if data.start is not StartLocation.SOUTH_WEST:
                 dirs = list(np.roll(dirs, -data.start.value))
-            for vix, six in zip(lure_indices, rng.sample(list(candidates), nl)):
+            for vix, six in zip(lure_indices, rng.sample(list(candidates),
+                                                         nl)):
                 c_i, c_j = maze.solution[six]
                 nc_i, nc_j = maze.solution[six+1]
                 dirs_ = dirs.copy()
@@ -493,7 +495,8 @@ class Maze:
                     if maze.wall(pos[0], pos[1], d_):
                         continue
                     if (maze.solution[six-1] ==
-                            tuple(sum(t) for t in zip(pos, maze._offsets[d_]))):
+                            tuple(sum(t) for t
+                                  in zip(pos, maze._offsets[d_]))):
                         continue
                     new_d = d_
                     break

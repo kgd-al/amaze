@@ -44,8 +44,8 @@ class Robot:
             where the input character I is taken from :class:`.InputType` and
             be either D (:const:`~amaze.simu.types.InputType.DISCRETE`)
             or C (:const:`~amaze.simu.types.InputType.CONTINUOUS`).
-            Similarly, the output character O is taken from :class:`.OutputType`
-            and can also either be C or D.
+            Similarly, the output character O is taken from
+            :class:`.OutputType` and can also either be C or D.
             Shorthands (S) are also available with D, H, and C corresponding to
             DD, CD, and CC, respectively.
             In case of continuous inputs, V provides the size of agent's retina

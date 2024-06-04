@@ -2,8 +2,9 @@ from typing import Optional
 
 from PyQt5.QtCore import Qt, QSize, pyqtSignal
 from PyQt5.QtGui import QIcon
-from PyQt5.QtWidgets import QSizePolicy, QListWidget, QWidget, QVBoxLayout, QHBoxLayout, QComboBox, QDoubleSpinBox, \
-    QToolButton, QLayout
+from PyQt5.QtWidgets import (QSizePolicy, QListWidget, QWidget, QVBoxLayout,
+                             QHBoxLayout, QComboBox, QDoubleSpinBox,
+                             QToolButton, QLayout)
 
 from amaze.visu import resources
 from amaze.visu.resources import Sign, Signs
@@ -113,4 +114,3 @@ class CompactList(QListWidget):
         if not self.model() or self.model().rowCount() == 0:
             return QSize(0, 0)
         return super().viewportSizeHint()
-

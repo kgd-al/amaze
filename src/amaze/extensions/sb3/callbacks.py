@@ -15,7 +15,8 @@ import PIL.Image
 import numpy as np
 from stable_baselines3.common.callbacks import BaseCallback, EvalCallback
 from stable_baselines3.common.evaluation import evaluate_policy
-from stable_baselines3.common.logger import Image, HParam, TensorBoardOutputFormat
+from stable_baselines3.common.logger import (Image, HParam,
+                                             TensorBoardOutputFormat)
 from stable_baselines3.common.vec_env.base_vec_env import tile_images
 
 from amaze.extensions.sb3.maze_env import env_method, env_attr
@@ -95,10 +96,12 @@ class TensorboardCallback(BaseCallback):
         assert len(io_types) == 1, "Non-uniform I/O types"
 
         if self.multi_env:
-            writer.add_text(f"train/rewards",
-                            self.prefix + ": " + self._rewards(self.training_env))
-            writer.add_text(f"eval/rewards",
-                            self.prefix + ":" + self._rewards(self.parent.eval_env))
+            writer.add_text(
+                "train/rewards",
+                self.prefix + ": " + self._rewards(self.training_env))
+            writer.add_text(
+                "eval/rewards",
+                self.prefix + ":" + self._rewards(self.parent.eval_env))
 
         if self.num_timesteps > 0:
             return
@@ -166,8 +169,9 @@ class TensorboardCallback(BaseCallback):
         pil_img.save(folder.joinpath(f"{key}_{name}.png"))
 
     def log_step(self, final: bool):
-        # logger.info(f"[kgd-debug] Logging tensorboard data at time"
-        #             f" {self.num_timesteps} {self.model.num_timesteps} ({final=})")
+        # logger.info(
+        #     f"[kgd-debug] Logging tensorboard data at time"
+        #     f" {self.num_timesteps} {self.model.num_timesteps} ({final=})")
 
         assert isinstance(self.parent, EvalCallback)
         env = self.parent.eval_env
@@ -181,7 +185,7 @@ class TensorboardCallback(BaseCallback):
                        and (self.n_calls % self.log_trajectory_every) == 0))
 
         if print_trajectory:
-            t_str = f"final" if final else \
+            t_str = "final" if final else \
                 self.img_format.format(self.num_timesteps)
             self._print_trajectory(env, "eval", t_str)
 
@@ -191,12 +195,12 @@ class TensorboardCallback(BaseCallback):
             train_env = self.training_env
             env_method(train_env, 'log_trajectory', True)
 
-            logger.info(f"Final log step. Storing performance on training env")
+            logger.info("Final log step. Storing performance on training env")
             r = evaluate_policy(model=self.model, env=train_env)
 
             env_method(train_env, 'log_trajectory', False)
 
-            t_str = f"final" if final else \
+            t_str = "final" if final else \
                 self.img_format.format(self.num_timesteps)
             self._print_trajectory(train_env, "train", t_str)
 

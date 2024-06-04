@@ -5,7 +5,7 @@ from abc import ABC, abstractmethod
 from typing import Tuple, List, Union
 
 import graphviz
-from stable_baselines3.common.policies import BaseModel, ActorCriticCnnPolicy
+from stable_baselines3.common.policies import ActorCriticCnnPolicy
 from torch.nn import Linear, Conv2d, ReLU, Flatten, Sequential
 
 

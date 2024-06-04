@@ -56,10 +56,11 @@ class KeyboardController(QObject, BaseController, metaclass=__Meta):
         else:
             return self.current_action.copy()
 
-    def save_to_archive(self, archive: ZipFile) -> bool:
+    def save_to_archive(self, archive: ZipFile, *args, **kwargs) -> bool:
         raise NotImplementedError
 
-    def load_from_archive(self, archive: ZipFile) -> 'KeyboardController':
+    def load_from_archive(self, archive: ZipFile, *args, **kwargs) \
+            -> 'KeyboardController':
         raise NotImplementedError
 
     @staticmethod
@@ -93,7 +94,7 @@ class KeyboardController(QObject, BaseController, metaclass=__Meta):
                                        for k, down in self.down_keys.items()
                                        if down],
                                       Vec.null())
-            if (l := self.current_action.length()) > 0:
-                self.current_action /= l
+            if (length := self.current_action.length()) > 0:
+                self.current_action /= length
             return True
         return False

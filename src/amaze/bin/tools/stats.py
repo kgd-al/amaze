@@ -33,7 +33,7 @@ class Options:
 def _get_stats(maze: str):
     m = Maze.from_string(maze)
     stats = m.stats()
-    c = Simulation.compute_complexity(m, InputType.DISCRETE, 5)['entropy']
+    c = Simulation.compute_metrics(m, InputType.DISCRETE, 5)['entropy']
     stats.update({f"E{k}": v for k, v in c.items()})
     return stats
 
@@ -52,7 +52,7 @@ def main(sys_args: Optional[Sequence[str]] = None):
                             index_col=False)
         stats_df = None
         try:
-            name_index = list(in_df.columns).index("Name")
+            _ = list(in_df.columns).index("Name")
         except ValueError:
             raise KeyError("No name column in provided file")
         in_df.set_index("Name", inplace=True)
@@ -60,7 +60,7 @@ def main(sys_args: Optional[Sequence[str]] = None):
             # print(f"{i=}, {r=}")
             stats = _get_stats(str(i))
             if stats_df is None:
-                stats_df = pd.DataFrame(columns=stats.keys())
+                stats_df = pd.DataFrame(columns=list(stats.keys()))
             stats_df.loc[i] = stats.values()
         df = in_df.join(stats_df)
         print(df)

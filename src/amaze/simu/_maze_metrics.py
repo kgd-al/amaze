@@ -37,7 +37,6 @@ def __inputs(c, r, maze, visuals):
 
 
 def __all_inputs(maze: Maze, visuals):
-    inputs = defaultdict(lambda: 0)
     cells = maze.iter_cells if not maze.unicursive() else maze.iter_solutions
 
     i = __inputs(*maze.start, maze=maze, visuals=visuals)
@@ -54,7 +53,6 @@ def __all_inputs(maze: Maze, visuals):
 
 
 def __solution_path(maze, visuals):
-    inputs = defaultdict(lambda: 0)
     for j, (c, r) in enumerate(maze.solution):
         i = __inputs(c=c, r=r, maze=maze, visuals=visuals)
         if j > 0:
@@ -187,15 +185,15 @@ def __mutual_information(maze: Maze):
 
 
 def __inseparability(maze: Maze):
-    c = maze.clues()
-    l = maze.lures() if maze.p_lure and maze.p_lure > 0 else []
-    t = maze.traps() if maze.p_trap and maze.p_trap > 0 else []
-    if len(c+l+t) == 0:
+    sc = maze.clues()
+    sl = maze.lures() if maze.p_lure and maze.p_lure > 0 else []
+    st = maze.traps() if maze.p_trap and maze.p_trap > 0 else []
+    if len(sc+sl+st) == 0:
         return 0
 
-    sorted_signs = sorted([(s.value, t) for lst, t in [(c, Sign.CLUE),
-                                                       (l, Sign.LURE),
-                                                       (t, Sign.TRAP)]
+    sorted_signs = sorted([(s.value, t) for lst, t in [(sc, Sign.CLUE),
+                                                       (sl, Sign.LURE),
+                                                       (st, Sign.TRAP)]
                            for s in lst], key=lambda x: x[0])
     range_t = namedtuple("Range", ["l", "u", "t"])
 
@@ -231,7 +229,7 @@ def __inseparability(maze: Maze):
 
 
 def __debug_draw_inputs(inputs, name):
-    app = QApplication([])
+    _ = QApplication([])
     label = InputsLabel()
     label.setFixedSize(5, 5)
     folder = Path(f"tmp/complexity/{name}")
@@ -286,8 +284,9 @@ def metrics(maze: Maze, visuals: np.ndarray, input_type: InputType):
 
         "n_inputs": n_inputs,
         "mutual_information": __mutual_information(maze),
-        #
+
         # "__debug_entropy": {
-        #     k: __entropy_bits(f(maze, visuals)) for k, f in [("all", __all_inputs), ("path", __solution_path)]
+        #     k: __entropy_bits(f(maze, visuals))
+        #     for k, f in [("all", __all_inputs), ("path", __solution_path)]
         # }
     }

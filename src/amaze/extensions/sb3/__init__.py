@@ -5,10 +5,10 @@ from typing import Type
 
 from amaze.extensions.sb3.guard import CV2QTGuard
 
-print("[kgd-debug] >>> sb3 is being imported <<<")
+# print("[kgd-debug] >>> sb3 is being imported <<<")
 
 with CV2QTGuard():
-    print("[kgd-debug] >>> guarding against cv2 <<<")
+    # print("[kgd-debug] >>> guarding against cv2 <<<")
 
     from stable_baselines3 import SAC, A2C, DQN, PPO, TD3
     from stable_baselines3.common.base_class import \
@@ -20,6 +20,11 @@ with CV2QTGuard():
     from amaze.simu.controllers.base import BaseController as _BaseController
     from amaze.simu.controllers.control import \
         CONTROLLERS as __BASE_CONTROLLERS, load
+
+
+__all__ = [
+    "CV2QTGuard", "TensorboardCallback", "env_method", "make_vec_maze_env"
+]
 
 
 def compatible_models():
@@ -54,4 +59,4 @@ def load_sb3_controller(path: str | Path):
     return load(path)
 
 
-print("[kgd-debug] >>> sb3 is imported <<<")
+# print("[kgd-debug] >>> sb3 is imported <<<")

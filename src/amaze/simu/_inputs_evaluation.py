@@ -1,6 +1,5 @@
 import itertools
 import math
-import pprint
 from collections import defaultdict
 from pathlib import Path
 from typing import List, Tuple, Optional, Callable
@@ -13,7 +12,7 @@ from PyQt5.QtGui import QColor, QPainter, QImage
 from .controllers.base import BaseController
 from .maze import Maze
 from .types import Action
-from ..visu.resources import SignType, arrow_path, Sign, qt_images, np_images
+from ..visu.resources import SignType, arrow_path, Sign, np_images
 
 ARROW_PATH = arrow_path()
 
@@ -67,7 +66,7 @@ def __draw_action(painter: QPainter, correct_action, action,
     if action is not None:
         selected_direction = a_to_dir(action)
         if selected_direction == correct_direction:
-            __draw_arrow(painter, Qt.green, correct_direction.value, size,.5)
+            __draw_arrow(painter, Qt.green, correct_direction.value, size, .5)
         else:
             __draw_arrow(painter, Qt.red, selected_direction.value, size, .5)
 

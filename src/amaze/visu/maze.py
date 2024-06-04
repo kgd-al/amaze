@@ -102,7 +102,8 @@ class MazePainter(ABC):
 
         if options["solution"] and maze.solution is not None:
             if maze.unicursive():
-                ignored_cells = {(i_, j_) for i_ in range(w) for j_ in range(h)}
+                ignored_cells = {(i_, j_)
+                                 for i_ in range(w) for j_ in range(h)}
                 for e in maze.solution:
                     ignored_cells.remove(e)
                 for i, j in ignored_cells:
@@ -111,7 +112,8 @@ class MazePainter(ABC):
 
             # painter.setPen(Qt.blue)
             i0, j0 = maze.solution[0]
-            # painter.drawRect(QRectF((i0 + .5) * scale - 1, (j0 + .5) * scale - 1, 2, 2))
+            # painter.drawRect(QRectF((i0 + .5) * scale - 1,
+            #                         (j0 + .5) * scale - 1, 2, 2))
 
             for i, (i1, j1) in enumerate(maze.solution[1:]):
                 self.draw_line((i0 + .5) * scale, (j0 + .5) * scale - 1,

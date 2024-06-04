@@ -2,7 +2,6 @@
 
 import io
 import json
-import pprint
 from typing import Optional, Dict, Type, Union, Tuple
 from zipfile import ZipFile
 
@@ -88,7 +87,8 @@ def wrapped_sb3_model(model_type: Type[BaseAlgorithm]):
                 actions = range(self._mapper.a_space.n)
             else:
                 raise NotImplementedError
-            obs, _ = self.policy.obs_to_tensor(self._mapper.map_observation(inputs))
+            obs, _ = self.policy.obs_to_tensor(
+                self._mapper.map_observation(inputs))
             _, log_prob, _ = self.policy.evaluate_actions(
                 obs, torch.Tensor(actions))
 

@@ -43,7 +43,8 @@ class CustomCNN(BaseFeaturesExtractor):
                 as_tensor(observation_space.sample()[None]).float()
             ).shape[1]
 
-        self.linear = nn.Sequential(nn.Linear(n_flatten, features_dim), nn.ReLU())
+        self.linear = nn.Sequential(nn.Linear(n_flatten, features_dim),
+                                    nn.ReLU())
 
         exit(42)
 

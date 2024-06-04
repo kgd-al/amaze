@@ -11,7 +11,7 @@ class BaseController(ABC):
 
     infos: dict = {}
     """ Generic storage for additional information.
-    
+
     For instance the class of mazes this agent should solve.
     """
 

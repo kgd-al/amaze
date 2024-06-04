@@ -21,7 +21,7 @@ class Vec:
     def __eq__(self, other):
         try:
             return self.x == other[0] and self.y == other[1]
-        except:
+        except IndexError:
             return False
 
     def __iadd__(self, other):
@@ -29,8 +29,11 @@ class Vec:
         self.y += other[1]
         return self
 
-    def __add__(self, other): return type(self)(self.x + other.x, self.y + other.y)
-    def __sub__(self, other): return type(self)(self.x - other.x, self.y - other.y)
+    def __add__(self, other):
+        return type(self)(self.x + other.x, self.y + other.y)
+
+    def __sub__(self, other):
+        return type(self)(self.x - other.x, self.y - other.y)
 
     def __mul__(self, k): return type(self)(self.x * k, self.y * k)
     def __rmul__(self, k): return self.__mul__(k)

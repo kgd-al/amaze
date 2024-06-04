@@ -1,5 +1,4 @@
 from logging import getLogger
-from logging import getLogger
 from pathlib import Path
 from types import SimpleNamespace
 from typing import Union, TypeVar, Optional, Tuple
@@ -204,8 +203,8 @@ class Simulation:
 
         def wall(i_, j_, d_): return self.maze.wall(i_, j_, d_)
 
-        def chk(): return (x - i <= r), (i + 1 - x <= r),\
-                          (y - j <= r), (j + 1 - y <= r)
+        def chk(): return ((x - i <= r), (i + 1 - x <= r),
+                           (y - j <= r), (j + 1 - y <= r))
 
         o_w, o_e, o_s, o_n = chk()
 

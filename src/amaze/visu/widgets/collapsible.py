@@ -1,5 +1,6 @@
 from PyQt5.QtCore import Qt, pyqtSlot
-from PyQt5.QtWidgets import QSizePolicy, QVBoxLayout, QToolButton, QWidget, QGroupBox
+from PyQt5.QtWidgets import (QSizePolicy, QVBoxLayout, QToolButton, QWidget,
+                             QGroupBox)
 
 
 class CollapsibleBox(QWidget):

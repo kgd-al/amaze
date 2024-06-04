@@ -1,7 +1,6 @@
 import copy
 import logging
 import os
-import pprint
 import sys
 from enum import Enum
 from functools import cache
@@ -11,7 +10,8 @@ from typing import List, Tuple
 
 import numpy as np
 from PyQt5.QtCore import Qt, QRectF, QPointF
-from PyQt5.QtGui import QPainter, QPainterPath, QColor, QImage, QTransform, QPolygonF
+from PyQt5.QtGui import (QPainter, QPainterPath, QColor, QImage, QTransform,
+                         QPolygonF)
 
 logger = getLogger(__name__)
 
@@ -237,6 +237,7 @@ def __generator__error(lightness: float = 0, size: int = 15):
 
 
 def arrow_path():
+    """Returns a plain arrow"""
     path = QPainterPath()
     path.moveTo(0., .4)
     path.lineTo(0., .6)
@@ -386,10 +387,10 @@ def np_images(signs: Signs, resolution: int,
 
 
 def qimage_to_numpy(img: QImage) -> np.ndarray:
+    """Converts a QImage into a numpy array"""
     w, h, d = img.width(), img.height(), img.depth() // 8
     b = img.constBits().asstring(img.byteCount())
     bw = img.bytesPerLine() // d
     shape = (h, bw) if d == 1 else (h, bw, d)
     return np.ndarray(
         shape=shape, buffer=b, dtype=np.uint8)[:, :w]
-

@@ -21,7 +21,8 @@ from PyQt5.QtWidgets import (QHBoxLayout, QWidget, QLabel,
                              QVBoxLayout, QToolButton, QSpinBox, QGroupBox,
                              QStyle, QAbstractButton, QCheckBox, QComboBox,
                              QDoubleSpinBox, QFormLayout, QFrame, QGridLayout,
-                             QFileDialog, QSizePolicy, QScrollArea, QMessageBox)
+                             QFileDialog, QSizePolicy, QScrollArea,
+                             QMessageBox)
 
 from amaze.simu._maze_metrics import MazeMetrics
 from amaze.simu.controllers.control import (controller_factory,
@@ -142,7 +143,8 @@ class MainWindow(QWidget):
         self._update()
         self.buttons["play"].setFocus()
 
-        self._movie = _MovieRecorder(self, args.movie) if args and args.movie else None
+        self._movie = (_MovieRecorder(self, args.movie)
+                       if args and args.movie else None)
 
         if self.robot_mode:  # Trimmed down version for the robot
             self._set_robot_mode_layout()
@@ -432,7 +434,7 @@ class MainWindow(QWidget):
             ccb.setCurrentText(new_value)
 
         if error:
-            logger.warning(f"Reverting to keyboard controller")
+            logger.warning("Reverting to keyboard controller")
             ccb.setCurrentText("keyboard")
 
         ct = ccb.currentText()

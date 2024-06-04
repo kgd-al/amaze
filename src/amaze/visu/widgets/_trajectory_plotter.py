@@ -4,7 +4,8 @@ from typing import Optional
 import numpy as np
 import pandas as pd
 from PyQt5.QtCore import Qt, QRectF, QLineF, QPointF
-from PyQt5.QtGui import QImage, QColor, QPainterPath, QLinearGradient, QFontMetrics
+from PyQt5.QtGui import (QImage, QColor, QPainterPath, QLinearGradient,
+                         QFontMetrics)
 
 from amaze.simu.simulation import Simulation
 
@@ -379,12 +380,14 @@ def _plot_trajectory_value(
         painter.setPen(functions['foreground'](dark))
 
         if verbose:
-            painter.drawText(QRectF(x_offset, 0, width - cb_width, .5 * cb_width),
+            painter.drawText(QRectF(x_offset, 0,
+                                    width - cb_width, .5 * cb_width),
                              Qt.AlignCenter, "Expected return")
             painter.drawText(QRectF(x_offset, height - .5 * cb_width,
                                     width - cb_width, .5 * cb_width),
                              Qt.AlignCenter,
-                             f"First cycle ({100 * cycle / len(trajectory):.2g}%)")
+                             f"First cycle"
+                             f" ({100 * cycle / len(trajectory):.2g}%)")
 
     if needs_color_bar:
         # w, h = maze.width, maze.height
@@ -411,7 +414,7 @@ def _plot_trajectory_value(
         painter.drawRect(cb_box)
 
         fm: QFontMetrics = painter.fontMetrics()
-        cb_ticks = 5#min(5, max(diff_v, 2))
+        cb_ticks = 5  # min(5, max(diff_v, 2))
         tick_x, tick_x_w = cb_w + m, .1 * cb_width
         text_offset = .05 * cb_width
         text_rect = QRectF(tick_x + tick_x_w + text_offset, 0,
