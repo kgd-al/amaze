@@ -23,7 +23,8 @@ with CV2QTGuard():
 
 
 __all__ = [
-    "CV2QTGuard", "TensorboardCallback", "env_method", "make_vec_maze_env"
+    "CV2QTGuard", "TensorboardCallback", "env_method", "make_vec_maze_env",
+    "load_sb3_controller", "sb3_controller", "compatible_models"
 ]
 
 
