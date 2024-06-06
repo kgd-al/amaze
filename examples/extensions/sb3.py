@@ -18,6 +18,7 @@ BEST = f"{FOLDER}/best_model.zip"
 SEED = 0
 BUDGET = 100_000
 VERBOSE = False
+ROBOT = "CD"
 
 TRAIN_MAZE = "M14_20x20_C1"
 TEST_SEED = 18
@@ -26,7 +27,7 @@ TEST_SEED = 18
 def train():
     train_mazes = Maze.BuildData.from_string(TRAIN_MAZE).all_rotations()
     eval_mazes = [d.where(seed=TEST_SEED) for d in train_mazes]
-    robot = Robot.BuildData.from_string("DD")
+    robot = Robot.BuildData.from_string(ROBOT)
 
     train_env = make_vec_maze_env(train_mazes, robot, SEED)
     eval_env = make_vec_maze_env(eval_mazes, robot, SEED, log_trajectory=True)

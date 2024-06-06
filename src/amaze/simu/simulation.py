@@ -338,7 +338,7 @@ class Simulation:
         walls = self.maze.walls[cell[0], cell[1]]
         visual = self.visuals[cell]
         if io == (InputType.DISCRETE, OutputType.DISCRETE):
-            return self._fill_discrete_visual_buffer(
+            self._fill_discrete_visual_buffer(
                 obs, walls, self._discrete_visual(visual), prev_dir)
 
         elif io == (InputType.CONTINUOUS, OutputType.DISCRETE):

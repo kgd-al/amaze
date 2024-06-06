@@ -149,12 +149,12 @@ todo_include_todos = True
 
 
 def kgd_init_log():
-    wd = os.path.dirname(__file__)
+    wd = Path(os.path.dirname(__file__))
     if wd is not None:
         global kgd_logger
-        wd += "/_autogen"
-        os.makedirs(wd, exist_ok=True)
-        kgd_logger = f"{wd}/errors.rst"
+        wd = wd.joinpath("_autogen")
+        wd.mkdir(parents=True, exist_ok=True)
+        kgd_logger = wd.joinpath("errors.rst")
         print("[kgd] Logging custom errors to", kgd_logger)
         kgd_log(header=True)
 

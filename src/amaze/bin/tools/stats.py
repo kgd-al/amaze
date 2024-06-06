@@ -33,7 +33,7 @@ class Options:
 def _get_stats(maze: str):
     m = Maze.from_string(maze)
     stats = m.stats()
-    c = Simulation.compute_metrics(m, InputType.DISCRETE, 5)['entropy']
+    c = Simulation.compute_metrics(m, InputType.DISCRETE, 5)
     stats.update({f"E{k}": v for k, v in c.items()})
     return stats
 
@@ -68,8 +68,7 @@ def main(sys_args: Optional[Sequence[str]] = None):
     else:
         df = None
         for maze_str in args.mazes:
-            maze = Maze.from_string(maze_str)
-            stats = maze.stats()
+            stats = _get_stats(maze_str)
             stats['Name'] = maze_str
             if df is None:
                 df = pd.DataFrame(columns=stats.keys())
