@@ -69,7 +69,7 @@ would receive the following inputs:
 For continuous inputs, a raw grayscale image is directly provided to the agent.
 It contains wall information on the outer edge, as well as the same temporal information as with the
 discrete case (centered pixel on the corresponding border).
-The sign, if any, is thus provided a potentially complex image that the agent must parse and understand:
+The sign, if any, is thus provided as a potentially complex image that the agent must parse and understand:
 
 <picture>
     <source
@@ -102,6 +102,11 @@ According to the combinations of input and output spaces, the library can work i
 ## Further reading
 The documentation is available at (https://amaze.readthedocs.io/) including
 installation instruction (pip) and detailed examples.
+
+## Contributing
+
+Contributions to the library aiming at increasing its ease of use in both the scientific and students communities are welcome.
+Any such contribution can be made via a pull request while bugs (in the code or the documentation) should be reported in the dedicated tracker.
 
 ## Acknowledgement
 
