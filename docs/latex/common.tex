@@ -16,6 +16,11 @@
 }{
  \end{scope}
 }
+\newcommand*{\ExtractCoordinateOld}[1]{%
+ \path [transform canvas] (#1);
+ \pgfgetlastxy{\XCoord}{\YCoord}%
+}
+
 \usepackage{substr}
 % \def\jobname{dark}
 \IfSubStringInString{\detokenize{dark}}{\jobname}{

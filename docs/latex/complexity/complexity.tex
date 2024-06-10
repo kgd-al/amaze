@@ -1,0 +1,41 @@
+\documentclass{standalone}
+\input{../common}
+\usetikzlibrary{calc, spy}
+\begin{document}
+\begin{tikzpicture}[remember picture]
+ \begin{scope}[spy using outlines={size=2 cm, connect spies, magnification=5, circle}]
+  \begin{localtoimage}{distributions}{width=.5\textwidth}
+   \def\dx{.1}
+   \coordinate (r) at ($(I.east)+(\dx,0)$);
+   \coordinate (l) at ($(I.west)-(\dx,0)$);
+   \foreach \n/\c/\a/\f in {C/r/south west/complex,
+                            L/r/north west/lures,
+                            T/l/south east/traps,
+                            S/l/north east/simple} {
+    \node (\n) at (\c) [anchor=\a]{\includegraphics[width=.2\textwidth]{example_\f.png}};
+   }
+
+   \foreach \n/\x/\y/\c in {C/.633/.646/0173b2,
+                            L/.643/-.493/de8f05,
+                            T/-.106/.021/029e73,
+                            S/-.512/-.677/d55e00} {
+    \definecolor{tmp}{HTML}{\c}
+    \draw [dashed, tmp] (\n) -- (\x, \y);
+%     \draw [thin, red] (\x, 1) -- (\x, -1) (1, \y) -- (-1, \y);
+   }
+  \end{localtoimage}
+
+  \foreach \c/\a/\b in {C/{-.9,.9}/{.25, -.25},
+                        L/{.95,-.95}/{-.25, .25},
+                        T/{.95,-.3}/{-.25, .25}} {
+   \ExtractCoordinateOld{$(\c)+(\a)$}
+   \edef\tmp{\noexpand\spy [red] on (\XCoord, \YCoord) in node at ($(\c)+(\b)$);}
+   \tmp
+  }
+
+%   \spy [red] on ($(C)+(-.9,.9)$) in node at ($(C)+(.25, -.25)$);
+%   \spy [red] on ($(L)+(.95,-.95)$) in node at ($(L)+(-.25, .25)$);
+%   \spy [red] on ($(T)+(.95,-.3)$) in node at ($(T)+(-.25, .25)$);
+\end{scope}
+\end{tikzpicture}
+\end{document}

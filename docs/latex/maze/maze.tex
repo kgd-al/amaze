@@ -1,16 +1,24 @@
 \documentclass{standalone}
 \input{../common}
 \usetikzlibrary{calc, decorations.pathreplacing, spy, tikzmark}
-\newcommand*{\ExtractCoordinateOld}[1]{%
- \path [transform canvas] (#1);
- \pgfgetlastxy{\XCoord}{\YCoord}%
-}
+\newif\ifwide
+\widefalse
+\IfSubStringInString{\detokenize{wide}}{\jobname}{
+ \widetrue
+}{}
+
 \begin{document}
 \begin{tikzpicture}[>=stealth', remember picture]
  \def\scale{.75}
  \pgfmathsetmacro{\s}{.21 * \scale * \textwidth}
 
- \node (str) [inner sep=0pt] at (0, 8) {
+ \ifwide
+  \coordinate (str_p) at (-13, 0);
+ \else
+  \coordinate (str_p) at (0, 8);
+ \fi
+
+ \node (str) [inner sep=0pt] at (str_p) {
   \LARGE
   M%
   \subnode{str_S}{16}%
@@ -36,7 +44,7 @@
     \coordinate (\n) at (\x, \y);
    }
 
-   \coordinate (L) at (-1.6, 0);
+   \coordinate (L) at (-1.4, 0);
    \coordinate (R) at ( 1.3, 0);
    \coordinate (RR) at ( 1.8, 0);
    \coordinate (RRR) at ( 2.3, 0);
@@ -45,7 +53,7 @@
   \foreach \n/\c in \labels {
    \ExtractCoordinateOld{$(\n)$}
    \edef\tmp{\noexpand\spy [red] on (\XCoord, \YCoord) in node (S\n) at (\c|-\n);}\tmp
- }
+  }
  \end{scope}
  \foreach \n/\c in \labels {\node at (S\n.north) (Sl\n) [anchor=south] {\n};}
 %
@@ -75,9 +83,10 @@
  \draw [->] (str_L.south) ++(0, -5pt) -- (str_L|-DOWN) -- ++(0, -.4)
   node [anchor=north] (strl_L) {Value};
 
+ \ifwide\else
   \draw [dotted] (strl_C) -- (strl_C-|SClue) -- (SlClue);
   \draw [dotted] (strl_T) -- ++(6, 0) |- (STrap);
   \draw [dotted] (strl_L) -- ++(4, 0) |- (SLure);
-
+ \fi
 \end{tikzpicture}
 \end{document}

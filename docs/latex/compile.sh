@@ -8,21 +8,30 @@ date > $log
 
 compile(){
     cd $1
-    echo "### Compiling $1 figure" | tee -a $log
-    for mode in light dark
-    do
-        echo "#### mode: $mode" | tee -a $log
-        for i in 0 1
-        do
-            pdflatex --shell-escape --interaction=nonstopmode --jobname=$mode *.tex >> $log
-        done
-        convert -density 300 $mode.pdf $mode.png
-    done
 
-    rm *.{aux,log,pdf}
+    mode=$2
+    echo "#### mode: $mode" | tee -a $log
+    for i in 0 1
+    do
+        pdflatex --shell-escape --interaction=nonstopmode --jobname=$mode *.tex >> $log
+    done
+    convert -density 300 $mode.pdf $mode.png
+
+    rm *.{aux,log}
 
     cd ..
 }
 
-compile maze
-compile agents
+compile_ld(){
+    echo "### Compiling $1 figure" | tee -a $log
+    for mode in light dark
+    do
+        compile $1 $mode
+    done
+}
+
+compile_ld maze
+compile_ld agents
+compile_ld complexity
+
+compile maze light-wide
