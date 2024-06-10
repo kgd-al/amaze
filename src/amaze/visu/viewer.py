@@ -120,7 +120,7 @@ class MainWindow(QWidget):
                 lambda: self.plot_current_trajectory(
                     args.width,
                     Path(f"tmp/trajectories/human"
-                         f"_{Maze.bd_to_string(self.maze_data())}"
+                         f"_{Maze.to_string()}"
                          f"_{time().strftime('%Y-%m-%d_%H-%M-%S')}"
                          f".png"),
                     symlink=True,
