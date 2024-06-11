@@ -38,6 +38,9 @@ Its primary goal is to provide a way to quickly generate mazes of targeted diffi
 Without paraphrasing the documentation[^1] too much, users of AMaze have two main components to take into consideration: mazes and agents.
 
 ## Mazes
+
+![A sample maze from the library. Every maze can be converted to and from a human-readable string where each underscore-separated component describes one of its facets. The *seed* seeds the random number generator used for the paths and stochastic placement of *lures* and *traps*. These have a specific probability, shape and/or value and may be specified multiple times to increase the complexity.\label{fig:maze}](../docs/latex/maze/light-wide.png)
+
 Every maze can be described by human-readable string as illustrated in \autoref{fig:maze}, where every component is optional with sensible default values (excepted the *seed* which is time-dependent).
 The *seed* is used in the random number generator responsible for: a) the depth-first search that creates the part and b) the stochastic placement of the *lures* and *traps*.
 As will be detailed below, agents only see a single cell at a time making intersections impossible to handle without additional information.
@@ -52,8 +55,6 @@ When intersections are labeled with appropriate clues mazes are considered as *s
 Additionally exhibiting either lures or traps form the corresponding classes while the more general case with all types of signs is labeled as *complex*.
 To accurately compare between different types of mazes across multiple categories, the library provides two dedicated metrics.
 The surprisingness $S_M$ and deceptiveness $D_M$ for a given maze $M$ are as follows:
-
-![A sample maze from the library. Every maze can be converted to and from a human-readable string where each underscore-separated component describes one of its facets. The *seed* seeds the random number generator used for the paths and stochastic placement of *lures* and *traps*. These have a specific probability, shape and/or value and may be specified multiple times to increase the complexity.\label{fig:maze}](../docs/latex/maze/light-wide.png)
 
 $$S_M = - \sum\limits_{i \in I_M} p(i) * log_2(p(i))$$
 $$D_M = \sum\limits_{c \in \text{cells}(M)}
@@ -73,15 +74,22 @@ As illustrated in \autoref{fig:complexity}, the space of all possible mazes[^2] 
 
 Agents in AMaze are loosely embodied robots that wander around mazes perceiving only local information (the cell they are in) and a single bit of memory (the direction they come from, if any).
 To accommodate various use cases, these agents come in three different forms: fully discrete, fully continuous and hybrid.
-In the former case, an agent has access to something akin to a pre-processed input, as in \autoref{fig:d}, where the first four fields describes the wall configuration and the remainder provide information about signs, if any.
-
-![Discrete inputs for the examples shown above.\label{fig:d}](../docs/latex/agents/light-1.png){ width=33% }
-
+In the former case, an agent has access to something akin to a pre-processed input, as in \autoref{fig:inputs}, where the first four fields describes the wall configuration and the remainder provide information about signs, if any.
 The direction of the previous cell is depicted in red *for the benefit of the human observer* as agents only perceive grayscale values.
 In the fully discrete case, these observations are used to deduce the correct action out of the four cardinal directions.
 
+![Discrete (left) and continuous (right) inputs for the examples shown above.\label{fig:inputs}](../docs/latex/agents/light-1-3.png)
 
-![Continuous inputs (images) for the examples shown above.\label{fig:c}](../docs/latex/agents/light-3.png){ width=33% }
+In the hybrid case, actions are identical while observations now become coarse-grained images where walls are indicated by with pixels on the perimeter.
+The temporal information of the previous direction is still provided, as a single white pixel centered on the appropriate side.
+More importantly, the center of the image is used to display an arbitrary shape as a sign (clue, lure or trap).
+Finally, the fully continuous case is characterized by having the robot control its acceleration instead of choosing one cardinal direction.
+Thus, in addition to accurately processing visual data, the agent must also infer and take into consideration its position and intertia.
+
+# Python Ecosystem
+
+As stated in the introduction, numerous benchmarks have been developed in recent years especially in the Python Ecosystem.
+Thanks to its interoperability,
 
 <!-- ![Discrete.\label{demo:dd}](../docs/demo/dd.gif){ width=33% } -->
 <!-- ![Hybrid.\label{demo:cd}](../docs/demo/cd.gif){ width=33% } -->
@@ -105,9 +113,6 @@ For a quick reference, the following citation commands can be used:
 Figures can be included like this:
 ![Caption for example figure.\label{fig:example}](figure.png)
 and referenced from text using \autoref{fig:example}.
-
-Figure sizes can be customized by adding an optional second parameter:
-![Caption for example figure.](figure.png){ width=20% }
 
 # Acknowledgements
 

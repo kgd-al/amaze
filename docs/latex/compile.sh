@@ -35,3 +35,5 @@ compile_ld agents
 compile_ld complexity
 
 compile maze light-wide
+
+montage -geometry +100+0 agents/light-{1,3}.png agents/light-1-3.png
