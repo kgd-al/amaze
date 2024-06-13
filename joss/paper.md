@@ -88,31 +88,34 @@ Thus, in addition to accurately processing visual data, the agent must also infe
 
 # Python Ecosystem
 
-As stated in the introduction, numerous benchmarks have been developed in recent years especially in the Python Ecosystem.
-Thanks to its interoperability,
+As stated in the introduction, benchmark implementations are quite numerous, ranging from classic control [@Barto1983] to Atari games [@Bellemare2013].
+In the context of single-agent environments, an ubiquitous benchmark suite is [gymnasium](https://gymnasium.farama.org/).
+However, AMaze differs from existing benchmarks and benchmark suites on two important points:
 
 <!-- ![Discrete.\label{demo:dd}](../docs/demo/dd.gif){ width=33% } -->
 <!-- ![Hybrid.\label{demo:cd}](../docs/demo/cd.gif){ width=33% } -->
 <!-- ![Continuous.\label{demo:cc}](../docs/demo/cc.gif){ width=33% } -->
 
+: Comparison of AMaze with gymnasium's environments suite.\label{tab:comparison}
 
-Citations to entries in paper.bib should be in
-[rMarkdown](http://rmarkdown.rstudio.com/authoring_bibliographies_and_citations.html)
-format.
++-----------------+---------+------------+------------+-------------+------------+
+| Family          |   Count | Inputs     | Outputs    | Control     |     Median |
+|                 |         |            |            |             |   time (s) |
++=================+=========+============+============+=============+============+
+| Toy Text        |       5 | Discrete   | Discrete   | Random init |      0.010 |
++-----------------+---------+------------+------------+-------------+------------+
+| Classic Control |       5 | Continuous | Both       | Random init |      0.031 |
++-----------------+---------+------------+------------+-------------+------------+
+| AMaze           |      81 | Both       | Both       | Extensive   |      0.035 |
++-----------------+---------+------------+------------+-------------+------------+
+| Mujoco          |       9 | Continuous | Continuous | Random init |      0.085 |
++-----------------+---------+------------+------------+-------------+------------+
+| Box2D           |       5 | Continuous | Both       | Random init |      0.200 |
++-----------------+---------+------------+------------+-------------+------------+
+| ALE             |     104 | Image      | Discrete   | Modes       |      0.397 |
++-----------------+---------+------------+------------+-------------+------------+
 
-If you want to cite a software repository URL (e.g. something on GitHub without a preferred
-citation) then you can do it with the example BibTeX entry below for @fidgit.
 
-For a quick reference, the following citation commands can be used:
-- `@author:2001`  ->  "Author et al. (2001)"
-- `[@author:2001]` -> "(Author et al., 2001)"
-- `[@author1:2001; @author2:2001]` -> "(Author1 et al., 2001; Author2 et al., 2002)"
-
-# Figures
-
-Figures can be included like this:
-![Caption for example figure.\label{fig:example}](figure.png)
-and referenced from text using \autoref{fig:example}.
 
 # Acknowledgements
 
