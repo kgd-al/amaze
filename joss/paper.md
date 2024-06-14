@@ -27,7 +27,7 @@ bibliography: paper.bib
 # Summary
 
 The need to provide fair comparisons between agents, especially in the field of Reinforcement Learning, has led to a plethora of benchmarks.
-However these benchmarks are, for the most part, devoted to tailor made problems with very little degrees of freedom for the experimenter.
+However these benchmarks are, for the most part, devoted to tailor-made problems with very little degrees of freedom for the experimenter.
 AMaze is, instead, a benchmark *generator* capable of producing human-intelligible environment of arbitrarily high complexity.
 By using, potentially custom-made, visual cues in a maze-navigation task, the library empowers researchers across a large breadth of fields.
 
@@ -42,7 +42,7 @@ Without paraphrasing the documentation[^1] too much, users of AMaze have two mai
 ![A sample maze from the library. Every maze can be converted to and from a human-readable string where each underscore-separated component describes one of its facets. The *seed* seeds the random number generator used for the paths and stochastic placement of *lures* and *traps*. These have a specific probability, shape and/or value and may be specified multiple times to increase the complexity.\label{fig:maze}](../docs/latex/maze/light-wide.png)
 
 Every maze can be described by human-readable string as illustrated in \autoref{fig:maze}, where every component is optional with sensible default values (excepted the *seed* which is time-dependent).
-The *seed* is used in the random number generator responsible for: a) the depth-first search that creates the part and b) the stochastic placement of the *lures* and *traps*.
+The *seed* is used in the random number generator responsible for: a) the depth-first search that creates the paths and b) the stochastic placement of the *lures* and *traps*.
 As will be detailed below, agents only see a single cell at a time making intersections impossible to handle without additional information.
 *Clues* provide such an information by helpfully pointing towards the correct direction.
 However, users may additionally specify the presence of *traps*, at a given frequency, to replace a clue at an intersection.
@@ -98,7 +98,7 @@ To illustrate both statements, we compare AMaze to [gymnasium](https://gymnasium
 ![Comparison of AMaze with gymnasium's environments suite. Inputs, Outputs and amount of human Control are taken from the documentation while times are measured on 1000 timesteps averaged over 10 replicates on an i7-1185G7 (3GHz). AMaze is more computationally efficient than all but the simplest environments while also being the more parametrizable with respect to input, outputs and environmental characteristics.\label{tab:comparison}](../docs/latex/benchmarking/gym_pretty_table.pdf)
 
 While taking more time than Classical Control tasks [@Barto1983] or Toy Text environments [@Sutton2018], AMaze is demonstrably faster than those based on 2D ([Box2d](https://box2d.org/)) or 3D ([MuJoCo](https://github.com/google-deepmind/mujoco), @Todorov2012) simulators or the Arcade Learning Environment [@Bellemare2013].
-Furthermore, this comparison uses 81 variations of AMaze with different retina sizes (11, 15, 21), maze sizes (5, 10, 20), lure frequency (0, 0.5, 1) and observation/action spaces (discrete, hybrid and continuous).
+Furthermore, this comparison uses 81 variations of AMaze with different retina sizes (11, 15, 21), maze sizes (5, 10, 20), lure frequencies (0, 0.5, 1) and observation/action spaces (discrete, hybrid and continuous).
 This both showcases the ease of creating feature-specific environments and demonstrates the library computational efficiency even with the most complex of configurations.
 
 # Acknowledgements
