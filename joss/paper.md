@@ -70,6 +70,8 @@ As illustrated in \autoref{fig:complexity}, the space of all possible mazes[^2] 
 [^1]: [https://amaze.readthedocs.io/en/latest/](https://amaze.readthedocs.io/en/latest/)
 [^2]: Sampled from 500'000 unique mazes across all five classes
 
+![Discrete (left) and continuous (right) inputs for the examples shown above.\label{fig:inputs}](../docs/latex/agents/light-1-3.png)
+
 ## Agents
 
 Agents in AMaze are loosely embodied robots that wander around mazes perceiving only local information (the cell they are in) and a single bit of memory (the direction they come from, if any).
@@ -78,9 +80,7 @@ In the former case, an agent has access to something akin to a pre-processed inp
 The direction of the previous cell is depicted in red *for the benefit of the human observer* as agents only perceive grayscale values.
 In the fully discrete case, these observations are used to deduce the correct action out of the four cardinal directions.
 
-![Discrete (left) and continuous (right) inputs for the examples shown above.\label{fig:inputs}](../docs/latex/agents/light-1-3.png)
-
-In the hybrid case, actions are identical while observations now become coarse-grained images where walls are indicated by with pixels on the perimeter.
+In the hybrid case, actions are identical while observations are coarse-grained images where walls are indicated by pixels on the perimeter.
 The temporal information of the previous direction is still provided, as a single white pixel centered on the appropriate side.
 More importantly, the center of the image is used to display an arbitrary shape as a sign (clue, lure or trap).
 Finally, the fully continuous case is characterized by having the robot control its acceleration instead of choosing one cardinal direction.
@@ -88,38 +88,24 @@ Thus, in addition to accurately processing visual data, the agent must also infe
 
 # Python Ecosystem
 
-As stated in the introduction, benchmark implementations are quite numerous, ranging from classic control [@Barto1983] to Atari games [@Bellemare2013].
-In the context of single-agent environments, an ubiquitous benchmark suite is [gymnasium](https://gymnasium.farama.org/).
-However, AMaze differs from existing benchmarks and benchmark suites on two important points:
+AMaze differs from existing benchmarks (suites) on two important points:
 
-<!-- ![Discrete.\label{demo:dd}](../docs/demo/dd.gif){ width=33% } -->
-<!-- ![Hybrid.\label{demo:cd}](../docs/demo/cd.gif){ width=33% } -->
-<!-- ![Continuous.\label{demo:cc}](../docs/demo/cc.gif){ width=33% } -->
+- Computational efficiency when compared to alternative vision-based tasks
+- Extensive control over the environment and intuitive understanding of an agent's behavior
 
-: Comparison of AMaze with gymnasium's environments suite.\label{tab:comparison}
+To illustrate both statements, we compare AMaze to [gymnasium](https://gymnasium.farama.org/), an ubiquitous benchmark suite in the Python ecosystem:
 
-+-----------------+---------+------------+------------+-------------+------------+
-| Family          |   Count | Inputs     | Outputs    | Control     |     Median |
-|                 |         |            |            |             |   time (s) |
-+=================+=========+============+============+=============+============+
-| Toy Text        |       5 | Discrete   | Discrete   | Random init |      0.010 |
-+-----------------+---------+------------+------------+-------------+------------+
-| Classic Control |       5 | Continuous | Both       | Random init |      0.031 |
-+-----------------+---------+------------+------------+-------------+------------+
-| AMaze           |      81 | Both       | Both       | Extensive   |      0.035 |
-+-----------------+---------+------------+------------+-------------+------------+
-| Mujoco          |       9 | Continuous | Continuous | Random init |      0.085 |
-+-----------------+---------+------------+------------+-------------+------------+
-| Box2D           |       5 | Continuous | Both       | Random init |      0.200 |
-+-----------------+---------+------------+------------+-------------+------------+
-| ALE             |     104 | Image      | Discrete   | Modes       |      0.397 |
-+-----------------+---------+------------+------------+-------------+------------+
+![Comparison of AMaze with gymnasium's environments suite. Inputs, Outputs and amount of human Control are taken from the documentation while times are measured on 1000 timesteps averaged over 10 replicates on an i7-1185G7 (3GHz). AMaze is more computationally efficient than all but the simplest environments while also being the more parametrizable with respect to input, outputs and environmental characteristics.\label{tab:comparison}](../docs/latex/benchmarking/gym_pretty_table.pdf)
 
-
+While taking more time than Classical Control tasks [@Barto1983] or Toy Text environments [@Sutton2018], AMaze is demonstrably faster than those based on 2D ([Box2d](https://box2d.org/)) or 3D ([MuJoCo](https://github.com/google-deepmind/mujoco), @Todorov2012) simulators or the Arcade Learning Environment [@Bellemare2013].
+Furthermore, this comparison uses 81 variations of AMaze with different retina sizes (11, 15, 21), maze sizes (5, 10, 20), lure frequency (0, 0.5, 1) and observation/action spaces (discrete, hybrid and continuous).
+This both showcases the ease of creating feature-specific environments and demonstrates the library computational efficiency even with the most complex of configurations.
 
 # Acknowledgements
 
-We acknowledge contributions from Brigitta Sipocz, Syrtis Major, and Semyeong
-Oh, and support from Kathryn Johnston during the genesis of this project.
+This research was funded by the Hybrid Intelligence Center, a 10-year programme
+funded by the Dutch Ministry of Education, Culture and Science through the
+Netherlands Organisation for Scientific Research,
+[https://hybrid-intelligence-centre.nl](https://hybrid-intelligence-centre.nl), grant number 024.004.022.
 
 # References

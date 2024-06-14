@@ -5,15 +5,17 @@ import math
 import time
 import pprint
 import pandas as pd
-import gymnasium as gym
 import matplotlib.pyplot as plt
 import seaborn as sns
+
+import gymnasium as gym
 
 from pathlib import Path
 from rich.progress import Progress
 
 import amaze
 from amaze.extensions.sb3.maze_env import MazeEnv
+
 
 pd.options.display.float_format = '{:.3f}'.format
 
@@ -22,8 +24,8 @@ for v in [11, 15, 21]:
         for io in ["DD", "CD", "CC"]:
             for l in [0, .5, 1]:
                 gym.register(f"AMaze/AMaze.{io}{v}.{s}x{s}.{l}-v0",
-                             lambda *args, _io=io: MazeEnv(maze=amaze.Maze.BuildData.from_string(f"M4_{s}x{s}_C1_l{l}_L.25"),
-                                                           robot=amaze.Robot.BuildData.from_string(f"{_io}{v}"), *args))
+                            lambda *args, _io=io: MazeEnv(maze=amaze.Maze.BuildData.from_string(f"M4_{s}x{s}_C1_l{l}_L.25"),
+                                                        robot=amaze.Robot.BuildData.from_string(f"{_io}{v}"), *args))
 
 registration = gym.envs.registration
 
@@ -182,98 +184,3 @@ with Progress() as progress:
 
                 if not math.isnan(t):
                     df.loc[candidate] = [family, t, len(gym.spec(candidate).kwargs)]
-line()
-print(df)
-df.to_csv(datafile)
-
-line()
-
-gb = df.groupby("Family")
-table = gb.agg({"Time": ['min', 'max', 'median', 'mean', 'std'], "Args": ["max"]})
-table["N"] = gb.count()["Time"]
-table.insert(0, "N", table.pop("N"))
-table.sort_values(("Time", "median"), axis="rows", inplace=True)
-print(table)
-
-line()
-
-manual_data = {
-    "Classic Control": ["Continuous", "Both", "Random init"],
-    "Toy Text": ["Discrete", "Discrete", "Random init"],
-    "Box2D": ["Continuous", "Both", "Random init"],
-    "Mujoco": ["Continuous", "Continuous", "Random init"],
-    "ALE": ["Image", "Discrete", "Modes"],
-    "AMaze": ["Both", "Both", "Extensive"]
-}
-
-md_table = table[[("N", ""), ("Time", "median")]]
-md_table.columns = ["N", "Median time (s)"]
-
-for c in ["Control", "Outputs", "Inputs"]:
-    md_table.insert(1, c, ["?" for _ in range(len(md_table))])
-
-for family, (inputs, outputs, control) in manual_data.items():
-    md_table.loc[family, "Inputs"] = inputs
-    md_table.loc[family, "Outputs"] = outputs
-    md_table.loc[family, "Control"] = control
-
-md_table.to_markdown(folder.joinpath("gym_table.md"), floatfmt=".3f", tablefmt="grid")
-md_table.to_latex(folder.joinpath("gym_table.tex"), float_format="%.3f")
-
-table_pdf = folder.joinpath("gym_table.pdf")
-with amaze.extensions.sb3.CV2QTGuard():
-    positions = [-md_table.index.get_loc(f) for f in sorted(df["Family"].unique())]
-
-    # Cancel this one to get something readable
-    #df.loc["CarRacing-v2"] = float("nan")
-
-    df.boxplot(column="Time", by="Family", vert=False, positions=positions)
-    plt.savefig(folder.joinpath("gym_table.png"))
-
-    df.boxplot(column="Time", by="Family", vert=False, positions=positions, figsize=(3, 2))
-    plt.title("")
-    plt.suptitle("")
-    plt.xlabel("Time (s)")
-    #plt.yticks([])
-    plt.ylabel("")
-    plt.xscale("log")
-    plt.gca().tick_params(top=True, labeltop=True, bottom=False, labelbottom=False)
-    plt.gca().xaxis.set_label_position('top')
-    plt.savefig(table_pdf, bbox_inches='tight')
-
-with open(folder.joinpath("gym_pretty_table.tex"), "w") as f:
-    lc = md_table.columns[-1]
-    table_str = md_table.to_latex(float_format="%.3f")
-    table_str = table_str.replace(r"lr}", r"lrr}")
-    table_str = table_str.replace(lc, f"\\multicolumn{{2}}{{c}}{{{lc}}}")
-
-    def _print(*args): print(*args, file=f)
-    _print(r"\documentclass{standalone}")
-    _print(r"\usepackage{booktabs}")
-    _print(r"\usepackage{tikz}")
-    _print(r"\usetikzlibrary{calc, positioning}")
-    _print(r"\begin{document}")
-    _print(r"\begin{tikzpicture}")
-    _print(r" \node (T){")
-    _print(table_str)
-    _print(r" };")
-    _print(r" \path let \p{A} = ($(T.north)-(T.south)$) in")
-    _print(r"  node (I) [above right=0 of T.south east, scale=.8, xshift=-2cm]")
-    _print(r"   {\includegraphics[height=\y{A}]{", table_pdf, r"}};")
-    _print(r"\end{tikzpicture}")
-    _print(r"\end{document}")
-
-    #_print(r"\documentclass{standalone}")
-    #_print(r"\usepackage{booktabs}")
-    #_print(r"\usepackage{tikz}")
-    #_print(r"\usetikzlibrary{calc, positioning}")
-    #_print(r"\begin{document}")
-    #_print(r"\begin{tikzpicture}")
-    #_print(r" \node (T){")
-    #_print(md_table.to_latex(float_format="%.3f"))
-    #_print(r" };")
-    #_print(r" \path let \p{A} = ($(T.north)-(T.south)$) in")
-    #_print(r"  node (I) [above right=0 of T.south east, scale=.8, yshift=-1cm]")
-    #_print(r"   {\includegraphics[height=\y{A}]{", table_pdf, r"}};")
-    #_print(r"\end{tikzpicture}")
-    #_print(r"\end{document}")
