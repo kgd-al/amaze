@@ -282,6 +282,7 @@ def inputs_evaluation(path: Path,
 
     for walls, correct_action, prev_dir, oriented_sign in inputs:
         obs = observations.copy()
+        obs.fill(0)
 
         visual = None
         if with_visuals and oriented_sign is not None:
@@ -290,6 +291,7 @@ def inputs_evaluation(path: Path,
 
         drawer(obs, walls, visual, prev_dir)
         visuals.append(obs)
+
         action = controller(obs)
         outputs.append(tuple(action))
         # print(obs, oriented_sign)
