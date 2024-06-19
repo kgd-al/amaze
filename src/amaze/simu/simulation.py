@@ -75,11 +75,8 @@ class Simulation:
             steps=0, collisions=0, backsteps=0
         )
 
-        if self.data.inputs is InputType.CONTINUOUS:
-            self.observations = np.zeros((self.data.vision, self.data.vision),
-                                         dtype=np.float32)
-        else:
-            self.observations = np.zeros(8, dtype=np.float32)
+        self.observations = self._observations(self.data.inputs,
+                                               self.data.vision)
 
         self.visuals = self.generate_visuals_map(self.maze, self.data.inputs,
                                                  self.data.vision)
@@ -377,6 +374,15 @@ class Simulation:
         return obs
 
     @staticmethod
+    def _observations(input_type: InputType, vision: Optional[int]):
+        if input_type is InputType.CONTINUOUS:
+            return np.zeros((vision, vision), dtype=np.float32)
+        elif input_type is InputType.DISCRETE:
+            return np.zeros(8, dtype=np.float32)
+        else:
+            raise ValueError(f"Invalid InputType: {input_type=}")
+
+    @staticmethod
     def _discrete_visual(visual: Union[DiscreteVisual, float]) \
             -> Optional[DiscreteVisual]:
         return (visual
@@ -461,18 +467,21 @@ class Simulation:
             maze, cls.generate_visuals_map(maze, inputs, vision), inputs
         )
 
-    def inputs_evaluation(self, results_path: Path,
-                          controller: BaseController,
-                          draw_inputs: bool = False,
-                          draw_individual_files: bool = False,
-                          draw_summary_file: bool = True,
-                          summary_file_ratio: float = 16 / 9):
-
+    @classmethod
+    def static_inputs_evaluation(
+            cls,
+            results_path: Path,
+            controller: BaseController,
+            signs: dict[SignType, Maze.Signs],
+            draw_inputs: bool = False,
+            draw_individual_files: bool = False,
+            draw_summary_file: bool = True,
+            summary_file_ratio: float = 16 / 9
+    ):
         """ Evaluates the provided controller on all possible inputs.
 
-        Uses the current maze to generate the list of clues/lures/traps and
-        tests the controller's capacity to take the appropriate action in
-        all cases.
+        Uses the provided lists of clues/lures/traps and tests the controller's
+        capacity to take the appropriate action in all cases.
         Unlike conventional, maze-navigation evaluation for generalization
         performance evaluation, this method does not suffer from cumulative
         failure (e.g. missing one intersection may prevent reaching the goal).
@@ -481,6 +490,7 @@ class Simulation:
 
         :param results_path: Folder under which to store the resulting files.
         :param controller: Controller to evaluate.
+        :param signs: Dictionary of clues/lures/traps.
         :param draw_inputs: Whether to draw inputs (without the actions)
         :param draw_individual_files: Whether to generate a separate file for
          every input/action
@@ -488,6 +498,50 @@ class Simulation:
          all input/action pairs
         :param summary_file_ratio: Width/Height ratio of the summary file
         """
+
+        i_type, o_type = controller.input_type, controller.output_type
+        if i_type is InputType.CONTINUOUS and o_type is OutputType.CONTINUOUS:
+            raise ValueError("Enumerating all inputs for the fully discrete"
+                             " case is not supported (because of combinatory"
+                             " explosion).")
+
+        drawer = (cls._fill_discrete_visual_buffer
+                  if i_type is InputType.DISCRETE else
+                  cls._fill_continuous_visual_buffer)
+
+        return inputs_evaluation(
+            path=results_path,
+            signs=signs, drawer=drawer,
+            observations=cls._observations(i_type, controller.vision),
+            controller=controller,
+            draw_inputs=draw_inputs,
+            draw_individual_files=draw_individual_files,
+            draw_summary_file=draw_summary_file,
+            summary_file_ratio=summary_file_ratio
+        )
+
+    def inputs_evaluation(self, results_path: Path,
+                          controller: BaseController,
+                          **kwargs):
+
+        """ Evaluates the provided controller on all possible inputs.
+
+        Uses the current maze to generate the list of clues/lures/traps and
+        delegates to :meth:`~static_input_evaluation`.
+
+        .. warning:: Only available for fully discrete and hybrid spaces
+
+        :param results_path: Folder under which to store the resulting files.
+        :param controller: Controller to evaluate.
+        :param kwargs: Additional keyword arguments.
+        """
+
+        return self.static_inputs_evaluation(
+            results_path=results_path,
+            controller=controller,
+            signs=self.maze.signs,
+            **kwargs
+        )
 
         if (self.data.inputs is InputType.CONTINUOUS
                 and self.data.outputs is OutputType.CONTINUOUS):

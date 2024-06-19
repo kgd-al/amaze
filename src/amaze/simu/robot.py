@@ -2,10 +2,10 @@ from dataclasses import dataclass, field
 from logging import getLogger
 from typing import Annotated, Optional, Tuple
 
-from amaze.simu.controllers.base import BaseController
-from amaze.simu.types import InputType, OutputType
-from amaze.simu.pos import Pos, Vec
 from amaze.simu._build_data import BaseBuildData
+from amaze.simu.controllers.base import BaseController
+from amaze.simu.pos import Pos, Vec
+from amaze.simu.types import InputType, OutputType
 
 logger = getLogger(__name__)
 
@@ -88,25 +88,12 @@ class Robot:
                 -> 'Robot.BuildData':
             """ Create a robot build data from an existing controller"""
 
-            def _err(type):
-                raise ValueError(f"Controller can handle more than one {type}"
-                                 "type. Please use the other constructor to"
-                                 "specify")
-
             bd = cls()
-
-            if len(i := controller.inputs_types()) > 1:
-                _err("input")
-            else:
-                bd.inputs = i[0]
-
-            if len(o := controller.outputs_types()) > 1:
-                _err("output")
-            else:
-                bd.outputs = o[0]
+            bd.inputs = controller.input_type
+            bd.outputs = controller.output_type
 
             if bd.inputs is InputType.CONTINUOUS:
-                if (v := controller.vision()) is not None:
+                if (v := controller.vision) is not None:
                     bd.vision = v
 
             return bd

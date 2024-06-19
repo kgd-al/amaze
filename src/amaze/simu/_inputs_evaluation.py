@@ -12,7 +12,7 @@ from PyQt5.QtGui import QColor, QPainter, QImage
 from .controllers.base import BaseController
 from .maze import Maze
 from .types import Action
-from ..visu.resources import SignType, arrow_path, Sign, np_images
+from ..visu.resources import SignType, arrow_path, Sign, np_images, Signs
 
 ARROW_PATH = arrow_path()
 
@@ -182,7 +182,7 @@ def __draw_inputs(path: Path,
         big_image.save(str(path))
 
 
-def _all_inputs(maze: Maze) -> List[InputDetails]:
+def _all_inputs(signs: dict[SignType, Signs]) -> List[InputDetails]:
     inputs: List[InputDetails] = []
 
     def array():
@@ -190,6 +190,10 @@ def _all_inputs(maze: Maze) -> List[InputDetails]:
 
     def i_to_dir(i_):
         return Maze.offsets[Maze.Direction(i_)]
+
+    lures = signs[SignType.LURE]
+    traps = signs[SignType.TRAP]
+    clues = signs[SignType.CLUE]
 
     # First the dead ends
     for i in range(4):
@@ -200,7 +204,7 @@ def _all_inputs(maze: Maze) -> List[InputDetails]:
             a = a.copy()
             inputs.append((a, i_to_dir(i), d, None))
 
-            for lure in maze.lures():
+            for lure in lures:
                 for lure_dir in iter(set(range(4)) - {i}):
                     a_ = a.copy()
                     inputs.append(
@@ -218,7 +222,7 @@ def _all_inputs(maze: Maze) -> List[InputDetails]:
                 i_sol = next(iter(dirs - {d}))
                 sol = i_to_dir(i_sol)
                 inputs.append((a, sol, Direction(d), None))
-                for lure in maze.lures():
+                for lure in lures:
                     for lure_dir in iter(set(range(4)) - {i_sol}):
                         a_ = a.copy()
                         inputs.append(
@@ -231,13 +235,13 @@ def _all_inputs(maze: Maze) -> List[InputDetails]:
             for k in iter(set(range(4)) - {i}):
                 a = array()
                 a[i] = 1
-                for clue in maze.clues():
+                for clue in clues:
                     inputs.append((a, i_to_dir(j), Direction(k),
                                    (clue, SignType.CLUE, Direction(j))))
 
                 if j != k:
                     a = a.copy()
-                    for trap in maze.traps():
+                    for trap in traps:
                         i_sol = next(iter(set(range(4)) - {i, j, k}))
                         inputs.append((a, i_to_dir(i_sol), Direction(k),
                                        (trap, SignType.TRAP, Direction(j))))
@@ -246,7 +250,7 @@ def _all_inputs(maze: Maze) -> List[InputDetails]:
 
 
 def inputs_evaluation(path: Path,
-                      maze: Maze,
+                      signs: dict[SignType, Signs],
                       drawer: Callable,
                       observations: np.ndarray,
                       controller: BaseController,
@@ -254,7 +258,7 @@ def inputs_evaluation(path: Path,
                       draw_individual_files: bool = False,
                       draw_summary_file: bool = True,
                       summary_file_ratio: float = 16/9):
-    inputs = _all_inputs(maze)
+    inputs = _all_inputs(signs)
 
     visuals, outputs = [], []
     df = pd.DataFrame(columns=["Walls", "Type", "Sign", "SignType",
@@ -270,13 +274,13 @@ def inputs_evaluation(path: Path,
 
     NO_VALUE = "None"
 
-    signs = None
+    images = None
     with_visuals = len(observations.shape) > 1
     if with_visuals:
-        all_signs = maze.clues() + maze.lures() + maze.traps()
-        signs = {k: v for k, v in zip(all_signs,
-                                      np_images(all_signs,
-                                                observations.shape[0] - 2))}
+        all_signs = sum(signs.values(), [])
+        images = {k: v for k, v in zip(all_signs,
+                                       np_images(all_signs,
+                                                 observations.shape[0] - 2))}
 
     def _maybe_enum(_v): return _v.name if _v else NO_VALUE
 
@@ -287,7 +291,7 @@ def inputs_evaluation(path: Path,
         visual = None
         if with_visuals and oriented_sign is not None:
             sign, _, direction = oriented_sign
-            visual = signs[sign][direction.value]
+            visual = images[sign][direction.value]
 
         drawer(obs, walls, visual, prev_dir)
         visuals.append(obs)

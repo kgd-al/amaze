@@ -440,7 +440,9 @@ class MainWindow(QWidget):
         ct = ccb.currentText()
         if (ct.lower() != "autonomous") or c is None:
             args = dict(
-                a_type=self._enum_value("outputs", OutputType),
+                i_type=self._enum_value("inputs", InputType),
+                o_type=self._enum_value("outputs", OutputType),
+                vision=self.config["vision"].getValue(),
                 simulation=self.simulation
             )
             c = controller_factory(ct, args)

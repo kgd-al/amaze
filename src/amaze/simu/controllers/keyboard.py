@@ -19,8 +19,9 @@ class __Meta(type(QObject), ABCMeta):
 
 
 class KeyboardController(QObject, BaseController, metaclass=__Meta):
-    def __init__(self, a_type: OutputType):
-        super().__init__()
+    def __init__(self, inputs: InputType, outputs: OutputType, vision: int,
+                 *args, **kwargs):
+        super(BaseController, self).__init__(inputs, outputs, vision)
         QApplication.instance().installEventFilter(self)
         self.actions = {
             Qt.Key_Right: Vec(1, 0),
@@ -29,8 +30,7 @@ class KeyboardController(QObject, BaseController, metaclass=__Meta):
             Qt.Key_Down: Vec(0, -1),
         }
 
-        self.action_type = a_type
-        if self.action_type == OutputType.DISCRETE:
+        if self._output_type == OutputType.DISCRETE:
             self.actions_queue = []
         else:
             self.down_keys = {a: False for a in self.actions.keys()}
@@ -39,7 +39,7 @@ class KeyboardController(QObject, BaseController, metaclass=__Meta):
     def eventFilter(self, obj: 'QObject', e: 'QEvent') -> bool:
         if not isinstance(e, QKeyEvent):
             return False
-        if self.action_type is OutputType.DISCRETE:
+        if self._output_type is OutputType.DISCRETE:
             return self._process_discrete_input(e)
         else:
             return self._process_continuous_input(e)
@@ -48,7 +48,7 @@ class KeyboardController(QObject, BaseController, metaclass=__Meta):
         self.current_action = Vec.null()
 
     def __call__(self, _) -> Vec:
-        if self.action_type is OutputType.DISCRETE:
+        if self._output_type is OutputType.DISCRETE:
             if len(self.actions_queue) > 0:
                 return self.actions_queue.pop(0)
             else:

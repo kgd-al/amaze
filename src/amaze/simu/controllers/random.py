@@ -12,12 +12,15 @@ from amaze.simu.maze import Maze
 class RandomController(BaseController):
     cheats = True
 
-    def __init__(self, simulation, **kwargs):
+    def __init__(self, simulation, *args, **kwargs):
         if simulation is None and not hasattr(self, "simulation"):
             raise ValueError("Random controller missing required 'simulation'"
                              " parameter")
         elif simulation is not None:
             self.simulation = simulation
+        super().__init__(simulation.data.inputs,
+                         simulation.data.outputs,
+                         simulation.data.vision)
         self.robot = self.simulation.robot
 
         self.rng = Random()
@@ -54,10 +57,11 @@ class RandomController(BaseController):
     def reset(self):
         self.__init__(simulation=None)
 
-    def save_to_archive(self, archive: ZipFile) -> bool:
+    def save_to_archive(self, archive: ZipFile, *args, **kwargs) -> bool:
         raise NotImplementedError
 
-    def load_from_archive(self, archive: ZipFile) -> 'RandomController':
+    def load_from_archive(self, archive: ZipFile, *args, **kwargs) \
+            -> 'RandomController':
         raise NotImplementedError
 
     @staticmethod

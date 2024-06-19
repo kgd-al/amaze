@@ -15,6 +15,22 @@ class BaseController(ABC):
     For instance the class of mazes this agent should solve.
     """
 
+    def __init__(self,
+                 input_type: InputType, output_type: OutputType,
+                 vision: Optional[int]):
+        self._input_type = input_type
+        self._output_type = output_type
+        self._vision = vision
+
+    @property
+    def input_type(self) -> InputType: return self._input_type
+
+    @property
+    def output_type(self) -> OutputType: return self._output_type
+
+    @property
+    def vision(self) -> int: return self._vision
+
     @abstractmethod
     def __call__(self, inputs: State) -> Vec:
         """
@@ -51,9 +67,6 @@ class BaseController(ABC):
         Abstract method that should be implemented and documented.
         """
         raise NotImplementedError
-
-    # noinspection PyMethodMayBeStatic
-    def vision(self) -> Optional[int]: return None
 
     @abstractmethod
     def save_to_archive(self, archive: ZipFile, *args, **kwargs) -> bool:

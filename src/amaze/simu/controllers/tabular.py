@@ -11,7 +11,9 @@ from amaze.simu.types import Action, State, InputType, OutputType
 
 
 class TabularController(BaseController):
-    def __init__(self, actions, epsilon, seed):
+    def __init__(self, inputs: InputType, outputs: OutputType,
+                 actions, epsilon, seed):
+        super().__init__(InputType.DISCRETE, OutputType.DISCRETE, None)
         self._actions = actions
         self._actions_ix = {a: i for i, a in enumerate(actions)}
         self._data = {}

@@ -93,13 +93,16 @@ AMaze differs from existing benchmarks (suites) on two important points:
 - Computational efficiency when compared to alternative vision-based tasks
 - Extensive control over the environment and intuitive understanding of an agent's behavior
 
-To illustrate both statements, we compare AMaze to [gymnasium](https://gymnasium.farama.org/), an ubiquitous benchmark suite in the Python ecosystem:
+To illustrate both statements, we compare AMaze to [gymnasium](https://gymnasium.farama.org/), an ubiquitous benchmark suite in the Python ecosystem.
+This test uses 81 variations of AMaze with different retina sizes (11, 15, 21), maze sizes (5, 10, 20), lure frequencies (0, 0.5, 1) and observation/action spaces (discrete, hybrid and continuous).
 
 ![Comparison of AMaze with gymnasium's environments suite. Inputs, Outputs and amount of human Control are taken from the documentation while times are measured on 1000 timesteps averaged over 10 replicates on an i7-1185G7 (3GHz). AMaze is more computationally efficient than all but the simplest environments while also being the more parametrizable with respect to input, outputs and environmental characteristics.\label{tab:comparison}](../docs/latex/benchmarking/gym_pretty_table.pdf)
 
-While taking more time than Classical Control tasks [@Barto1983] or Toy Text environments [@Sutton2018], AMaze is demonstrably faster than those based on 2D ([Box2d](https://box2d.org/)) or 3D ([MuJoCo](https://github.com/google-deepmind/mujoco), @Todorov2012) simulators or the Arcade Learning Environment [@Bellemare2013].
-Furthermore, this comparison uses 81 variations of AMaze with different retina sizes (11, 15, 21), maze sizes (5, 10, 20), lure frequencies (0, 0.5, 1) and observation/action spaces (discrete, hybrid and continuous).
-This both showcases the ease of creating feature-specific environments and demonstrates the library computational efficiency even with the most complex of configurations.
+Such a diversity of environment types was done to give sufficient data for a fair comparison while also showcasing the ease with which AMaze can create feature-specific sets of mazes e.g. for benchmarking purposes.
+In terms of computational speed, while taking more time than Classical Control tasks [@Barto1983] or Toy Text environments [@Sutton2018], AMaze is demonstrably faster than those based on 2D ([Box2d](https://box2d.org/)) or 3D ([MuJoCo](https://github.com/google-deepmind/mujoco), @Todorov2012) simulators or the Arcade Learning Environment [@Bellemare2013].
+
+Given the broad range of environments used here, this demonstrates how competitive the library is compared to existing alternatives with respect to its execution speed and customizability.
+
 
 # Acknowledgements
 

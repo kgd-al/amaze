@@ -68,18 +68,45 @@ plt.suptitle("")
 plt.yticks([])
 plt.ylabel("")
 plt.xscale("log")
-plt.gca().tick_params(which='both', top=True, labeltop=True, bottom=False, labelbottom=False)
-plt.gca().xaxis.set_label_position('top')
-plt.savefig(table_pdf, bbox_inches='tight')
+ax = plt.gca()
+ax.tick_params(which='both', top=True, labeltop=True, bottom=False, labelbottom=False)
+ax.xaxis.set_label_position('top')
+for y in [1, 2]:
+    ax.axhline(y=-1*y-.5, linestyle="dashed", linewidth=.5, color="red")
+for y, ay, dy, t, va in [(-1.5, -1.4, 1.5, "Faster &\nNo control", "bottom"),
+                         (-2.6, -2.6, -2.5, "Slower &\nLow control", "top")]:
+    ax.text(5.5, y, t, ha="right", va=va, size="x-small", color="red")
+    plt.arrow(7, ay, 0, dy, color="red", head_width=1, head_length=.5, length_includes_head=True, clip_on=False)
+ax.set_xlim(right=6)
+for side in ['left', 'right', 'bottom']:
+    ax.spines[side].set_visible(False)
+plt.savefig(table_pdf, bbox_inches='tight', pad_inches=0.05)
 
-with open(folder.joinpath("gym_pretty_table-auto.tex"), "w") as f:
+with open(folder.joinpath("gym_pretty_table.tex"), "w") as f:
     lc = md_table.columns[-1]
     table_str = md_table.to_latex(float_format="%.3f")
-    table_str = table_str.replace(r"lr}", r"lrr}")
-    table_str = table_str.replace("Time", f"\\multicolumn{{2}}{{c}}{{Time (s)}}")
-    table_str = table_str.replace("median", r"median & \multirow{6}{*}{"
-                                            + r"\includegraphics[height=6\baselineskip]{"
-                                            + str(table_pdf) + r"}}")
+    tr = table_str.split("\n")
+    print("-"*80)
+    print("\n".join(tr))
+
+    tr[0] = tr[0][:-2] + "c@{}r@{}}"
+    tr[2] = "&".join((r"\multirow{2}{*}{" + h + r"}" if 0 < i < 5 else h) for i, h in enumerate(tr[2].split("&")))
+    tr[2] = tr[2].replace(r"Time \\", r"\multicolumn{2}{c}{Time (s)} \\ ")
+    tr.insert(3, r"\cmidrule(lr){6-7}")
+    tr[4] = "&".join(tr[5].split("&")[0:1]
+                     + tr[4].split("&")[1:-1]
+                     + [
+                         r" Median & \multirow{6}{*}{"
+                         + r"\includegraphics[height=\img]{"
+                         + str(table_pdf) + r"}} \\"
+                       ])
+    del tr[5]
+    tr[5] = r"\cmidrule(r){1-6}"
+    tr[8] = " & ".join(r"\textbf{" + v + r"}" for v in tr[8].replace(r"\\", "").split(" & ")) + r"\\"
+
+    print("-"*80)
+    print("\n".join(tr))
+    print("-"*80)
 
     def _print(*args): print(*args, file=f)
     _print(r"\documentclass{standalone}")
@@ -87,28 +114,8 @@ with open(folder.joinpath("gym_pretty_table-auto.tex"), "w") as f:
     _print(r"\usepackage{multirow}")
     _print(r"\usepackage{tikz}")
     _print(r"\usetikzlibrary{calc, positioning}")
+    _print(r"\newlength{\img}")
+    _print(r"\setlength{\img}{7.5\baselineskip}")
     _print(r"\begin{document}")
-    #_print(r"\begin{tikzpicture}")
-    #_print(r" \node (T){")
-    _print(table_str)
-    #_print(r" };")
-    #_print(r" \path let \p{A} = ($(T.north)-(T.south)$) in")
-    #_print(r"  node (I) [above right=0 of T.south east, xshift=-1cm, inner sep=0pt, draw]")
-    #_print(r"   {\includegraphics[height=6\baselineskip]{", table_pdf, r"}};")
-    #_print(r"\end{tikzpicture}")
+    _print("\n".join(tr))
     _print(r"\end{document}")
-
-    #_print(r"\documentclass{standalone}")
-    #_print(r"\usepackage{booktabs}")
-    #_print(r"\usepackage{tikz}")
-    #_print(r"\usetikzlibrary{calc, positioning}")
-    #_print(r"\begin{document}")
-    #_print(r"\begin{tikzpicture}")
-    #_print(r" \node (T){")
-    #_print(md_table.to_latex(float_format="%.3f"))
-    #_print(r" };")
-    #_print(r" \path let \p{A} = ($(T.north)-(T.south)$) in")
-    #_print(r"  node (I) [above right=0 of T.south east, scale=.8, yshift=-1cm]")
-    #_print(r"   {\includegraphics[height=\y{A}]{", table_pdf, r"}};")
-    #_print(r"\end{tikzpicture}")
-    #_print(r"\end{document}")

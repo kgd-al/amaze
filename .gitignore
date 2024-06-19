@@ -13,6 +13,8 @@ tmp
 
 docs/src/_auto*
 docs/dependencies/dependencies
+joss/inara/
+resources/
 
 *.aux
 *.pdf

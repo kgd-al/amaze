@@ -3,18 +3,18 @@
 \usepackage{multirow}
 \usepackage{tikz}
 \usetikzlibrary{calc, positioning}
+\newlength{\img}
+\setlength{\img}{7.5\baselineskip}
 \begin{document}
-\newlength{\img}%
-\setlength{\img}{7.5\baselineskip}%
 \begin{tabular}{lrlllc@{}r@{}}
 \toprule
- & N & Inputs & Outputs & Control & \multicolumn{2}{c}{Time (s)} \\
+ &\multirow{2}{*}{ N }&\multirow{2}{*}{ Inputs }&\multirow{2}{*}{ Outputs }&\multirow{2}{*}{ Control }& \multicolumn{2}{c}{Time (s)} \\ 
 \cmidrule(lr){6-7}
-Family &   &        &         &         & Median & \multirow{8}{*}{\includegraphics[height=\img]{/home/kgd/work/code/vu/amaze/docs/latex/benchmarking/gym_table.pdf}} \\
-\cmidrule{1-6}
+Family &  &  &  &  & Median & \multirow{6}{*}{\includegraphics[height=\img]{/home/kgd/work/code/vu/amaze/docs/latex/benchmarking/gym_table.pdf}} \\
+\cmidrule(r){1-6}
 Toy Text & 5 & Discrete & Discrete & Random init & 0.010 \\
 Classic Control & 5 & Continuous & Both & Random init & 0.031 \\
-AMaze & 81 & Both & Both & Extensive & 0.035 \\
+\textbf{AMaze} & \textbf{81} & \textbf{Both} & \textbf{Both} & \textbf{Extensive} & \textbf{0.035 }\\
 Mujoco & 9 & Continuous & Continuous & Random init & 0.085 \\
 Box2D & 5 & Continuous & Both & Random init & 0.200 \\
 ALE & 104 & Image & Discrete & Modes & 0.397 \\

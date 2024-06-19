@@ -10,6 +10,9 @@ class CheaterController(BaseController):
     cheats = True
 
     def __init__(self, simulation, **kwargs):
+        super().__init__(simulation.data.inputs,
+                         simulation.data.outputs,
+                         simulation.data.vision)
         if simulation is None and not hasattr(self, "simulation"):
             raise ValueError("Cheater controller missing required 'simulation'"
                              " parameter")

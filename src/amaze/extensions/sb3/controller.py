@@ -45,18 +45,22 @@ def wrapped_sb3_model(model_type: Type[BaseAlgorithm]):
         _model_type = model_type
 
         def __init__(self, *_args, **_kwargs):
-            super().__init__(*_args, **_kwargs)
+            # noinspection PyTypeChecker
+            BaseController.__init__(self, None, None, None)
 
             # print(f"[kgd-debug] policy={self.policy.__class__.__name__}"
             #       f" {self._i_type=} {self._o_type=} {self._vision=}")
 
         def _setup_model(self) -> None:
-            super()._setup_model()
+            model_type._setup_model(self)
             print("[kgd-debug] SB3 model setup")
-            self._i_type = _i_types_mapping[len(self.observation_space.shape)]
-            self._o_type = _o_types_mapping[self.action_space.__class__]
-            self._vision = None if self._i_type is InputType.DISCRETE \
-                else self.observation_space.shape[1]
+            BaseController.__init__(
+                self,
+                _i_types_mapping[len(self.observation_space.shape)],
+                _o_types_mapping[self.action_space.__class__],
+                (None if self._input_type is InputType.DISCRETE
+                 else self.observation_space.shape[1])
+            )
 
             self._mapper = IOMapper(observation_space=self.observation_space,
                                     action_space=self.action_space)
@@ -97,22 +101,19 @@ def wrapped_sb3_model(model_type: Type[BaseAlgorithm]):
         def reset(self):
             pass
 
-        def inputs_types(self):
-            return [self._i_type]
+        @staticmethod
+        def inputs_types(): return list(InputType)
 
-        def outputs_types(self):
-            return [self._o_type]
-
-        def vision(self):
-            return self._vision
+        @staticmethod
+        def outputs_types(): return list(OutputType)
 
         def save(self, path: str, *_args, **_kwargs) -> None:
             # print("[kgd-debug] infos:\n", pprint.pformat(infos))
             save(self, path,
                  infos={
                      "algo": self._model_type.__name__,
-                     "inputs": self._i_type.name,
-                     "outputs": self._o_type.name,
+                     "inputs": self._input_type.name,
+                     "outputs": self._output_type.name,
                      "vision": self._vision,
                  },
                  *_args, **_kwargs)
@@ -135,6 +136,12 @@ def wrapped_sb3_model(model_type: Type[BaseAlgorithm]):
                         env=loaded_model.env,
                         device=loaded_model.device,
                         _init_setup_model=False)
+            BaseController.__init__(
+                model,
+                input_type=InputType[infos["inputs"]],
+                output_type=OutputType[infos["outputs"]],
+                vision=infos["vision"],
+            )
             model.__dict__.update(loaded_model.__dict__)
             if it := infos.get("inputs"):
                 model._i_type = InputType[it]

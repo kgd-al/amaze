@@ -191,27 +191,38 @@ class Options:
 
 
 def __make_simulation(args, trajectory=False):
+    maze = __make_maze(args)
+
+    if args.cell_width is not None:
+        args.width = args.cell_width * maze.width
+
+    robot = Robot.BuildData.from_argparse(args)
+    controller = __make_controller(args, robot)
+
+    return Simulation(
+        maze, robot,
+        save_trajectory=trajectory
+    ), controller
+
+
+def __make_maze(args):
     if args.maze:
         maze_bd = Maze.BuildData.from_string(
             args.maze, Maze.BuildData.from_argparse(args, set_defaults=False))
     else:
         maze_bd = Maze.BuildData.from_argparse(args, set_defaults=True)
 
-    if args.cell_width is not None:
-        args.width = args.cell_width * maze_bd.width
+    return Maze.generate(maze_bd)
 
-    robot = Robot.BuildData.from_argparse(args)
 
+def __make_controller(args, robot: Optional[Robot.BuildData] = None):
     controller = None
     if args.controller:
         controller = load(args.controller)
-        robot.override_with(Robot.BuildData.from_controller(controller))
+        if robot:
+            robot.override_with(Robot.BuildData.from_controller(controller))
 
-    return Simulation(
-        Maze.generate(maze_bd),
-        robot,
-        save_trajectory=trajectory
-    ), controller
+    return controller
 
 
 def main(sys_args: Optional[Sequence[str] | str] = None):
@@ -270,6 +281,14 @@ def main(sys_args: Optional[Sequence[str] | str] = None):
 
     logging.basicConfig(level=logging.DEBUG)
 
+    if args.eval_inputs and (controller := __make_controller(args)):
+        res = Simulation.static_inputs_evaluation(
+            args.eval_inputs, controller,
+            __make_maze(args).signs
+        )
+
+        pprint.pprint(res)
+
     if not window:
         simulation, controller = __make_simulation(args)
 
@@ -285,11 +304,6 @@ def main(sys_args: Optional[Sequence[str] | str] = None):
             if widget.render_to_file(args.render, width=args.width):
                 logger.info(f"Saved {simulation.maze.to_string()}"
                             f" to {args.render}")
-
-        if args.eval_inputs:
-            res = simulation.inputs_evaluation(args.eval_inputs,
-                                               controller)
-            pprint.pprint(res)
 
         if simulate:
             simulation.reset(save_trajectory=True)
