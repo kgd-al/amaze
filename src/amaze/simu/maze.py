@@ -3,6 +3,7 @@
 
 import copy
 import json
+import pprint
 import random
 import re
 import time
@@ -88,8 +89,55 @@ class Maze:
                           "probability of generating a trap (per-cell)"] = None
 
         def __post_init__(self):
+            self._post_init(allow_unset=False)
+
+        @staticmethod
+        def _valid_dimension(d: int):
+            return 2 <= d <= 100
+
+        @staticmethod
+        def _valid_probability(p: float):
+            return 0 <= p <= 1
+
+        @classmethod
+        def _valid_signs(cls, signs: Signs):
+            return all(cls._valid_sign(s) for s in signs)
+
+        @staticmethod
+        def _valid_sign(sign: Sign):
+            return 0 < sign.value <= 1
+
+        def _post_init(self, allow_unset: bool):
+            def assert_ok(f, **kwargs):
+                self._assert_field_type(f, **kwargs, allow_unset=allow_unset)
+
+            assert_ok("width", value_tester=self._valid_dimension)
+            assert_ok("height", value_tester=self._valid_dimension)
+
             if self.seed is None:
                 self.seed = round(time.time() * 1000) % (2**31)
+            else:
+                assert_ok("seed", field_type=int)
+
+            assert_ok("start")
+            assert_ok("rotated")
+            assert_ok("unicursive")
+
+            if self.p_lure is not None:
+                assert_ok("p_lure", field_type=float,
+                          value_tester=self._valid_probability)
+
+            if self.p_trap is not None:
+                assert_ok("p_trap", field_type=float,
+                          value_tester=self._valid_probability)
+
+            if self.p_lure == 0 or not self.lure:
+                self.p_lure = None
+                self.lure = []
+
+            if self.p_trap == 0 or not self.trap:
+                self.p_trap = None
+                self.trap = []
 
             for k in ["clue", "lure", "trap"]:
                 attr = getattr(self, k)
@@ -97,22 +145,7 @@ class Maze:
                     setattr(self, k,
                             [resources.Sign.from_string(s)
                              if isinstance(s, str) else s for s in attr])
-                elif not isinstance(attr, BaseBuildData.Unset):
-                    raise ValueError(
-                        f"Incompatible value {attr} ({type(attr)}) for"
-                        f" field {k}")
-
-        def all_permutations(self):
-            """ Returns a list describing the same maze with all four rotations
-            """
-            def start_from(s: StartLocation):
-                m_ = copy.deepcopy(self)
-                m_.start = s
-                return m_
-
-            sl = [StartLocation.NORTH_WEST, StartLocation.NORTH_EAST,
-                  StartLocation.SOUTH_WEST, StartLocation.SOUTH_EAST]
-            return [start_from(s) for s in sl]
+                assert_ok(k, field_type=list, value_tester=self._valid_signs)
 
         def to_string(self) -> str:
             """ Generate a string representation of this object
@@ -217,9 +250,13 @@ class Maze:
                                       BaseBuildData.Unset):
                         setattr(bd, _field.name, v)
 
+            bd._post_init(allow_unset=False)
+
             return bd
 
         def all_rotations(self):
+            """ Returns a list describing the same maze with all four rotations
+            """
             return [
                 self.where(start=s)
                 for s in [

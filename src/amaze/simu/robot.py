@@ -18,10 +18,7 @@ class Robot:
         """
         inputs: Annotated[InputType, "Input type"] = InputType.DISCRETE
         outputs: Annotated[OutputType, "Output type"] = OutputType.DISCRETE
-        vision: Annotated[int, "agent vision size"] = 15
-
-        control: Annotated[str, "Controller type"] = "random"
-        control_data: Optional[dict] = field(default_factory=dict)
+        vision: Annotated[Optional[int], "agent vision size"] = 15
 
         __inputs_to_string = {i: i.name[0] for i in InputType}
         __outputs_to_string = {o: o.name[0] for o in OutputType}
@@ -30,9 +27,22 @@ class Robot:
         __string_to_output = {v: k for k, v in __outputs_to_string.items()}
 
         def __post_init__(self):
-            if not isinstance(self.control, BaseBuildData.Unset):
-                self.control = self.control.lower()
-                # assert self.control in CONTROLLERS.keys(), self.control
+            self._post_init(allow_unset=False)
+
+        def _post_init(self, allow_unset: bool):
+            def assert_ok(*args):
+                self._assert_field_type(*args, allow_unset=allow_unset)
+
+            assert_ok("inputs")
+            assert_ok("outputs")
+
+            if self.vision is not None:
+                assert_ok("vision")
+
+            if self.inputs is not InputType.CONTINUOUS:
+                self.vision = None
+            elif self.vision is None:
+                self.vision = self.__class__.vision
 
         @classmethod
         def from_string(cls, robot: str):
@@ -51,16 +61,26 @@ class Robot:
             In case of continuous inputs, V provides the size of agent's retina
             as an *odd* integer
 
+            :raises TypeError: if passing invalid parameters
             :raises ValueError: if requesting DC mode or if the retina size is
              even
             """
             bd = cls()
 
-            assert robot[0] in ["D", "C", "H"]
-            assert robot[1] in ["D", "C"] or robot[1].isdigit()
-            assert all(c.isdigit() for c in robot[2:])
+            if robot[0] not in ["D", "C", "H"]:
+                raise TypeError(f"Invalid token[0]: {robot[0]} should be 'D',"
+                                f" 'C' or 'H'")
 
-            ix = 1+robot[1].isalpha()
+            if (len(robot) > 1 and robot[1].isalpha()
+                    and robot[1] not in ["D", "C"]):
+                raise TypeError(f"Invalid token[1]: {robot[1]} should be 'D'"
+                                f" or 'C'")
+
+            ix = 1 + (len(robot) > 1 and robot[1].isalpha())
+            if any(not c.isdigit() for c in robot[ix:]):
+                raise TypeError(f"Invalid token[ix:]: {robot[ix:]} should be"
+                                f" a digit")
+
             io = robot[0:ix]
             if len(io) == 1:
                 bd.inputs, bd.outputs = {
@@ -77,10 +97,13 @@ class Robot:
                                      " have discrete inputs and continuous"
                                      " outputs")
 
-            if bd.inputs is InputType.CONTINUOUS and ix < len(robot) > 2:
-                bd.vision = int(robot[ix:])
-                if (bd.vision % 2) != 1:
-                    raise ValueError("Retina size must be odd")
+            if bd.inputs is InputType.CONTINUOUS:
+                if ix < len(robot) > 2:
+                    bd.vision = int(robot[ix:])
+                    if (bd.vision % 2) != 1:
+                        raise ValueError("Retina size must be odd")
+                else:
+                    bd.vision = cls.vision
             return bd
 
         @classmethod
@@ -95,6 +118,8 @@ class Robot:
             if bd.inputs is InputType.CONTINUOUS:
                 if (v := controller.vision) is not None:
                     bd.vision = v
+                else:  # pragma no cover
+                    raise ValueError("Controller does not provide vision size")
 
             return bd
 

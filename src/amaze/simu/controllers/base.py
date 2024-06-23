@@ -52,7 +52,7 @@ class BaseController(ABC):
 
     @staticmethod
     @abstractmethod
-    def inputs_types() -> List[InputType]:
+    def inputs_types() -> List[InputType]:  # pragma no cover
         """ Specify what kind of inputs this controller can handle.
 
         Abstract method that should be implemented and documented.
@@ -61,7 +61,7 @@ class BaseController(ABC):
 
     @staticmethod
     @abstractmethod
-    def outputs_types() -> List[OutputType]:
+    def outputs_types() -> List[OutputType]:  # pragma no cover
         """ Specify what kind of outputs this controller can handle.
 
         Abstract method that should be implemented and documented.
@@ -69,12 +69,13 @@ class BaseController(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def save_to_archive(self, archive: ZipFile, *args, **kwargs) -> bool:
+    def save_to_archive(self, archive: ZipFile, *args, **kwargs) \
+            -> bool:  # pragma no cover
         """ Implement to save derived-specific content to the archive """
         raise NotImplementedError
 
     @classmethod
-    def load_from_archive(cls, archive: ZipFile, *args, **kwargs)\
-            -> 'BaseController':
+    def load_from_archive(cls, archive: ZipFile, *args, **kwargs) \
+            -> 'BaseController':  # pragma no cover
         """ Implement to load derived-specific content from the archive """
         raise NotImplementedError

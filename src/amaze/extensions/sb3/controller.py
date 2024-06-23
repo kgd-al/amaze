@@ -44,21 +44,22 @@ def wrapped_sb3_model(model_type: Type[BaseAlgorithm]):
 
         _model_type = model_type
 
-        def __init__(self, *_args, **_kwargs):
+        def __init__(self, *args, **kwargs):
             # noinspection PyTypeChecker
             BaseController.__init__(self, None, None, None)
+            model_type.__init__(self, *args, **kwargs)
 
             # print(f"[kgd-debug] policy={self.policy.__class__.__name__}"
             #       f" {self._i_type=} {self._o_type=} {self._vision=}")
 
         def _setup_model(self) -> None:
-            model_type._setup_model(self)
+            super()._setup_model()
             print("[kgd-debug] SB3 model setup")
+            input_type = _i_types_mapping[len(self.observation_space.shape)]
+            output_type = _o_types_mapping[self.action_space.__class__]
             BaseController.__init__(
-                self,
-                _i_types_mapping[len(self.observation_space.shape)],
-                _o_types_mapping[self.action_space.__class__],
-                (None if self._input_type is InputType.DISCRETE
+                self, input_type, output_type,
+                (None if input_type is InputType.DISCRETE
                  else self.observation_space.shape[1])
             )
 

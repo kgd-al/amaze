@@ -264,7 +264,12 @@ class MainWindow(QWidget):
 
     def _step(self):
         self.sections[self.Sections.CONFIG].setEnabled(False)
-        reward = self.simulation.step(self.next_action)
+
+        if (self._combobox_value("control").upper() == "KEYBOARD" and
+                not self.next_action and not self.simulation.robot.vel):
+            reward = None
+        else:
+            reward = self.simulation.step(self.next_action)
 
         if not self.simulation.done():
             self.next_action = self._think()
@@ -440,9 +445,9 @@ class MainWindow(QWidget):
         ct = ccb.currentText()
         if (ct.lower() != "autonomous") or c is None:
             args = dict(
-                i_type=self._enum_value("inputs", InputType),
-                o_type=self._enum_value("outputs", OutputType),
-                vision=self.config["vision"].getValue(),
+                input_type=self._enum_value("inputs", InputType),
+                output_type=self._enum_value("outputs", OutputType),
+                vision=self.config["vision"].value(),
                 simulation=self.simulation
             )
             c = controller_factory(ct, args)
@@ -453,7 +458,7 @@ class MainWindow(QWidget):
                 self.config['inputs'].setCurrentText(i_t.name.lower())
             if o_t := c.outputs_types()[0]:
                 self.config['outputs'].setCurrentText(o_t.name.lower())
-            if v := c.vision():
+            if v := c.vision:
                 self.config["vision"].setValue(v)
 
         check_types(c, self._robot_data())

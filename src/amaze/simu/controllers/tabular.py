@@ -11,9 +11,13 @@ from amaze.simu.types import Action, State, InputType, OutputType
 
 
 class TabularController(BaseController):
-    def __init__(self, inputs: InputType, outputs: OutputType,
-                 actions, epsilon, seed):
-        super().__init__(InputType.DISCRETE, OutputType.DISCRETE, None)
+    def __init__(self,
+                 actions, epsilon, seed,
+                 input_type: InputType = InputType.DISCRETE,
+                 output_type: OutputType = OutputType.DISCRETE):
+        assert input_type is InputType.DISCRETE
+        assert output_type is OutputType.DISCRETE
+        super().__init__(input_type, output_type, None)
         self._actions = actions
         self._actions_ix = {a: i for i, a in enumerate(actions)}
         self._data = {}
@@ -140,7 +144,8 @@ class TabularController(BaseController):
             dct = json.loads(file.read().decode("utf-8"))
             actions = [parse_tuple(a) for a in
                        next(iter(dct['data'].values())).keys()]
-            c = TabularController(actions, 0, 0)
+            c = TabularController(
+                actions=actions, epsilon=0, seed=0)
             c._data = parse_dict(dct["data"])
             c.__updates = parse_dict(dct["updates"])
             c.init_value = dct["init_val"]

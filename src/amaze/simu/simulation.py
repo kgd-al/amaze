@@ -266,10 +266,6 @@ class Simulation:
         corresponding reward"""
         # logger.debug(f"{'-'*80}\n-- step {self.time()}")
 
-        if self.data.control.upper() == "KEYBOARD" and \
-                not action and not self.robot.vel:
-            return None
-
         reward = 0
 
         prev_prev_cell = self.robot.prev_cell
@@ -541,23 +537,4 @@ class Simulation:
             controller=controller,
             signs=self.maze.signs,
             **kwargs
-        )
-
-        if (self.data.inputs is InputType.CONTINUOUS
-                and self.data.outputs is OutputType.CONTINUOUS):
-            raise ValueError("Enumerating all inputs for the fully discrete"
-                             " case is not supported (because of combinatory"
-                             " explosion).")
-
-        drawer = (self._fill_discrete_visual_buffer
-                  if self.data.inputs is InputType.DISCRETE else
-                  self._fill_continuous_visual_buffer)
-
-        return inputs_evaluation(
-            results_path,
-            self.maze, drawer, self.observations.copy(), controller,
-            draw_inputs=draw_inputs,
-            draw_individual_files=draw_individual_files,
-            draw_summary_file=draw_summary_file,
-            summary_file_ratio=summary_file_ratio
         )

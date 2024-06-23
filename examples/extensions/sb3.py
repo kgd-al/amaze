@@ -7,7 +7,7 @@ from stable_baselines3.common.callbacks import (EvalCallback,
                                                 StopTrainingOnRewardThreshold)
 from stable_baselines3.common.logger import configure
 
-from amaze import Maze, Robot, Simulation, Sign, amaze_main
+from amaze import Maze, Robot, Simulation, Sign, amaze_main, StartLocation
 from amaze.extensions.sb3 import (make_vec_maze_env, env_method,
                                   load_sb3_controller, PPO,
                                   TensorboardCallback, sb3_controller,
@@ -18,15 +18,15 @@ BEST = f"{FOLDER}/best_model.zip"
 SEED = 0
 BUDGET = 100_000
 VERBOSE = False
-ROBOT = "CD"
-
-TRAIN_MAZE = "M14_20x20_C1"
-TEST_SEED = 18
+ROBOT = "DD"
 
 
-def train():
-    train_mazes = Maze.BuildData.from_string(TRAIN_MAZE).all_rotations()
-    eval_mazes = [d.where(seed=TEST_SEED) for d in train_mazes]
+def train(is_test):
+    train_maze = "M14_10x10_U" if is_test else "M14_20x20_C1"
+    test_seed = 18
+
+    train_mazes = Maze.BuildData.from_string(train_maze).all_rotations()
+    eval_mazes = [d.where(seed=test_seed) for d in train_mazes]
     robot = Robot.BuildData.from_string(ROBOT)
 
     train_env = make_vec_maze_env(train_mazes, robot, SEED)
@@ -59,14 +59,16 @@ def train():
     tb_callback.log_step(True)
     print("="*80)
 
+    return train_maze
 
-def evaluate():
+
+def evaluate(is_test):
     model = load_sb3_controller(BEST)
 
     rng = random.Random(0)
     robot = Robot.BuildData.from_controller(model)
 
-    n = 1000
+    n = 10 if is_test else 1000
     rewards = []
 
     print()
@@ -80,7 +82,8 @@ def evaluate():
             width=rng.randint(10, 30),
             height=rng.randint(10, 30),
             seed=rng.randint(0, 10000),
-            unicursive=False,
+            unicursive=is_test,
+            start=rng.choice([l for l in StartLocation]),
             clue=[Sign(value=1)],
             p_lure=0, p_trap=0
         )
@@ -108,11 +111,11 @@ def main(is_test=False):
         shutil.rmtree(folder)
     folder.mkdir(parents=True, exist_ok=False)
 
-    train()
-    evaluate()
+    train_maze = train(is_test)
+    evaluate(is_test)
 
     with CV2QTGuard(platform=False):
-        amaze_main(f"--controller {BEST} --extension sb3 --maze {TRAIN_MAZE}"
+        amaze_main(f"--controller {BEST} --extension sb3 --maze {train_maze}"
                    f" --auto-quit --no-restore-config")
 
 

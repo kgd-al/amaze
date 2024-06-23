@@ -1,5 +1,7 @@
 import ast
+import inspect
 import logging
+import pprint
 from abc import ABC
 from copy import copy
 from dataclasses import fields, dataclass
@@ -24,7 +26,7 @@ class BaseBuildData(ABC):
 
         for lhs, rhs in zip(self.__fields(), other.__fields()):
             assert lhs.name == rhs.name
-            if (v := getattr(other, rhs.name)) != self.unset:
+            if not isinstance(v := getattr(other, rhs.name), self.Unset):
                 setattr(self, lhs.name, v)
         return self
 
@@ -45,6 +47,27 @@ class BaseBuildData(ABC):
         return [field for field in fields(cls) if
                 get_origin(field.type) is Annotated]
 
+    @classmethod
+    def _is_legal_unset(cls, allow_unset, field):
+        return allow_unset and isinstance(field, cls.Unset)
+
+    def _assert_field_type(self, field: str, allow_unset: bool,
+                           field_type=None,
+                           value_tester=None):
+        field_value = getattr(self, field)
+        field_type = field_type or type(getattr(self.__class__, field, None))
+
+        if (not isinstance(field_value, field_type) and
+                not self._is_legal_unset(allow_unset, field_value)):
+            raise TypeError(f"Wrong type for {field}: {type(field_value)}"
+                            f" should have been {field_type}")
+        if value_tester is not None and isinstance(field_value, field_type):
+            if not value_tester(field_value):
+                func = inspect.getsource(value_tester).split("\n")[-2] \
+                    .replace("return ", "").lstrip()
+                raise ValueError(f"Invalid value for {field}: x={field_value}"
+                                 f" should pass {func}")
+
     custom_classes = {}
 
     @classmethod
@@ -61,8 +84,7 @@ class BaseBuildData(ABC):
                     (f := cls.custom_classes.get(a_type, None))):
                 f_type = getattr(f, 'type_parser', None) or f_type
                 str_type = getattr(f, 'type_name', None) or str_type
-                if (d := getattr(f, 'default', None)) is not None:
-                    default = d
+                default = getattr(f, 'default')
                 action = getattr(f, 'action', None) or action
 
             elif get_origin(a_type) is Union and type(None) in t_args:
@@ -101,6 +123,6 @@ class BaseBuildData(ABC):
                 attr = cls.unset
             if attr is not None:
                 setattr(data, field.name, attr)
-        if hasattr(data, "__post_init__"):
-            data.__post_init__()
+        if post_init := getattr(data, "_post_init", None):  # pragma: no branch
+            post_init(allow_unset=True)
         return data

@@ -149,6 +149,7 @@ def evaluate_generalization(policy):
             height=rng.randint(10, 20),
             seed=rng.randint(0, 10000),
             unicursive=True,
+            start=rng.choice([l for l in StartLocation]),
             p_lure=0, p_trap=0
         )
         maze = Maze.generate(maze_data)

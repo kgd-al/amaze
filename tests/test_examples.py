@@ -5,7 +5,11 @@ from pathlib import Path
 import pytest
 
 
-@pytest.mark.parametrize("file", Path("examples").glob("**/*.py"))
+@pytest.mark.parametrize(
+    "file",
+    [pytest.param(path, id=str(Path(*path.parts[1:])))
+     for path in Path("examples").glob("**/*.py")]
+)
 def test_run_examples(file, capsys):
     spec = importlib.util.spec_from_file_location(file.stem, file)
     module = importlib.util.module_from_spec(spec)

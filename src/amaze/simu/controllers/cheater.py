@@ -10,14 +10,15 @@ class CheaterController(BaseController):
     cheats = True
 
     def __init__(self, simulation, **kwargs):
-        super().__init__(simulation.data.inputs,
-                         simulation.data.outputs,
-                         simulation.data.vision)
         if simulation is None and not hasattr(self, "simulation"):
             raise ValueError("Cheater controller missing required 'simulation'"
                              " parameter")
         elif simulation is not None:
             self.simulation = simulation
+
+        data = self.simulation.data
+        super().__init__(data.inputs, data.outputs, data.vision)
+
         self.path = self.simulation.maze.solution[1:]
         self.current_cell = self.simulation.robot.pos.aligned()
         self.previous_cell = self.current_cell

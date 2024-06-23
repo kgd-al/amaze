@@ -55,7 +55,16 @@ class Sign:
     def __init__(self, name: str = _default_builtin(),
                  value: float = _default_lightness()):
         self.name: str | Path = name
+        if not isinstance(self.name, str) and not isinstance(self.name, Path):
+            raise ValueError(f"Invalid name type: {type(self.name)}"
+                             f" should be <str> or <libpath.Path>")
         self.value: float = float(value)
+        if not isinstance(self.value, float):
+            raise TypeError(f"Invalid value: {type(self.value)}"
+                            f" should be <float>")
+        if not 0 < self.value <= 1:
+            raise ValueError(f"Invalid value: {self.value}"
+                             f" should be in ]0, 1]")
 
     def __iter__(self): return iter((self.name, self.value))
 
