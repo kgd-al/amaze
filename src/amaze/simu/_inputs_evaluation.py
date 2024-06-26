@@ -138,7 +138,7 @@ def __draw_inputs(path: Path,
     def sign_type(_i): return _s[1] if (_s := _i[3]) is not None else None
 
     inputs, visuals, outputs = zip(*sorted(
-        zip(inputs, visuals, outputs),
+        itertools.zip_longest(inputs, visuals, outputs or []),
         key=lambda _i: i_type_list[sign_type(_i[0])]))
 
     shape = visuals[0].shape

@@ -6,18 +6,19 @@ from zipfile import ZipFile
 import numpy as np
 import pandas as pd
 
-from amaze.simu.controllers.base import BaseController
-from amaze.simu.types import Action, State, InputType, OutputType
+from .base import BaseController, InputType, OutputType, Action, State, Robot
 
 
 class TabularController(BaseController):
+    _simple = False
+    _savable = True
+
     def __init__(self,
-                 actions, epsilon, seed,
-                 input_type: InputType = InputType.DISCRETE,
-                 output_type: OutputType = OutputType.DISCRETE):
-        assert input_type is InputType.DISCRETE
-        assert output_type is OutputType.DISCRETE
-        super().__init__(input_type, output_type, None)
+                 robot_data: Robot.BuildData,
+                 actions, epsilon, seed):
+        assert robot_data.inputs is InputType.DISCRETE
+        assert robot_data.outputs is OutputType.DISCRETE
+        super().__init__(robot_data)
         self._actions = actions
         self._actions_ix = {a: i for i, a in enumerate(actions)}
         self._data = {}
@@ -26,11 +27,6 @@ class TabularController(BaseController):
         self.__updates = {}
         self.init_value = 0
         self.min_value, self.max_value = None, None
-
-    @staticmethod
-    def inputs_type(): return InputType.DISCRETE
-    @staticmethod
-    def outputs_type(): return OutputType.DISCRETE
 
     def value(self, state, action):
         return self.values(state)[self._actions_ix[action]]
@@ -113,7 +109,7 @@ class TabularController(BaseController):
             "max": self.max_value
         }
 
-    def save_to_archive(self, archive: ZipFile) -> bool:
+    def save_to_archive(self, archive: ZipFile, *args, **kwargs) -> bool:
         def fmt(f_): return self.__pretty_format(f_).to_dict(orient='index')
         with archive.open("data.json", "w") as file:
             data_bytes = json.dumps(
@@ -126,7 +122,8 @@ class TabularController(BaseController):
             return True
 
     @classmethod
-    def load_from_archive(cls, archive: ZipFile) -> 'TabularController':
+    def load_from_archive(cls, archive: ZipFile, *args, **kwargs) \
+            -> 'TabularController':
         def parse_val(v):
             try:
                 return int(v)

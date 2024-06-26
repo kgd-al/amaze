@@ -45,3 +45,8 @@ class StartLocation(int, Enum):
     def from_shorthand(cls, short):
         return {'SW': cls.SOUTH_WEST, 'SE': cls.SOUTH_EAST,
                 'NE': cls.NORTH_EAST, 'NW': cls.NORTH_WEST}[short]
+
+
+class classproperty(property):
+    def __get__(self, owner_self, owner_cls):
+        return self.fget(owner_cls)

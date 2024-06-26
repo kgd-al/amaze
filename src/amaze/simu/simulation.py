@@ -6,7 +6,7 @@ from typing import Union, TypeVar, Optional, Tuple
 import numpy as np
 import pandas as pd
 
-from amaze.simu import _maze_metrics
+from ._maze_metrics import metrics as _maze_metrics, MazeMetrics
 from amaze.simu.maze import Maze
 from amaze.simu.pos import Pos
 from amaze.simu.robot import Robot
@@ -144,10 +144,8 @@ class Simulation:
 
     def run(self, controller):
         """ Let the agent navigate in the maze until completion """
-        action = controller(self.observations)
         while not self.done():
-            self.step(action)
-            action = controller(self.observations)
+            self.step(controller(self.observations))
 
     @staticmethod
     def generate_visuals_map(maze: Maze, inputs: InputType, vision: int = 15):
@@ -165,18 +163,16 @@ class Simulation:
 
             for t in SignType:
                 lst, img_list = maze.signs_data[t], images[t]
-                if lst is not None and img_list is not None:
-                    for v_index, sol_index, d, _ in lst:
-                        visuals[maze.solution[sol_index]] = \
-                            img_list[v_index][d.value]
+                for v_index, sol_index, d, _ in lst:
+                    visuals[maze.solution[sol_index]] = \
+                        img_list[v_index][d.value]
 
-        elif inputs is InputType.DISCRETE:
+        else:
             for t in SignType:
                 lst, signs = maze.signs_data[t], maze.signs[t]
-                if lst is not None:
-                    for v_index, sol_index, sign_dir, true_dir in lst:
-                        visuals[maze.solution[sol_index]] = \
-                            (signs[v_index].value, sign_dir, t, true_dir)
+                for v_index, sol_index, sign_dir, true_dir in lst:
+                    visuals[maze.solution[sol_index]] = \
+                        (signs[v_index].value, sign_dir, t, true_dir)
 
         return visuals
 
@@ -364,7 +360,7 @@ class Simulation:
 
                 obs[:] = buffer[v-dpy:2*v-dpy, v+dpx:2*v+dpx]
 
-        else:
+        else:  # pragma no cover
             raise ValueError(f"Invalid I/O combination: {io}")
 
         return obs
@@ -375,7 +371,7 @@ class Simulation:
             return np.zeros((vision, vision), dtype=np.float32)
         elif input_type is InputType.DISCRETE:
             return np.zeros(8, dtype=np.float32)
-        else:
+        else:  # pragma no cover
             raise ValueError(f"Invalid InputType: {input_type=}")
 
     @staticmethod
@@ -447,19 +443,13 @@ class Simulation:
 
     @staticmethod
     def discrete_actions():
-        return [(1, 0), (0, 1), (-1, 0), (0, -1)]
-
-    # @classmethod
-    # def compute_complexity(cls, maze: Maze, inputs: InputType, vision: int):
-    #     inputs = InputType.DISCRETE
-    #     return _maze_metrics.complexity(
-    #         maze, cls.generate_visuals_map(maze, inputs, vision), inputs
-    #     )
+        return BaseController.discrete_actions
 
     @classmethod
-    def compute_metrics(cls, maze: Maze, inputs: InputType, vision: int):
-        inputs = InputType.DISCRETE
-        return _maze_metrics.metrics(
+    def compute_metrics(cls, maze: Maze, inputs: InputType, vision: int) \
+            -> dict[Union[MazeMetrics, str]]:
+        inputs = InputType.DISCRETE  # Input type currently has no impact
+        return _maze_metrics(
             maze, cls.generate_visuals_map(maze, inputs, vision), inputs
         )
 

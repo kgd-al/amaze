@@ -68,8 +68,19 @@ cmd_pytest(){  # Perform the test suite (small scale)
     pytest --durations=10 --basetemp=$out -x -ra "$@" || exit 2
   mkdir -p $cout # pytest will have cleared everything. Build it back
   mv $(basename $coverage) $coverage
-  coverage report --data-file=$coverage
+  coverage report --data-file=$coverage --skip-covered
   coverage html  --fail-under=100 --data-file=$coverage -d $cout/html
+
+#  line
+#  coverage report --data-file=best-coverage.info
+#  line
+
+#  ((coverage report --data-file=$coverage | grep TOTAL; \
+#  coverage report --data-file=best-coverage.info | grep TOTAL | sed 's/TOTAL/ BEST/') \
+#  | awk '{print; for (i=2; i<=NF; i++) diff[i] = -diff[i] - $i;}END{printf " DIFF";
+#          for (i=2; i<=NF; i++)
+#           printf " \033[%dm%+g\033[0m", diff[i] == 0 ? 0 : 31, diff[i];
+#          print"\n";}') | column -t
 }
 
 do_doc_prepare() {

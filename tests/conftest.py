@@ -5,38 +5,26 @@ from typing import Dict, Any
 
 import pytest
 
+from _common import TestSize, generate_large_maze_data_sample, MAZE_DATA_SAMPLE
 
 _DEBUG = 0
-
-
-class TestSize(IntFlag):
-    SMALL = 2
-    NORMAL = 8
-    LARGE = 16
 
 
 flags = {
     TestSize.SMALL: "--fast",
     TestSize.NORMAL: "--normal-scale",
-    TestSize.LARGE: "--full-scale",
 }
 
 
 def pytest_addoption(parser):
     parser.addoption(flags[TestSize.SMALL], "--small-scale",
                      action='store_const',
-                     const=TestSize.SMALL, dest='size',
+                     const=TestSize.SMALL, dest='scale',
                      help='Run very small test suite')
     parser.addoption(flags[TestSize.NORMAL], action='store_const',
                      const=TestSize.NORMAL, default=TestSize.NORMAL,
-                     dest='size',
+                     dest='scale',
                      help='Run moderate test suite')
-    parser.addoption(flags[TestSize.LARGE], "--large-scale",
-                     action='store_const',
-                     const=TestSize.LARGE, dest='size',
-                     help='Run large test suite. '
-                          'Warning: While it ensures good coverage, it will'
-                          ' take (too) long')
 
     parser.addoption("--test-examples", dest='examples',
                      action='store_true',
@@ -98,60 +86,36 @@ def max_scale_for(params):
     return scale
 
 
+def pytest_configure(config):
+    config.addinivalue_line("markers", "slow: mark test as slow to run")
+
+
 def pytest_generate_tests(metafunc):
     def can_parametrize(name):
         if name not in metafunc.fixturenames:
             return False
         existing = [
             m for m in metafunc.definition.iter_markers('parametrize')
-            if name == m.args[0]
+            if any(name == arg for arg in m.args[0].split(","))
         ]
         return len(existing) == 0
 
-    def maybe_parametrize(name, short_name=None, values=None):
+    def maybe_parametrize(name, values, short_name=None):
         if can_parametrize(name):
-            # print(f"adding {name} = {values_for(name)}")
-            if values is None:
-                values = values_for(name)
+            # if values is None:
+            #     values = values_for(name)
+            # print(f"[kgd-debug] adding {name} = {values}")
 
             metafunc.parametrize(name, values,
-                                 ids=lambda val: ""
-                                 if short_name is None else
-                                 f"{short_name}_{val}")
+                                 ids=lambda val: (
+                                     "" if short_name is None
+                                     else f"{short_name}_{val}"))
 
-    # # print("Configuring", metafunc.function)
-    # maybe_parametrize("mutations", "m")
-    # maybe_parametrize("generations", "g")
-    # maybe_parametrize("seed", "s")
-    # maybe_parametrize("ad_rate", "ar")
-    # maybe_parametrize("dimension", "d")
-    # maybe_parametrize("cppn_type", "cg", [CPPN, CPPN2D, CPPN3D])
-    # maybe_parametrize("cppn_shape", "cs")
-    # maybe_parametrize("cppn_nd_type", "cn", [CPPN2D, CPPN3D])
-    # maybe_parametrize("eshn_genome", "eg", [True, False])
-    # maybe_parametrize("verbose", "v",
-    #                   [metafunc.config.getoption("verbose")])
-    #
-    # if can_parametrize("evo_config"):
-    #     evo_config = metafunc.config.getoption('evolution')
-    #     size = metafunc.config.getoption('size')
-    #     sizes = {TestSize.SMALL: 1, TestSize.NORMAL: 2, TestSize.LARGE: 4}
-    #     evo_config_values = [None for _ in range(sizes[size])]
-    #     if evo_config is not None:
-    #         for i in range(sizes[size]):
-    #             dct = dict()
-    #
-    #             def maybe_assign(key, if_true, if_false):
-    #                 dct[key] = (if_true(evo_config[key]) if
-    #                             evo_config[key] is not None else if_false)
-    #             maybe_assign("seed", lambda s: s+1, i)
-    #             maybe_assign("population", lambda s: s, 8*size)
-    #             maybe_assign("generations", lambda s: s, 8*size)
-    #             dct["fitness"] = evo_config["fitness"]
-    #             evo_config_values[i] = dct
-    #
-    #     maybe_parametrize("evo_config", short_name=None,
-    #                       values=evo_config_values)
+    # print("Configuring", metafunc.function)
+    size: TestSize = metafunc.config.getoption('scale')
+    maybe_parametrize("mbd_kwargs",
+                      values=generate_large_maze_data_sample(size))
+    maybe_parametrize("maze_str", values=MAZE_DATA_SAMPLE)
 
 
 def pytest_collection_modifyitems(config, items):
@@ -192,7 +156,10 @@ def pytest_collection_modifyitems(config, items):
     def extension(path): return "extensions" in path.parts
     def testable_extension(path): return path.stem in extensions
 
-    scale = config.getoption("size")
+    skip_slow = pytest.mark.skip(
+        reason="Skipping slow tests with small-scale option")
+
+    scale = config.getoption("scale")
     removed, kept = [], []
     for item in items:
         if _DEBUG > 1:
@@ -226,6 +193,9 @@ def pytest_collection_modifyitems(config, items):
                         reason="Only running examples test on explicit"
                                " request. Use  --test-examples to do so.")
                 )
+
+        if "slow" in item.keywords and scale < TestSize.NORMAL:
+            item.add_marker(skip_slow)
 
         if hasattr(item, 'callspec'):
             keep = (scale >= max_scale_for(item.callspec.params))

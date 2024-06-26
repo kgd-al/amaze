@@ -19,6 +19,8 @@ class __Meta(type(QObject), ABCMeta):
 
 
 class KeyboardController(QObject, BaseController, metaclass=__Meta):
+    _savable = False
+
     def __init__(self, inputs: InputType, outputs: OutputType, vision: int,
                  *args, **kwargs):
         super(BaseController, self).__init__(inputs, outputs, vision)
@@ -30,7 +32,7 @@ class KeyboardController(QObject, BaseController, metaclass=__Meta):
             Qt.Key_Down: Vec(0, -1),
         }
 
-        if self._output_type == OutputType.DISCRETE:
+        if self.output_type == OutputType.DISCRETE:
             self.actions_queue = []
         else:
             self.down_keys = {a: False for a in self.actions.keys()}

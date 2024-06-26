@@ -59,8 +59,18 @@ class BaseBuildData(ABC):
 
         if (not isinstance(field_value, field_type) and
                 not self._is_legal_unset(allow_unset, field_value)):
-            raise TypeError(f"Wrong type for {field}: {type(field_value)}"
-                            f" should have been {field_type}")
+            try:
+                casted_value = field_type(field_value)
+                roundtrip_value = type(field_value)(casted_value)
+                if field_value != roundtrip_value:
+                    raise ValueError(
+                        f"Bad roundtrip: {field_value} {type(field_value)}"
+                        f" -> {casted_value} {type(casted_value)}"
+                        f" -> {roundtrip_value} {type(roundtrip_value)}")
+                setattr(self, field, casted_value)
+            except ValueError as e:
+                raise TypeError(f"Wrong type for {field}: {type(field_value)}"
+                                f" cannot be cast to {field_type}:\n{e}")
         if value_tester is not None and isinstance(field_value, field_type):
             if not value_tester(field_value):
                 func = inspect.getsource(value_tester).split("\n")[-2] \

@@ -1,67 +1,37 @@
+import math
+from random import Random
+from typing import List
 from zipfile import ZipFile
 
-from amaze.simu import InputType, OutputType
-from amaze.simu.pos import Pos
-from random import Random
-from typing import Tuple, Optional, List
-
+from ..robot import Robot, InputType, OutputType
 from amaze.simu.controllers.base import BaseController
-from amaze.simu.maze import Maze
+from amaze.simu.types import Action
 
 
 class RandomController(BaseController):
-    cheats = True
+    _savable = False
 
-    def __init__(self, simulation, *args, **kwargs):
-        if simulation is None and not hasattr(self, "simulation"):
-            raise ValueError("Random controller missing required 'simulation'"
-                             " parameter")
-        elif simulation is not None:
-            self.simulation = simulation
-        super().__init__(simulation.data.inputs,
-                         simulation.data.outputs,
-                         simulation.data.vision)
-        self.robot = self.simulation.robot
+    def __init__(self, robot_data: Robot.BuildData, seed=None):
+        super().__init__(robot_data=robot_data)
+        self.seed = seed
+        self.rng = Random(seed)
 
-        self.rng = Random()
-        self.stack = []
-        self.visited = set()
-        self.curr_pos: Optional[Pos] = self.robot.pos
-        self.last_pos: Optional[Pos] = None
-
-    def __call__(self, _) -> Tuple[float, float]:
-        ci, cj = pos = self.robot.pos.aligned()
-
-        if self.last_pos and self.last_pos == pos:
-            self.stack.pop()  # Cancel last move
-
-        neighbors = []
-        # noinspection PyProtectedMember
-        for d, (di, dj) in Maze._offsets.items():
-            i, j = ci + di, cj + dj
-            if ((i, j), d) not in self.visited:
-                neighbors.append((d, (i, j), (di, dj)))
-
-        self.last_pos = pos
-        if len(neighbors) > 0:
-            d_chosen, chosen, delta = self.rng.choice(neighbors)
-            # noinspection PyProtectedMember
-            self.visited.add((pos, Maze._inverse_dir[d_chosen]))
-            self.visited.add((chosen, d_chosen))
-            self.stack.append((-delta[0], -delta[1]))
-
-            return delta
+    def __call__(self, _) -> Action:
+        if self.output_type is OutputType.DISCRETE:
+            return self.rng.choice(self.discrete_actions)
         else:
-            return self.stack.pop()
+            return Action.from_polar(self.rng.random() * math.pi,
+                                     self.rng.random())
 
     def reset(self):
-        self.__init__(simulation=None)
+        self.rng = Random(self.seed)
 
-    def save_to_archive(self, archive: ZipFile, *args, **kwargs) -> bool:
+    def save_to_archive(self, archive: ZipFile, *args, **kwargs) \
+            -> bool:  # pragma: no cover
         raise NotImplementedError
 
     def load_from_archive(self, archive: ZipFile, *args, **kwargs) \
-            -> 'RandomController':
+            -> 'RandomController':  # pragma: no cover
         raise NotImplementedError
 
     @staticmethod

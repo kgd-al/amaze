@@ -1,6 +1,5 @@
 import argparse
 import dataclasses
-import itertools
 
 import pytest
 
@@ -8,27 +7,12 @@ from amaze import Maze, StartLocation, Sign
 
 SL = StartLocation
 
-FIELD_KEYS = [
-    "width", "height", "seed", "start", "unicursive",
-    "p_lure", "p_trap", "clue", "lure", "trap"
-]
-FIELD_VALUES = [
-    [5, 10], [5, 10], [0, 1], [SL.SOUTH_WEST, SL.NORTH_EAST],
-    [True, False], [0., .5], [0., .5],
-    [[], [Sign(value=1)], [Sign(value=1), Sign("point", 1)]],
-    [[], [Sign(value=.25)], [Sign(value=.25), Sign("point", .25)]],
-    [[], [Sign(value=.5)], [Sign(value=.5), Sign("point", .5)]],
-]
 
-
-DATA = [
-    dict(zip(FIELD_KEYS, t)) for t in itertools.product(*FIELD_VALUES)
-]
 TYPE_ERROR_DATA = [
     dict(width="nan"),
     dict(height="nan"),
     dict(seed="nan"),
-    dict(start="down"), dict(start=0),
+    dict(start="down"), dict(start=4),
     dict(unicursive="maybe"),
     dict(p_lure="maybe"),
     dict(p_trap="maybe"),
@@ -77,9 +61,8 @@ def _test_build_data(bd: Maze.BuildData):
     _assert_valid_build_data(bd)
 
 
-@pytest.mark.parametrize("kwargs", DATA)
-def test_maze_build_data(kwargs):
-    bd = Maze.BuildData(**kwargs)
+def test_maze_build_data(mbd_kwargs):
+    bd = Maze.BuildData(**mbd_kwargs)
     _test_build_data(bd)
 
     permutations = bd.all_rotations()
@@ -95,9 +78,8 @@ def test_maze_build_data(kwargs):
         _test_build_data(bd.override_with(override))
 
 
-@pytest.mark.parametrize("kwargs", DATA)
-def test_maze_build_data_from_string(kwargs):
-    bd = Maze.BuildData(**kwargs)
+def test_maze_build_data_from_string(mbd_kwargs):
+    bd = Maze.BuildData(**mbd_kwargs)
     bd_str = bd.to_string()
     bd2 = Maze.BuildData.from_string(bd_str)
     assert bd_str == bd2.to_string()
@@ -129,9 +111,8 @@ def test_error_maze_build_data_from_string(s):
         Maze.BuildData.from_string(s)
 
 
-@pytest.mark.parametrize("kwargs", DATA)
-def test_maze_base_build_data(kwargs):
-    maze = Maze.BuildData(**kwargs)
+def test_maze_base_build_data(mbd_kwargs):
+    maze = Maze.BuildData(**mbd_kwargs)
     default = Maze.BuildData.from_argparse({}, set_defaults=True)
     unset = Maze.BuildData.from_argparse({}, set_defaults=False)
     print(default)

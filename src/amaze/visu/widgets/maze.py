@@ -14,7 +14,7 @@ from amaze.simu.types import InputType, OutputType
 from amaze.visu import resources
 from amaze.visu.maze import MazePainter, Color, logger
 from amaze.visu.resources import SignType, qimage_to_numpy
-from amaze.visu.widgets import _trajectory_plotter, has_qt_application
+from amaze.visu.widgets import _trajectory_plotter, has_qt_application, application
 
 
 class QtPainter(MazePainter):
@@ -387,6 +387,8 @@ class MazeWidget(QLabel):
         :param img_format: QImage.Format to use for the underlying QImage
         :param config: kw configuration values (see default_config())
         """
+
+        _ = application()
 
         funcs = dict(
             background=cls.__background_color,

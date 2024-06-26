@@ -25,8 +25,7 @@ ERROR_DATA = [
     pytest.param("D", O.DISCRETE, None, id="istr"),
     pytest.param(I.DISCRETE, "D", None, id="ostr"),
     pytest.param(I.DISCRETE, O.DISCRETE, "v", id="vstr"),
-    pytest.param(I.DISCRETE, O.DISCRETE, 11.0, id="vfloat"),
-    pytest.param(O.DISCRETE, I.DISCRETE, 11.0, id="swap"),
+    pytest.param(O.DISCRETE, I.DISCRETE, 11, id="swap"),
 ]
 
 

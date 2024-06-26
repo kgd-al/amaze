@@ -120,7 +120,7 @@ class InputsEntropy:
     def reset(self): self.__init__()
 
 
-class StatesEntropy:
+class _StatesEntropy:
     def __init__(self):
         self.__counts = defaultdict(lambda: 0)
         self.__inputs = defaultdict(lambda: defaultdict(lambda: 0))
@@ -264,7 +264,7 @@ def metrics(maze: Maze, visuals: np.ndarray, input_type: InputType):
 
     k = "path"
     s_metric.reset()
-    d_metric = StatesEntropy()
+    d_metric = _StatesEntropy()
     for i, d, c in __solution_path(maze, visuals):
         s_metric.process(i)
         d_metric.process(i, d, c)

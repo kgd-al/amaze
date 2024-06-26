@@ -1,15 +1,14 @@
 from typing import List
 from zipfile import ZipFile
 
-from amaze.simu import InputType, OutputType
-from amaze.simu.controllers.base import BaseController
-from amaze.simu.pos import Vec
+from .base import BaseController, InputType, OutputType, Robot, Vec
 
 
 class CheaterController(BaseController):
-    cheats = True
+    _cheats = True
+    _savable = False
 
-    def __init__(self, simulation, **kwargs):
+    def __init__(self, robot_data: Robot.BuildData, simulation):
         if simulation is None and not hasattr(self, "simulation"):
             raise ValueError("Cheater controller missing required 'simulation'"
                              " parameter")
@@ -17,7 +16,8 @@ class CheaterController(BaseController):
             self.simulation = simulation
 
         data = self.simulation.data
-        super().__init__(data.inputs, data.outputs, data.vision)
+        assert robot_data == data
+        super().__init__(data)
 
         self.path = self.simulation.maze.solution[1:]
         self.current_cell = self.simulation.robot.pos.aligned()
@@ -51,7 +51,7 @@ class CheaterController(BaseController):
         return self.action
 
     def reset(self):
-        self.__init__(simulation=None)
+        self.__init__(robot_data=self.simulation.data, simulation=None)
 
     def save_to_archive(self, archive: ZipFile, *args, **kwargs) -> bool:
         raise NotImplementedError

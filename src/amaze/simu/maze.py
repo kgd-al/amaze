@@ -19,17 +19,12 @@ from typing import Annotated, Tuple, Optional, List, Dict
 import numpy as np
 
 from ._build_data import BaseBuildData
-from .types import StartLocation
+from .types import StartLocation, classproperty
 from ..visu import resources
 from ..visu.resources import Sign, SignType
 
 
 logger = getLogger(__name__)
-
-
-class classproperty(property):
-    def __get__(self, owner_self, owner_cls):
-        return self.fget(owner_cls)
 
 
 class Maze:
@@ -132,12 +127,16 @@ class Maze:
                           value_tester=self._valid_probability)
 
             if self.p_lure == 0 or not self.lure:
-                self.p_lure = None
-                self.lure = []
+                if not isinstance(self.p_lure, self.Unset):
+                    self.p_lure = None
+                if not isinstance(self.lure, self.Unset):
+                    self.lure = []
 
             if self.p_trap == 0 or not self.trap:
-                self.p_trap = None
-                self.trap = []
+                if not isinstance(self.p_trap, self.Unset):
+                    self.p_trap = None
+                if not isinstance(self.p_trap, self.Unset):
+                    self.trap = []
 
             for k in ["clue", "lure", "trap"]:
                 attr = getattr(self, k)
@@ -154,19 +153,21 @@ class Maze:
             """
             sep = self._FIELD_SEP
             default = Maze.BuildData()
-            f = f"M{self.seed}{sep}{self.width}x{self.height}"
+            tokens = [f"M{self.seed}", f"{self.width}x{self.height}"]
             if self.start != default.start:
-                f += sep + self.start.shorthand()
+                tokens.append(self.start.shorthand())
             if self.unicursive:
-                f += sep + "U"
-            f += ''.join(f"{sep}C{Sign.to_string(s)}" for s in self.clue)
+                tokens.append("U")
+            if not self.rotated:
+                tokens.append("R")
+            tokens.extend(f"C{Sign.to_string(s)}" for s in self.clue)
             if self.p_lure and self.lure:
-                f += f"{sep}l" + f"{self.p_lure:.2g}".lstrip('0')
-                f += ''.join(f"{sep}L{Sign.to_string(s)}" for s in self.lure)
+                tokens.append(f"l{self.p_lure:.2g}".lstrip('0'))
+                tokens.extend(f"L{Sign.to_string(s)}" for s in self.lure)
             if self.p_trap and self.trap:
-                f += f"{sep}t" + f"{self.p_trap:.2g}".lstrip('0')
-                f += ''.join(f"{sep}T{Sign.to_string(s)}" for s in self.trap)
-            return f
+                tokens.append(f"t{self.p_trap:.2g}".lstrip('0'))
+                tokens.extend(f"T{Sign.to_string(s)}" for s in self.trap)
+            return sep.join(tokens)
 
         @classmethod
         def from_string(cls, s, overrides: Optional['Maze.BuildData'] = None) \
@@ -181,6 +182,7 @@ class Maze:
             - [int]x[int]: maze will have those dimensions
             - [SE|SW|NE|NW]: the agent will start in that corner
             - U: maze will be unicursive (without intersections)
+            - R: maze is not invariant to rotation
             - C[sign]: add one helpful sign type
             - L[sign]: add one mildly deceptive sign type
             - T[sign]: add one deceptive sign type
@@ -227,6 +229,8 @@ class Maze:
                     bd.seed = s if (s := int(tail)) >= 0 else bd.seed
                 elif t == 'U':
                     bd.unicursive = True
+                elif t == 'R':
+                    bd.rotated = False
                 elif t == 'C':
                     bd.clue.append(Sign.from_string(tail))
                 elif t == 'l':
@@ -301,13 +305,14 @@ class Maze:
         """ Private maze constructor. See `build` for the public API.
         """
         if key is not self.__private_key:
-            raise AssertionError("Cannot create maze directly")
+            raise RuntimeError("Cannot create maze directly")
 
         self.width, self.height = data.width, data.height
         self.walls = np.ones((data.width, data.height, 4), dtype=bool)
         self.e_start = data.start
         self.start = (0, 0)
         self.end = (self.width - 1, self.height - 1)
+        self.rotated = True
 
         self.seed = data.seed
         self.solution: Optional[List[Tuple[int, int]]] = None
@@ -335,7 +340,7 @@ class Maze:
 
     def stats(self):
         return dict(
-            size=f"{self.width}x{self.height}",
+            size=(self.width, self.height),
             path=len(self.solution), intersections=self._intersections,
             clues=len(self.signs_data[SignType.CLUE]),
             lures=len(self.signs_data[SignType.LURE]),
@@ -384,7 +389,8 @@ class Maze:
         rng = _reset_rng()
 
         w, h = maze.width, maze.height
-        if not data.rotated:
+        maze.rotated = data.rotated
+        if not maze.rotated:
             maze.start = {
                 StartLocation.SOUTH_WEST: (0, 0),
                 StartLocation.SOUTH_EAST: (w - 1, 0),
@@ -418,7 +424,7 @@ class Maze:
         for (i, j), d in walls:
             maze._set_wall(i, j, d, False)
 
-        if data.rotated and data.start is not StartLocation.SOUTH_WEST:
+        if maze.rotated and data.start is not StartLocation.SOUTH_WEST:
             # Rotate cells
             maze.walls = np.rot90(maze.walls, -data.start.value, axes=(1, 0))
             # Rotate walls inside the cells
@@ -525,19 +531,17 @@ class Maze:
             for i in reversed(trap_indices):
                 vix, six, sign_dir, true_dir = clues_data.pop(i)
                 pos = maze.solution[six]
-                new_d = None
-                for d_ in Maze.Direction:
-                    if true_dir == d_:
-                        continue
-                    if maze.wall(pos[0], pos[1], d_):
-                        continue
-                    if (maze.solution[six-1] ==
-                            tuple(sum(t) for t
-                                  in zip(pos, maze._offsets[d_]))):
-                        continue
-                    new_d = d_
-                    break
-                assert new_d
+                prev_dir = maze._offsets_inv[
+                    tuple(a - b
+                          for a, b in zip(maze.solution[six-1],
+                                          maze.solution[six]))]
+                candidate_dirs = (
+                        set(Maze.Direction)
+                        - {true_dir, prev_dir}
+                        - set(d for d in Maze.Direction
+                              if maze.wall(pos[0], pos[1], d))
+                )
+                new_d = rng.choice(list(candidate_dirs))
                 traps_data.append((trap_signs_indices.pop(), six,
                                    new_d, true_dir))
 
@@ -545,7 +549,7 @@ class Maze:
         if not clues:
             maze.signs_data[SignType.CLUE] = []
 
-        if not data.unicursive and clues is None:
+        if not data.unicursive and not clues:
             logger.warning("Mazes with intersections and no clues are"
                            " practically unsolvable")
 
@@ -556,6 +560,7 @@ class Maze:
             width=self.width, height=self.height,
             seed=self.seed,
             start=self.e_start,
+            rotated=self.rotated,
             unicursive=self.unicursive(),
             clue=self.clues(),
             p_lure=self.p_lure,
@@ -563,13 +568,6 @@ class Maze:
             p_trap=self.p_trap,
             trap=self.traps()
         )
-
-    def save(self, path: Path):
-        bd = self.build_data()
-        dct = dict(name=self.build_data().to_string())
-        dct.update(asdict(bd))
-        with open(path, 'w') as f:
-            json.dump(dct, f)
 
     def to_string(self):
         """ Provides the string representation of this maze """

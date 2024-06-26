@@ -1,11 +1,10 @@
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from logging import getLogger
 from typing import Annotated, Optional, Tuple
 
-from amaze.simu._build_data import BaseBuildData
-from amaze.simu.controllers.base import BaseController
-from amaze.simu.pos import Pos, Vec
-from amaze.simu.types import InputType, OutputType
+from ._build_data import BaseBuildData
+from .pos import Pos, Vec
+from .types import InputType, OutputType
 
 logger = getLogger(__name__)
 
@@ -107,7 +106,7 @@ class Robot:
             return bd
 
         @classmethod
-        def from_controller(cls, controller: BaseController) \
+        def from_controller(cls, controller: 'BaseController') \
                 -> 'Robot.BuildData':
             """ Create a robot build data from an existing controller"""
 

@@ -15,8 +15,8 @@ class Vec:
 
     def __repr__(self): return f"({self.x}, {self.y})"
     def __str__(self): return f"{self.x:.2g}, {self.y:.2g}"
-
     def __bool__(self): return bool(self.x != 0 or self.y != 0)
+    def __hash__(self): return hash((self.x, self.y))
 
     def __eq__(self, other):
         try:
@@ -55,6 +55,10 @@ class Vec:
 
     @classmethod
     def null(cls): return cls(0, 0)
+
+    @classmethod
+    def from_polar(cls, a: float, r: float) -> 'Vec':
+        return cls(r * math.cos(a), r * math.sin(a))
 
 
 AlignedPos = Tuple[int, int]

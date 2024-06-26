@@ -24,6 +24,7 @@ from PyQt5.QtWidgets import (QHBoxLayout, QWidget, QLabel,
                              QFileDialog, QSizePolicy, QScrollArea,
                              QMessageBox)
 
+from amaze.simu.controllers import BaseController
 from amaze.simu._maze_metrics import MazeMetrics
 from amaze.simu.controllers.control import (controller_factory,
                                             load, check_types)
@@ -394,12 +395,11 @@ class MainWindow(QWidget):
         return Robot.BuildData(
             vision=_sbv("vision"),
             inputs=_ecbv("inputs", InputType),
-            outputs=_ecbv("outputs", OutputType),
-            control=_cbv("control"),
+            outputs=_ecbv("outputs", OutputType)
         )
 
     def _generate_controller(self, new_value=None, open_dialog=False):
-        c = getattr(self, 'controller', None)
+        c: BaseController = getattr(self, 'controller', None)
         if c and new_value is None and not open_dialog:
             return
 
@@ -450,13 +450,13 @@ class MainWindow(QWidget):
                 vision=self.config["vision"].value(),
                 simulation=self.simulation
             )
-            c = controller_factory(ct, args)
+            c: BaseController = controller_factory(ct, args)
 
-        simple = c.simple
+        simple = c.is_simple
         if not simple:
-            if i_t := c.inputs_types()[0]:
+            if i_t := c.input_type:
                 self.config['inputs'].setCurrentText(i_t.name.lower())
-            if o_t := c.outputs_types()[0]:
+            if o_t := c.output_type:
                 self.config['outputs'].setCurrentText(o_t.name.lower())
             if v := c.vision:
                 self.config["vision"].setValue(v)
@@ -912,13 +912,13 @@ class MainWindow(QWidget):
         def val(k): return getattr(data, k)
 
         for name in ["vision"]:
-            self.config[name].setValue(val(name))
+            self.config[name].setValue(val(name) or 15)
 
         for name in ["inputs", "outputs"]:
             self.config[name].setCurrentText(val(name).name.lower())
 
-        name = "control"
-        self.config[name].setCurrentText(val(name).lower())
+        # name = "control"
+        # self.config[name].setCurrentText(val(name).lower())
 
 
 class _MovieRecorder:
