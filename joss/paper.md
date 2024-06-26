@@ -9,9 +9,10 @@ tags:
 authors:
   - name: Kevin Godin-Dubois
     orcid: 0009-0002-6033-3555
-    corresponding: true # (This is how to denote the corresponding author)
-    affiliation: 1 # (Multiple affiliations must be quoted)
+    corresponding: true
+    affiliation: 1
   - name: Karine Miras
+    orcid: 0000-0003-4942-3488
     affiliation: 1
   - name: Anna V. Kononova
     affiliation: 2
@@ -27,15 +28,16 @@ bibliography: paper.bib
 # Summary
 
 The need to provide fair comparisons between agents, especially in the field of Reinforcement Learning, has led to a plethora of benchmarks.
-However these benchmarks are, for the most part, devoted to tailor-made problems with very little degrees of freedom for the experimenter.
-AMaze is, instead, a benchmark *generator* capable of producing human-intelligible environment of arbitrarily high complexity.
-By using, potentially custom-made, visual cues in a maze-navigation task, the library empowers researchers across a large breadth of fields.
+However these are, for the most part, devoted to tailor-made problems with very little degrees of freedom for the experimenter.
+AMaze is instead a benchmark *generator* capable of producing human-intelligible environments of arbitrarily high complexity.
+By using visual cues in a maze-navigation task, the library empowers researchers across a large breadth of fields.
 
 # Statement of need
 
-AMaze is a pure-python package with an emphasis towards easy and intuitive generation, evaluation and analysis of mazes.
+AMaze is a pure-python package with an emphasis towards the easy and intuitive generation, evaluation and analysis of mazes.
 Its primary goal is to provide a way to quickly generate mazes of targeted difficulty e.g. to test a Reinforcement Learning algorithm.
-Without paraphrasing the documentation[^1] too much, users of AMaze have two main components to take into consideration: mazes and agents.
+Users of AMaze have two main components to take into consideration: mazes and agents.
+These are introduced below with more details available in the documentation[^1].
 
 ## Mazes
 
@@ -46,13 +48,13 @@ The *seed* is used in the random number generator responsible for: a) the depth-
 As will be detailed below, agents only see a single cell at a time making intersections impossible to handle without additional information.
 *Clues* provide such an information by helpfully pointing towards the correct direction.
 However, users may additionally specify the presence of *traps*, at a given frequency, to replace a clue at an intersection.
-Traps always point towards the wrong direction (randomly so in case of a three-way intersection) thereby forcing agents to discriminate between the two.
+Traps always point towards the wrong direction thereby forcing agents to discriminate between the two.
 Furthermore, there is a lighter class of negative sign, namely *lures*, which occur outside of intersection and unhelpfully point towards an obviously bad direction (e.g. a wall).
 
 Mazes can broadly be grouped by class depending on the features they exhibit.
 The most *trivial* cases correspond to mazes with a single path (enforced by "filling-in" intersections).
-When intersections are labeled with appropriate clues mazes are considered as *simple*.
-Additionally exhibiting either lures or traps form the corresponding classes while the more general case with all types of signs is labeled as *complex*.
+When intersections are labeled with appropriate clues, mazes are considered as *simple*.
+Additionally, exhibiting either lures or traps form the corresponding classes while the more general case with all types of signs is labeled as *complex*.
 To accurately compare between different types of mazes across multiple categories, the library provides two dedicated metrics.
 The surprisingness $S_M$ and deceptiveness $D_M$ for a given maze $M$ are as follows:
 
@@ -70,7 +72,7 @@ As illustrated in \autoref{fig:complexity}, the space of all possible mazes[^2] 
 [^1]: [https://amaze.readthedocs.io/en/latest/](https://amaze.readthedocs.io/en/latest/)
 [^2]: Sampled from 500'000 unique mazes across all five classes
 
-![Discrete (left) and continuous (right) inputs for the examples shown above.\label{fig:inputs}](../docs/latex/agents/light-1-3.png)
+![Discrete (left) and continuous (right) inputs for the examples shown in \autoref{fig:maze}.\label{fig:inputs}](../docs/latex/agents/light-1-3.png){ width=94% }
 
 ## Agents
 
@@ -78,30 +80,30 @@ Agents in AMaze are loosely embodied robots that wander around mazes perceiving 
 To accommodate various use cases, these agents come in three different forms: fully discrete, fully continuous and hybrid.
 In the former case, an agent has access to something akin to a pre-processed input, as in \autoref{fig:inputs}, where the first four fields describes the wall configuration and the remainder provide information about signs, if any.
 The direction of the previous cell is depicted in red *for the benefit of the human observer* as agents only perceive grayscale values.
-In the fully discrete case, these observations are used to deduce the correct action out of the four cardinal directions.
+These observations are used to deduce the correct action out of the four cardinal directions.
 
 In the hybrid case, actions are identical while observations are coarse-grained images where walls are indicated by pixels on the perimeter.
 The temporal information of the previous direction is still provided, as a single white pixel centered on the appropriate side.
 More importantly, the center of the image is used to display an arbitrary shape as a sign (clue, lure or trap).
-Finally, the fully continuous case is characterized by having the robot control its acceleration instead of choosing one cardinal direction.
-Thus, in addition to accurately processing visual data, the agent must also infer and take into consideration its position and intertia.
+Finally, the fully continuous case is characterized by having the robot control its acceleration.
+Thus, the agent must also infer and take into consideration its position and intertia.
 
-# Python Ecosystem
+# Comparison to existing benchmarks
 
-AMaze differs from existing benchmarks (suites) on two important points:
+AMaze differs from existing benchmarks (suites) on two important aspects:
 
-- Computational efficiency when compared to alternative vision-based tasks
-- Extensive control over the environment and intuitive understanding of an agent's behavior
+- *Computational efficiency* when compared to alternative vision-based tasks
+- *Extensive control* over the environment and *intuitive understanding* of an agent's behavior
 
-To illustrate both statements, we compare AMaze to [gymnasium](https://gymnasium.farama.org/), an ubiquitous benchmark suite in the Python ecosystem.
-This test uses 81 variations of AMaze with different retina sizes (11, 15, 21), maze sizes (5, 10, 20), lure frequencies (0, 0.5, 1) and observation/action spaces (discrete, hybrid and continuous).
+To illustrate both statements, we compare AMaze to [gymnasium](https://gymnasium.farama.org/) [@Towers2023], an ubiquitous benchmark suite in the Python ecosystem (\autoref{tab:comparison}).
+This test uses 81 variations of AMaze with different retina sizes (11, 15, 21), maze sizes (5, 10, 20), lure frequencies (0, 0.5, 1), and observation and action spaces (discrete, hybrid and continuous).
 
 ![Comparison of AMaze with gymnasium's environments suite. Inputs, Outputs and amount of human Control are taken from the documentation while times are measured on 1000 timesteps averaged over 10 replicates on an i7-1185G7 (3GHz). AMaze is more computationally efficient than all but the simplest environments while also being the more parametrizable with respect to input, outputs and environmental characteristics.\label{tab:comparison}](../docs/latex/benchmarking/gym_pretty_table.pdf)
 
-Such a diversity of environment types was done to give sufficient data for a fair comparison while also showcasing the ease with which AMaze can create feature-specific sets of mazes e.g. for benchmarking purposes.
+This diversity of environment types was generated to give sufficient data for a fair comparison while also showcasing the ease with which AMaze can create feature-specific sets of mazes e.g. for benchmarking purposes.
 In terms of computational speed, while taking more time than Classical Control tasks [@Barto1983] or Toy Text environments [@Sutton2018], AMaze is demonstrably faster than those based on 2D ([Box2d](https://box2d.org/)) or 3D ([MuJoCo](https://github.com/google-deepmind/mujoco), @Todorov2012) simulators or the Arcade Learning Environment [@Bellemare2013].
 
-Given the broad range of environments used here, this demonstrates how competitive the library is compared to existing alternatives with respect to its execution speed and customizability.
+Given the broad range of generated environments, this comparison demonstrates how competitive the library is compared to existing alternatives with respect to its execution speed and customizability.
 
 
 # Acknowledgements
