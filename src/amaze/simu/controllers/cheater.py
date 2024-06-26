@@ -56,8 +56,8 @@ class CheaterController(BaseController):
     def save_to_archive(self, archive: ZipFile, *args, **kwargs) -> bool:
         raise NotImplementedError
 
-    def load_from_archive(self, archive: ZipFile, *args, **kwargs) \
-            -> 'CheaterController':
+    def load_from_archive(self, archive: ZipFile,  robot: Robot.BuildData,
+                          *args, **kwargs) -> 'CheaterController':
         raise NotImplementedError
 
     @staticmethod

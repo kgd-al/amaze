@@ -30,8 +30,8 @@ class RandomController(BaseController):
             -> bool:  # pragma: no cover
         raise NotImplementedError
 
-    def load_from_archive(self, archive: ZipFile, *args, **kwargs) \
-            -> 'RandomController':  # pragma: no cover
+    def load_from_archive(self, archive: ZipFile,  robot: Robot.BuildData,
+                          *args, **kwargs) -> 'RandomController':  # pragma: no cover
         raise NotImplementedError
 
     @staticmethod
@@ -40,4 +40,4 @@ class RandomController(BaseController):
 
     @staticmethod
     def outputs_types() -> List[OutputType]:
-        return [OutputType.DISCRETE]
+        return list(OutputType)

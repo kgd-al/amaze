@@ -1,5 +1,5 @@
 from amaze import (Maze, Robot, MazeWidget, Simulation,
-                   application, load, amaze_main)
+                   qt_application, load, amaze_main)
 
 # Global variables
 FOLDER = "tmp/demos/visualization"
@@ -11,7 +11,7 @@ maze = Maze.from_string(maze_str)
 maze_str = maze.to_string()
 
 # Draw the maze
-app = application()
+app = qt_application()
 maze_img = f"{FOLDER}/{maze_str}.png"
 if MazeWidget.static_render_to_file(
         maze=Maze.from_string(maze_str),

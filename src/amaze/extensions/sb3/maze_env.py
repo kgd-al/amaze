@@ -11,7 +11,7 @@ from gymnasium import spaces, Env
 from stable_baselines3.common.env_checker import check_env
 from stable_baselines3.common.env_util import make_vec_env
 
-from amaze import application
+from amaze import qt_application
 from amaze.extensions.sb3.utils import IOMapper
 from amaze.extensions.sb3 import CV2QTGuard
 from amaze.simu.maze import Maze
@@ -189,7 +189,7 @@ class MazeEnv(Env):
     def plot_trajectory(self, cb_side: int = 0, verbose: bool = True,
                         square: bool = False) -> np.ndarray:
         with CV2QTGuard():
-            _ = application()
+            _ = qt_application()
             plot = MazeWidget.plot_trajectory(
                 simulation=self._simulation,
                 size=256, trajectory=self.prev_trajectory,

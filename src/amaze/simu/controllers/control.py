@@ -72,12 +72,15 @@ def save(controller: BaseController, path: Union[Path, str],
     with ZipFile(path, "w") as archive:
         archive.writestr("controller_class",
                          controller_class)
+        archive.writestr("robot", controller.robot_data.to_string())
         controller.save_to_archive(archive, *args, **kwargs)
 
         _infos = controller.infos.copy()
-        _infos.update(infos)
-        archive.writestr("infos",
-                         json.dumps(_infos).encode("utf-8"))
+        if infos is not None:
+            _infos.update(infos)
+        if _infos:
+            archive.writestr("infos",
+                             json.dumps(_infos).encode("utf-8"))
 
     logger.debug(f"Saved controller to {path}")
 
@@ -94,12 +97,19 @@ def load(path: Union[Path, str], *args, **kwargs):
     with ZipFile(path, "r") as archive:
         controller_class = archive.read("controller_class").decode("utf-8")
         logger.debug(f"> controller class: {controller_class}")
+
+        robot = Robot.BuildData.from_string(
+            archive.read("robot").decode("utf-8"))
+        logger.debug(f"> Robot build data: {robot}")
+
         if (c_type := CONTROLLERS.get(controller_class)) is None:
             msg = f"Unsupported controller type {controller_class}."
             if len(tokens := controller_class.split(".")) > 1:
                 msg += (f" Did you forget to include the '{tokens[0]}'"
                         f" extension?")
             raise ValueError(msg)
-        c = c_type.load_from_archive(archive, *args, **kwargs)
-        c.infos = json.loads(archive.read("infos").decode("utf-8"))
+
+        c = c_type.load_from_archive(archive, robot=robot, *args, **kwargs)
+        if "infos" in archive.namelist():
+            c.infos = json.loads(archive.read("infos").decode("utf-8"))
         return c

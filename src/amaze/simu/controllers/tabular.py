@@ -16,15 +16,13 @@ class TabularController(BaseController):
     def __init__(self,
                  robot_data: Robot.BuildData,
                  actions, epsilon, seed):
-        assert robot_data.inputs is InputType.DISCRETE
-        assert robot_data.outputs is OutputType.DISCRETE
         super().__init__(robot_data)
         self._actions = actions
         self._actions_ix = {a: i for i, a in enumerate(actions)}
         self._data = {}
         self.epsilon = epsilon
         self._rng = Random(seed)
-        self.__updates = {}
+        self._updates = {}
         self.init_value = 0
         self.min_value, self.max_value = None, None
 
@@ -45,13 +43,13 @@ class TabularController(BaseController):
 
     def __updated(self, s: State, a: Action, value):
         b_state = tuple(s)
-        if b_state not in self.__updates:
-            self.__updates[b_state] = [0 for _ in self._actions]
-        self.__updates[b_state][self._actions_ix[a]] += 1
+        if b_state not in self._updates:
+            self._updates[b_state] = [0 for _ in self._actions]
+        self._updates[b_state][self._actions_ix[a]] += 1
 
-        def _update(k, v, f): setattr(self, k,
-                                      value if not (a_ := getattr(self, k))
-                                      else f(v, a_))
+        def _update(k, v, f):
+            setattr(self, k, (value if not (a_ := getattr(self, k))
+                              else f(v, a_)))
         _update('max_value', value, max)
         _update('min_value', value, min)
 
@@ -99,7 +97,7 @@ class TabularController(BaseController):
         print(body)
         print(separator)
         if show_updates:
-            print(self.__pretty_format(self.__updates))
+            print(self.__pretty_format(self._updates))
 
     def details(self) -> dict:
         return {
@@ -112,18 +110,19 @@ class TabularController(BaseController):
     def save_to_archive(self, archive: ZipFile, *args, **kwargs) -> bool:
         def fmt(f_): return self.__pretty_format(f_).to_dict(orient='index')
         with archive.open("data.json", "w") as file:
-            data_bytes = json.dumps(
+            data = json.dumps(
                 dict(
                     init_val=self.init_value,
                     min_val=self.min_value, max_val=self.max_value,
-                    data=fmt(self._data), updates=fmt(self.__updates),
+                    data=fmt(self._data), updates=fmt(self._updates),
+                    epsilon=self.epsilon, seed=self._rng.randint(0, 2**32)
                 )).encode("utf-8")
-            file.write(data_bytes)
+            file.write(data)
             return True
 
     @classmethod
-    def load_from_archive(cls, archive: ZipFile, *args, **kwargs) \
-            -> 'TabularController':
+    def load_from_archive(cls, archive: ZipFile, robot: Robot.BuildData,
+                          *args, **kwargs) -> 'TabularController':
         def parse_val(v):
             try:
                 return int(v)
@@ -142,9 +141,10 @@ class TabularController(BaseController):
             actions = [parse_tuple(a) for a in
                        next(iter(dct['data'].values())).keys()]
             c = TabularController(
-                actions=actions, epsilon=0, seed=0)
+                robot_data=robot,
+                actions=actions, epsilon=dct["epsilon"], seed=dct["seed"])
             c._data = parse_dict(dct["data"])
-            c.__updates = parse_dict(dct["updates"])
+            c._updates = parse_dict(dct["updates"])
             c.init_value = dct["init_val"]
             c.min_value = dct["min_val"]
             c.max_value = dct["max_val"]
@@ -172,5 +172,11 @@ class TabularController(BaseController):
     def q_learning(self, s: State, a: Action, r, s_, _, alpha, gamma):
         self.__bellman(s, a, r, alpha, gamma, max(self.values(s_)))
 
-
-# def save
+    @staticmethod
+    def assert_equal(lhs: 'TabularController', rhs: 'TabularController'):
+        for (lhs_k, lhs_v), (rhs_k, rhs_v) in zip(lhs.__dict__.items(),
+                                                  rhs.__dict__.items()):
+            assert lhs_k == rhs_k
+            if lhs_k == "_rng":
+                continue
+            assert lhs_v == rhs_v
