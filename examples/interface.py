@@ -83,7 +83,7 @@ class MainWindow(QWidget):
 
 def main(is_test=False):
     # Create main QT objects
-    app = amaze.application()
+    app = amaze.qt_application()
     window = MainWindow()
     window.show()
 

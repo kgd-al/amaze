@@ -15,7 +15,7 @@ from importlib import import_module
 from pathlib import Path
 from typing import Optional, Sequence
 
-from amaze import application, load, Maze, Robot, Simulation, MazeWidget
+from amaze import qt_application, load, Maze, Robot, Simulation, MazeWidget
 from amaze.visu.viewer import MainWindow
 
 logger = logging.getLogger(__name__)
@@ -277,7 +277,7 @@ def main(sys_args: Optional[Sequence[str] | str] = None):
     if not window:
         os.environ["QT_QPA_PLATFORM"] = "offscreen"
 
-    app = application()
+    app = qt_application()
 
     logging.basicConfig(level=logging.DEBUG)
 

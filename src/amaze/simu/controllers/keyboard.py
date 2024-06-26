@@ -5,11 +5,9 @@ from zipfile import ZipFile
 
 from PyQt5.QtCore import QObject, Qt, QEvent
 from PyQt5.QtGui import QKeyEvent
-from PyQt5.QtWidgets import QApplication
 
-from amaze.simu.controllers.base import BaseController
-from amaze.simu.pos import Vec
-from amaze.simu.types import OutputType, InputType
+from .base import BaseController, Robot, Vec, OutputType, InputType
+from ...visu.widgets import qt_application
 
 logger = getLogger(__name__)
 
@@ -21,10 +19,9 @@ class __Meta(type(QObject), ABCMeta):
 class KeyboardController(QObject, BaseController, metaclass=__Meta):
     _savable = False
 
-    def __init__(self, inputs: InputType, outputs: OutputType, vision: int,
-                 *args, **kwargs):
-        super(BaseController, self).__init__(inputs, outputs, vision)
-        QApplication.instance().installEventFilter(self)
+    def __init__(self, robot_data: Robot.BuildData):
+        super().__init__(robot_data=robot_data)
+        qt_application(allow_create=False).installEventFilter(self)
         self.actions = {
             Qt.Key_Right: Vec(1, 0),
             Qt.Key_Up: Vec(0, 1),
@@ -41,16 +38,19 @@ class KeyboardController(QObject, BaseController, metaclass=__Meta):
     def eventFilter(self, obj: 'QObject', e: 'QEvent') -> bool:
         if not isinstance(e, QKeyEvent):
             return False
-        if self._output_type is OutputType.DISCRETE:
+        e: QKeyEvent
+        print(f"[kgd-debug] KeyEvent({e.type()}, {hex(e.key())})")
+        if self.output_type is OutputType.DISCRETE:
             return self._process_discrete_input(e)
         else:
             return self._process_continuous_input(e)
 
     def reset(self):
+        self.actions_queue.clear()
         self.current_action = Vec.null()
 
     def __call__(self, _) -> Vec:
-        if self._output_type is OutputType.DISCRETE:
+        if self.output_type is OutputType.DISCRETE:
             if len(self.actions_queue) > 0:
                 return self.actions_queue.pop(0)
             else:
@@ -61,8 +61,8 @@ class KeyboardController(QObject, BaseController, metaclass=__Meta):
     def save_to_archive(self, archive: ZipFile, *args, **kwargs) -> bool:
         raise NotImplementedError
 
-    def load_from_archive(self, archive: ZipFile, *args, **kwargs) \
-            -> 'KeyboardController':
+    def load_from_archive(self, archive: ZipFile, robot: Robot.BuildData,
+                          *args, **kwargs) -> 'KeyboardController':
         raise NotImplementedError
 
     @staticmethod

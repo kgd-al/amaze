@@ -115,7 +115,8 @@ def pytest_generate_tests(metafunc):
     size: TestSize = metafunc.config.getoption('scale')
     maybe_parametrize("mbd_kwargs",
                       values=generate_large_maze_data_sample(size))
-    maybe_parametrize("maze_str", values=MAZE_DATA_SAMPLE)
+    maybe_parametrize("maze_str", values=MAZE_DATA_SAMPLE,
+                      short_name="m")
 
 
 def pytest_collection_modifyitems(config, items):

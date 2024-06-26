@@ -26,6 +26,17 @@ class BaseController(ABC):
     def __init__(self, robot_data: Robot.BuildData):
         self._robot_data = robot_data
 
+        def test(name, field_type, field_types):
+            if field_type not in field_types:
+                raise ValueError(f"{name} type not supported."
+                                 f" {field_type} not in {field_types}: either"
+                                 f" you passed a wrong argument or you wrongly"
+                                 f" specified the valid {name.lower()} types"
+                                 f" for this controller")
+
+        test("Input", self.input_type, self.inputs_types())
+        test("Output", self.output_type, self.outputs_types())
+
     @classproperty
     def is_simple(cls) -> bool:
         """ Whether this controller has no internal state (table, ANN, ...)
@@ -59,6 +70,12 @@ class BaseController(ABC):
 
     @property
     def vision(self) -> int: return self._robot_data.vision
+
+    @property
+    def robot_data(self) -> Robot.BuildData:
+        return Robot.BuildData(inputs=self.input_type,
+                               outputs=self.output_type,
+                               vision=self.vision)
 
     @abstractmethod
     def __call__(self, inputs: State) -> Vec:
@@ -98,9 +115,8 @@ class BaseController(ABC):
         """
         raise NotImplementedError
 
-    @classmethod
-    @property
-    def discrete_actions(cls):
+    @classproperty
+    def discrete_actions(cls) -> List[Action]:
         """ Specifies the set of discrete actions that can be taken by an agent
         """
         return cls._discrete_actions
@@ -112,7 +128,26 @@ class BaseController(ABC):
         raise NotImplementedError
 
     @classmethod
-    def load_from_archive(cls, archive: ZipFile, *args, **kwargs) \
-            -> 'BaseController':  # pragma: no cover
+    @abstractmethod
+    def load_from_archive(
+            cls, archive: ZipFile, robot: Robot.BuildData,
+            *args, **kwargs) -> 'BaseController':  # pragma: no cover
         """ Implement to load derived-specific content from the archive """
         raise NotImplementedError
+
+    def save(self, *args, **kwargs):
+        """ Easy access to global save function
+
+        .. see:: `~amaze.simu.controllers.control.save`
+        """
+        from .control import save
+        save(self, *args, **kwargs)
+
+    @classmethod
+    def load(cls, *args, **kwargs):
+        """ Easy access to global load function
+
+        .. see:: `~amaze.simu.controllers.control.load`
+        """
+        from .control import load
+        return load(*args, **kwargs)
