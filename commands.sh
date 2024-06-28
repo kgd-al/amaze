@@ -62,8 +62,10 @@ cmd_pytest(){  # Perform the test suite (small scale)
   coverage_txt=$cout/coverage.table
   coverage_tree=$cout/coverage.tree
   coverage_config=$cout/coverage.conf
-  coverage_config_tmp=.coverage.conf
   coverage_args=""
+
+  coverage_tmp=$(basename $coverage)
+  coverage_config_tmp=$(basename $coverage_config)
 
   rm -rf $out
   mkdir -p $cout
@@ -81,20 +83,21 @@ cmd_pytest(){  # Perform the test suite (small scale)
     fi
   done
 
-  coverage run --branch --data-file=$(basename $coverage) \
+  coverage run --branch --data-file=$coverage_tmp\
     --source=. --omit "setup.py,tests/conftest.py,examples/*.py,tests/test_examples.py" \
     -m \
     pytest --durations=10 --basetemp=$out -x -ra "$@" || exit 2
   mkdir -p $cout # pytest will have cleared everything. Build it back
-  mv $(basename $coverage) $coverage
+  mv -v $coverage_tmp $coverage
   coverage report --data-file=$coverage $coverage_args > $coverage_txt
   coverage html  --fail-under=100 --data-file=$coverage $coverage_args -d $cout/html
 
   echo
   echo "Hierarchical coverage:"
-  ~/work/utils/coverage_tree.py $coverage --skip-covered --sort=cover $coverage_args
+  ~/work/utils/coverage_tree.py $coverage --skip-covered --sort=cover $coverage_args \
+  | tee $coverage_tree
 
-  mv $coverage_config_tmp $coverage_config
+  [ -f $coverage_config_tmp ] && mv -v $coverage_config_tmp $coverage_config
 
 #  line
 #  coverage report --data-file=best-coverage.info

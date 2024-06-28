@@ -55,15 +55,18 @@ def wrapped_sb3_model(model_type: Type[BaseAlgorithm]):
 
         def _setup_model(self) -> None:
             super()._setup_model()
-            print("[kgd-debug] SB3 model setup")
+            # print("[kgd-debug] SB3 model setup")
             input_type = _i_types_mapping[len(self.observation_space.shape)]
             output_type = _o_types_mapping[self.action_space.__class__]
             vision = (None if input_type is InputType.DISCRETE
                       else self.observation_space.shape[1])
-            BaseController.__init__(
-                self, input_type, output_type,
-                ()
-            )
+            deduced_robot_data = Robot.BuildData(input_type, output_type,
+                                                 vision)
+            if self.robot_data != deduced_robot_data:
+                raise ValueError("Incompatible IO specifications:\n"
+                                 f"- Model created with {self.robot_data}\n"
+                                 f"- Deduced from environment"
+                                 f" {deduced_robot_data}")
 
             self._mapper = IOMapper(observation_space=self.observation_space,
                                     action_space=self.action_space)
@@ -113,15 +116,10 @@ def wrapped_sb3_model(model_type: Type[BaseAlgorithm]):
         def save(self, path: str, *_args, **_kwargs) -> None:
             # print("[kgd-debug] infos:\n", pprint.pformat(infos))
             save(self, path,
-                 infos={
-                     "algo": self._model_type.__name__,
-                     "inputs": self._input_type.name,
-                     "outputs": self._output_type.name,
-                     "vision": self._vision,
-                 },
+                 infos=dict(algo=self._model_type.__name__),
                  *_args, **_kwargs)
 
-        def save_to_archive(self, archive: ZipFile, *_args, **_kwargs) -> bool:
+        def _save_to_archive(self, archive: ZipFile, *_args, **_kwargs) -> bool:
             """ Delegates savings of the internals to the SB3 model """
             buffer = io.BytesIO()
             self._model_type.save(self, buffer, *_args, **_kwargs)
@@ -129,28 +127,20 @@ def wrapped_sb3_model(model_type: Type[BaseAlgorithm]):
             return True
 
         @classmethod
-        def load_from_archive(cls, archive: ZipFile, *_args, **_kwargs):
+        def _load_from_archive(cls, archive: ZipFile,
+                               robot: Robot.BuildData,
+                               *_args, **_kwargs):
             """ Loads the SB3 specific contents from the archive """
             infos = json.loads(archive.read("infos"))
             # print("[kgd-debug] infos:\n", pprint.pformat(infos))
             buffer = io.BytesIO(archive.read("sb3.zip"))
             loaded_model = cls._model_type.load(buffer, *_args, **_kwargs)
-            model = cls(policy=loaded_model.policy,
+            model = cls(robot_data=robot,
+                        policy=loaded_model.policy,
                         env=loaded_model.env,
                         device=loaded_model.device,
                         _init_setup_model=False)
-            BaseController.__init__(
-                model,
-                input_type=InputType[infos["inputs"]],
-                output_type=OutputType[infos["outputs"]],
-                vision=infos["vision"],
-            )
             model.__dict__.update(loaded_model.__dict__)
-            if it := infos.get("inputs"):
-                model._i_type = InputType[it]
-            if ot := infos.get("outputs"):
-                model._o_type = OutputType[ot]
-            model._vision = infos.get("vision")
             return model
 
     return SB3Controller

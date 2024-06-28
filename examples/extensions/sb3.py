@@ -29,8 +29,6 @@ def train(is_test):
     eval_mazes = [d.where(seed=test_seed) for d in train_mazes]
     robot = Robot.BuildData.from_string(ROBOT)
 
-    print("[kgd-debug]", robot)
-
     train_env = make_vec_maze_env(train_mazes, robot, SEED)
     eval_env = make_vec_maze_env(eval_mazes, robot, SEED, log_trajectory=True)
 
@@ -56,7 +54,7 @@ def train(is_test):
         PPO, policy="MlpPolicy", env=train_env, seed=SEED, learning_rate=1e-3)
 
     print("== Starting", "="*68)
-    model.set_logger(configure(FOLDER, ["csv", "tensorboard"]))
+    model.set_logger(configure(FOLDER, ["tensorboard"]))
     model.learn(BUDGET, callback=eval_callback, progress_bar=True)
 
     tb_callback.log_step(True)
@@ -119,7 +117,7 @@ def main(is_test=False):
 
     with CV2QTGuard(platform=False):
         amaze_main(f"--controller {BEST} --extension sb3 --maze {train_maze}"
-                   f" --auto-quit --no-restore-config")
+                   f" --auto-quit --no-restore-config --width 1000")
 
 
 if __name__ == "__main__":

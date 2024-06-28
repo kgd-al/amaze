@@ -7,7 +7,7 @@ import pytest
 
 @pytest.mark.parametrize(
     "file",
-    [pytest.param(path, id=str(Path(*path.parts[1:])))
+    [pytest.param(path, id=str(Path(*path.parts[1:]).with_suffix("")))
      for path in Path("examples").glob("**/*.py")]
 )
 def test_run_examples(file, capsys):
