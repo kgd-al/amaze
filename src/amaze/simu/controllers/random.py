@@ -26,14 +26,6 @@ class RandomController(BaseController):
     def reset(self):
         self.rng = Random(self.seed)
 
-    def save_to_archive(self, archive: ZipFile, *args, **kwargs) \
-            -> bool:  # pragma: no cover
-        raise NotImplementedError
-
-    def load_from_archive(self, archive: ZipFile,  robot: Robot.BuildData,
-                          *args, **kwargs) -> 'RandomController':  # pragma: no cover
-        raise NotImplementedError
-
     @staticmethod
     def inputs_types() -> List[InputType]:
         return list(InputType)

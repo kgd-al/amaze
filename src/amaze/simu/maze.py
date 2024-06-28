@@ -1,18 +1,14 @@
 """Data structures describing a maze and its parameters
 """
 
-import copy
-import json
-import pprint
 import random
 import re
 import time
 from collections import namedtuple
-from dataclasses import dataclass, fields, asdict, field
+from dataclasses import dataclass, fields, field
 from enum import Enum
 from itertools import islice, cycle
 from logging import getLogger
-from pathlib import Path
 from types import SimpleNamespace
 from typing import Annotated, Tuple, Optional, List, Dict
 
@@ -20,8 +16,7 @@ import numpy as np
 
 from ._build_data import BaseBuildData
 from .types import StartLocation, classproperty
-from ..visu import resources
-from ..visu.resources import Sign, SignType
+from amaze.misc.resources import Sign, SignType
 
 
 logger = getLogger(__name__)
@@ -58,7 +53,7 @@ class Maze:
 
         unicursive: Annotated[bool, "Single path?"] = False
 
-        Signs = List[resources.Sign]
+        Signs = List[Sign]
         custom_classes = {
             Signs: SimpleNamespace(
                 type_parser=str,
@@ -142,7 +137,7 @@ class Maze:
                 attr = getattr(self, k)
                 if isinstance(attr, list):
                     setattr(self, k,
-                            [resources.Sign.from_string(s)
+                            [Sign.from_string(s)
                              if isinstance(s, str) else s for s in attr])
                 assert_ok(k, field_type=list, value_tester=self._valid_signs)
 

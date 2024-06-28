@@ -6,8 +6,8 @@ from PyQt5.QtWidgets import (QSizePolicy, QListWidget, QWidget, QVBoxLayout,
                              QHBoxLayout, QComboBox, QDoubleSpinBox,
                              QToolButton, QLayout)
 
-from amaze.visu import resources
-from amaze.visu.resources import Sign, Signs
+from amaze.misc import resources
+from amaze.misc.resources import Sign, Signs
 
 
 class SignList(QWidget):

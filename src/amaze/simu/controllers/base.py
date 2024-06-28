@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+from pathlib import Path
 from typing import List
 from zipfile import ZipFile
 
@@ -91,8 +92,13 @@ class BaseController(ABC):
     def details(self) -> dict:
         return {}
 
-    def name(self):
-        return self.__class__.__name__
+    @classproperty
+    def name(cls) -> str:
+        return cls.__name__
+
+    @classproperty
+    def short_name(cls) -> str:
+        return cls.name.replace("Controller", "").lower()
 
     @abstractmethod
     def reset(self): pass  # pragma no cover
@@ -121,27 +127,31 @@ class BaseController(ABC):
         """
         return cls._discrete_actions
 
-    @abstractmethod
-    def save_to_archive(self, archive: ZipFile, *args, **kwargs) \
+    def _save_to_archive(self, archive: ZipFile, *args, **kwargs) \
             -> bool:  # pragma: no cover
-        """ Implement to save derived-specific content to the archive """
+        """ Re-implement to save derived-specific content to the archive """
         raise NotImplementedError
 
     @classmethod
-    @abstractmethod
-    def load_from_archive(
+    def _load_from_archive(
             cls, archive: ZipFile, robot: Robot.BuildData,
             *args, **kwargs) -> 'BaseController':  # pragma: no cover
-        """ Implement to load derived-specific content from the archive """
+        """ Re-implement to load derived-specific content from the archive """
         raise NotImplementedError
 
-    def save(self, *args, **kwargs):
+    @staticmethod
+    def assert_equal(lhs: 'BaseController', rhs: 'BaseController') -> bool:
+        """ Re-implement for savable controllers to test for successful
+        roundtrip"""
+        raise NotImplementedError
+
+    def save(self, *args, **kwargs) -> Path:
         """ Easy access to global save function
 
         .. see:: `~amaze.simu.controllers.control.save`
         """
         from .control import save
-        save(self, *args, **kwargs)
+        return save(self, *args, **kwargs)
 
     @classmethod
     def load(cls, *args, **kwargs):

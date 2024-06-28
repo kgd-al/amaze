@@ -4,7 +4,7 @@ from typing import Type, Optional, Union
 import pytest
 
 from amaze import Maze, Robot, Simulation
-from amaze.simu._maze_metrics import MazeMetrics
+from amaze.simu.simulation import MazeMetrics
 from amaze.simu.controllers.cheater import CheaterController
 from amaze.simu.controllers.random import RandomController
 
@@ -37,7 +37,7 @@ def test_simulation_static():
 
 @pytest.mark.parametrize("save", [True, False])
 @pytest.mark.parametrize("robot", "DHC")
-def test_simulation(maze_str, robot, save):
+def test_simulation(maze_str, robot, save, capfd):
     simulation, controller = _run_simulation(
         Maze.BuildData.from_string(maze_str).where(width=5, height=5),
         robot, CheaterController,
@@ -46,9 +46,10 @@ def test_simulation(maze_str, robot, save):
     time, reward = simulation.time(), simulation.cumulative_reward()
 
     maze = simulation.maze
-    metrics = Simulation.compute_metrics(maze,
-                                         simulation.data.inputs,
-                                         simulation.data.vision)
+    with capfd.disabled():
+        metrics = Simulation.compute_metrics(maze,
+                                             simulation.data.inputs,
+                                             simulation.data.vision)
     pprint.pprint(metrics)
     assert 0 < metrics["n_inputs"]["all"] <= maze.width * maze.height * 3
     assert 0 < metrics["n_inputs"]["path"] <= len(maze.solution)
@@ -67,7 +68,7 @@ def test_simulation(maze_str, robot, save):
 
 @pytest.mark.slow
 @pytest.mark.parametrize("robot", "DHC")
-def test_simulation_success(mbd_kwargs, robot):  # pragma: no cover
+def test_simulation_success(mbd_kwargs, robot):
     simulation, _ = _run_simulation(
         Maze.BuildData(**mbd_kwargs),
         robot, CheaterController, save_trajectory=False)

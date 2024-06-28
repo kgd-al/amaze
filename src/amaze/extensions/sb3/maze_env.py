@@ -18,7 +18,7 @@ from amaze.simu.maze import Maze
 from amaze.simu.robot import Robot
 from amaze.simu.simulation import Simulation
 from amaze.simu.types import InputType, OutputType
-from amaze.visu.resources import qimage_to_numpy
+from amaze.misc.resources import qimage_to_numpy
 from amaze.visu.widgets.maze import MazeWidget
 
 logger = logging.getLogger(__name__)

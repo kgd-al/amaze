@@ -6,8 +6,8 @@ from PyQt5.QtCore import QRectF, Qt, QPointF
 from PyQt5.QtGui import QPainter, QImage, QPixmap, QColor
 from PyQt5.QtWidgets import QLabel
 
-from amaze.simu.controllers.base import BaseController
-from amaze.simu.types import InputType, OutputType, Action, State
+from ...simu.controllers.base import BaseController
+from ...simu.types import InputType, OutputType, Action, State
 
 logger = getLogger(__name__)
 

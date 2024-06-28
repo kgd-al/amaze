@@ -53,13 +53,6 @@ class CheaterController(BaseController):
     def reset(self):
         self.__init__(robot_data=self.simulation.data, simulation=None)
 
-    def save_to_archive(self, archive: ZipFile, *args, **kwargs) -> bool:
-        raise NotImplementedError
-
-    def load_from_archive(self, archive: ZipFile,  robot: Robot.BuildData,
-                          *args, **kwargs) -> 'CheaterController':
-        raise NotImplementedError
-
     @staticmethod
     def inputs_types() -> List[InputType]:
         return list(InputType)

@@ -11,8 +11,8 @@ from amaze.simu.maze import Maze
 from amaze.simu.pos import Pos
 from amaze.simu.robot import Robot
 from amaze.simu.types import InputType, OutputType, Action, State
-from amaze.visu import resources
-from amaze.visu.resources import SignType
+from ..misc import resources
+from amaze.misc.resources import SignType
 from ._inputs_evaluation import (inputs_evaluation)
 from .controllers.base import BaseController
 
@@ -448,7 +448,7 @@ class Simulation:
     @classmethod
     def compute_metrics(cls, maze: Maze, inputs: InputType, vision: int) \
             -> dict[Union[MazeMetrics, str]]:
-        inputs = InputType.DISCRETE  # Input type currently has no impact
+        inputs = InputType.DISCRETE  # Not implemented for continuous case
         return _maze_metrics(
             maze, cls.generate_visuals_map(maze, inputs, vision), inputs
         )

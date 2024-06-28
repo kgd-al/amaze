@@ -1,13 +1,12 @@
 from abc import ABCMeta
 from logging import getLogger
 from typing import List
-from zipfile import ZipFile
 
 from PyQt5.QtCore import QObject, Qt, QEvent
 from PyQt5.QtGui import QKeyEvent
 
 from .base import BaseController, Robot, Vec, OutputType, InputType
-from ...visu.widgets import qt_application
+from amaze.misc.utils import qt_application
 
 logger = getLogger(__name__)
 
@@ -38,16 +37,18 @@ class KeyboardController(QObject, BaseController, metaclass=__Meta):
     def eventFilter(self, obj: 'QObject', e: 'QEvent') -> bool:
         if not isinstance(e, QKeyEvent):
             return False
-        e: QKeyEvent
-        print(f"[kgd-debug] KeyEvent({e.type()}, {hex(e.key())})")
+        if e.modifiers() != Qt.NoModifier:
+            return False
         if self.output_type is OutputType.DISCRETE:
             return self._process_discrete_input(e)
         else:
             return self._process_continuous_input(e)
 
     def reset(self):
-        self.actions_queue.clear()
-        self.current_action = Vec.null()
+        if self.output_type is OutputType.DISCRETE:
+            self.actions_queue.clear()
+        else:
+            self.current_action = Vec.null()
 
     def __call__(self, _) -> Vec:
         if self.output_type is OutputType.DISCRETE:
@@ -57,13 +58,6 @@ class KeyboardController(QObject, BaseController, metaclass=__Meta):
                 return Vec.null()
         else:
             return self.current_action.copy()
-
-    def save_to_archive(self, archive: ZipFile, *args, **kwargs) -> bool:
-        raise NotImplementedError
-
-    def load_from_archive(self, archive: ZipFile, robot: Robot.BuildData,
-                          *args, **kwargs) -> 'KeyboardController':
-        raise NotImplementedError
 
     @staticmethod
     def inputs_types() -> List[InputType]:
@@ -80,9 +74,6 @@ class KeyboardController(QObject, BaseController, metaclass=__Meta):
         return False
 
     def _process_continuous_input(self, e: QKeyEvent):
-        if e.modifiers() != Qt.NoModifier:
-            return False
-
         if e.type() == QEvent.KeyPress:
             down = True
         elif e.type() == QEvent.KeyRelease:

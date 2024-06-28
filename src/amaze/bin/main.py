@@ -15,8 +15,13 @@ from importlib import import_module
 from pathlib import Path
 from typing import Optional, Sequence
 
-from amaze import qt_application, load, Maze, Robot, Simulation, MazeWidget
-from amaze.visu.viewer import MainWindow
+from ..simu.controllers.control import load
+from ..simu.maze import Maze
+from ..simu.robot import Robot
+from ..simu.simulation import Simulation
+from amaze.misc.utils import qt_application
+from ..visu.viewer import MainWindow
+from ..visu.widgets.maze import MazeWidget
 
 logger = logging.getLogger(__name__)
 

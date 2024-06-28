@@ -99,7 +99,7 @@ def test_robot_build_data_from_controller(i: InputType, o: OutputType, v: int):
     maze = Maze.from_string("M4_10x10_U")
     simulation = Simulation(maze, robot)
 
-    controller = CheaterController(simulation)
+    controller = CheaterController(robot, simulation)
     action = controller(simulation.observations)
     simulation.step(action)
     print(simulation.robot.to_dict())

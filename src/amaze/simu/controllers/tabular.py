@@ -107,11 +107,12 @@ class TabularController(BaseController):
             "max": self.max_value
         }
 
-    def save_to_archive(self, archive: ZipFile, *args, **kwargs) -> bool:
+    def _save_to_archive(self, archive: ZipFile, *args, **kwargs) -> bool:
         def fmt(f_): return self.__pretty_format(f_).to_dict(orient='index')
         with archive.open("data.json", "w") as file:
             data = json.dumps(
                 dict(
+                    actions=[a.tuple() for a in self._actions],
                     init_val=self.init_value,
                     min_val=self.min_value, max_val=self.max_value,
                     data=fmt(self._data), updates=fmt(self._updates),
@@ -121,8 +122,8 @@ class TabularController(BaseController):
             return True
 
     @classmethod
-    def load_from_archive(cls, archive: ZipFile, robot: Robot.BuildData,
-                          *args, **kwargs) -> 'TabularController':
+    def _load_from_archive(cls, archive: ZipFile, robot: Robot.BuildData,
+                           *args, **kwargs) -> 'TabularController':
         def parse_val(v):
             try:
                 return int(v)
@@ -138,8 +139,7 @@ class TabularController(BaseController):
 
         with archive.open("data.json", "r") as file:
             dct = json.loads(file.read().decode("utf-8"))
-            actions = [parse_tuple(a) for a in
-                       next(iter(dct['data'].values())).keys()]
+            actions = [Action(*t) for t in dct['actions']]
             c = TabularController(
                 robot_data=robot,
                 actions=actions, epsilon=dct["epsilon"], seed=dct["seed"])

@@ -58,18 +58,43 @@ cmd_install-dev(){  # Editable install (with pip)
 cmd_pytest(){  # Perform the test suite (small scale)
   out=tmp/tests-results
   cout=$out/coverage
-  rm -rf $out
-  mkdir -p $out
-
   coverage=$cout/coverage.info
+  coverage_txt=$cout/coverage.table
+  coverage_tree=$cout/coverage.tree
+  coverage_config=$cout/coverage.conf
+  coverage_config_tmp=.coverage.conf
+  coverage_args=""
+
+  rm -rf $out
+  mkdir -p $cout
+
+  for arg in "$@"
+  do
+    if [ "$arg" == "--small-scale" ]
+    then
+      (
+        echo "[report]"
+        echo "exclude_also ="
+        echo "    @pytest.mark.slow"
+      ) > $coverage_config_tmp
+      coverage_args="$coverage_args --rcfile=$coverage_config_tmp"
+    fi
+  done
+
   coverage run --branch --data-file=$(basename $coverage) \
     --source=. --omit "setup.py,tests/conftest.py,examples/*.py,tests/test_examples.py" \
     -m \
     pytest --durations=10 --basetemp=$out -x -ra "$@" || exit 2
   mkdir -p $cout # pytest will have cleared everything. Build it back
   mv $(basename $coverage) $coverage
-  coverage report --data-file=$coverage --skip-covered
-  coverage html  --fail-under=100 --data-file=$coverage -d $cout/html
+  coverage report --data-file=$coverage $coverage_args > $coverage_txt
+  coverage html  --fail-under=100 --data-file=$coverage $coverage_args -d $cout/html
+
+  echo
+  echo "Hierarchical coverage:"
+  ~/work/utils/coverage_tree.py $coverage --skip-covered --sort=cover $coverage_args
+
+  mv $coverage_config_tmp $coverage_config
 
 #  line
 #  coverage report --data-file=best-coverage.info

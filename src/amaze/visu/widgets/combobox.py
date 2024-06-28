@@ -2,7 +2,7 @@ from PyQt5.QtCore import QEvent, QBuffer, QIODevice
 from PyQt5.QtGui import QHelpEvent
 from PyQt5.QtWidgets import QComboBox, QToolTip
 
-from amaze.visu import resources
+from amaze.misc import resources
 
 
 class ZoomingComboBox(QComboBox):

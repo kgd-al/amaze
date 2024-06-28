@@ -12,7 +12,7 @@ from PyQt5.QtGui import QColor, QPainter, QImage
 from .controllers.base import BaseController
 from .maze import Maze
 from .types import Action
-from ..visu.resources import SignType, arrow_path, Sign, np_images, Signs
+from amaze.misc.resources import SignType, arrow_path, Sign, np_images, Signs
 
 ARROW_PATH = arrow_path()
 

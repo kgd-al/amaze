@@ -24,20 +24,15 @@ from PyQt5.QtWidgets import (QHBoxLayout, QWidget, QLabel,
                              QFileDialog, QSizePolicy, QScrollArea,
                              QMessageBox)
 
-from amaze.simu.controllers import BaseController
-from amaze.simu._maze_metrics import MazeMetrics
-from amaze.simu.controllers.control import (controller_factory,
-                                            load, check_types)
-from amaze.simu.maze import Maze
-from amaze.simu.robot import Robot
-from amaze.simu.types import InputType, OutputType, StartLocation
-from amaze.simu.simulation import Simulation
-from amaze.visu.resources import SignType
-from amaze.visu.widgets.collapsible import CollapsibleBox
-from amaze.visu.widgets.labels import (InputsLabel, OutputsLabel, ValuesLabel,
-                                       ElidedLabel)
-from amaze.visu.widgets.lists import SignList
-from amaze.visu.widgets.maze import MazeWidget
+from amaze.misc.resources import SignType
+from ..visu.widgets.collapsible import CollapsibleBox
+from ..visu.widgets.labels import (InputsLabel, OutputsLabel, ValuesLabel,
+                                   ElidedLabel)
+from ..visu.widgets.lists import SignList
+from ..visu.widgets.maze import MazeWidget
+from ..simu.controllers import BaseController
+from ..simu import (MazeMetrics, controller_factory, load, Maze, Robot,
+                    InputType, OutputType, StartLocation, Simulation)
 
 logger = logging.getLogger(__name__)
 
@@ -460,8 +455,6 @@ class MainWindow(QWidget):
                 self.config['outputs'].setCurrentText(o_t.name.lower())
             if v := c.vision:
                 self.config["vision"].setValue(v)
-
-        check_types(c, self._robot_data())
 
         self.sections[self.Sections.CONTROLLER].setVisible(not simple)
         if not simple:

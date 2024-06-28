@@ -7,14 +7,14 @@ from PyQt5.QtCore import Qt, QPointF, QRectF, QSize
 from PyQt5.QtGui import QPainter, QColor, QPainterPath, QImage
 from PyQt5.QtWidgets import QLabel
 
-from amaze import Robot
-from amaze.simu.maze import Maze
-from amaze.simu.simulation import Simulation
-from amaze.simu.types import InputType, OutputType
-from amaze.visu import resources
-from amaze.visu.maze import MazePainter, Color, logger
-from amaze.visu.resources import SignType, qimage_to_numpy
-from amaze.visu.widgets import _trajectory_plotter, has_qt_application, qt_application
+from ...simu.robot import Robot
+from ...simu.maze import Maze
+from ...simu.simulation import Simulation
+from ...simu.types import InputType, OutputType
+from ..maze import MazePainter, Color, logger
+from amaze.misc.resources import SignType, qimage_to_numpy, qt_images
+from ._trajectory_plotter import plot_trajectory
+from amaze.misc.utils import has_qt_application, qt_application
 
 
 class QtPainter(MazePainter):
@@ -166,7 +166,7 @@ class MazeWidget(QLabel):
 
     @staticmethod
     def __qt_images(size, maze):
-        return (resources.qt_images(v, size)
+        return (qt_images(v, size)
                 if (v := maze.signs[t]) is not None else None
                 for t in SignType)
 
@@ -409,7 +409,7 @@ class MazeWidget(QLabel):
         if config is not None:
             _config.update(config)
 
-        return _trajectory_plotter.plot_trajectory(
+        return plot_trajectory(
             simulation=simulation,
             size=size,
             trajectory=trajectory,

@@ -4,40 +4,23 @@ from pathlib import Path
 from typing import Union, Type, Optional
 from zipfile import ZipFile
 
-from amaze.simu import Robot
-from amaze.simu.controllers.base import BaseController
-from amaze.simu.controllers.cheater import CheaterController
-from amaze.simu.controllers.keyboard import KeyboardController
-from amaze.simu.controllers.random import RandomController
-from amaze.simu.controllers.tabular import TabularController
+from . import (BaseController, CheaterController, KeyboardController,
+               RandomController, TabularController)
+from .base import Robot
 
 logger = logging.getLogger(__name__)
 
 CONTROLLERS: dict[str, Type[BaseController]] = {
-    "random": RandomController,
-    "cheater": CheaterController,
-    "keyboard": KeyboardController,
-    "tabular": TabularController
+    t.short_name: t for t in [
+        RandomController, CheaterController, KeyboardController,
+        TabularController
+    ]
 }
 
 
 def builtin_controllers():
     """ Provides the list of controllers shipped with this library """
-    return CONTROLLERS.keys()
-
-
-def check_types(controller: BaseController | Type[BaseController],
-                robot: Robot.BuildData) -> bool:
-    """ Ensure that the controller is compatible with the specified
-     inputs/outputs """
-    def _fmt(e_list): return ", ".join([e.name for e in e_list])
-    assert robot.inputs in controller.inputs_types(), \
-        (f"Input type {robot.inputs.name} is not valid for {controller}."
-         f" Expected one of [{_fmt(controller.inputs_types())}]")
-    assert robot.outputs in controller.outputs_types(), \
-        (f"Output type {robot.outputs.name} is not valid for {controller}."
-         f" Expected [{_fmt(controller.outputs_types())}]")
-    return True
+    return list(CONTROLLERS.keys())
 
 
 def controller_factory(c_type: str, c_data: dict):
@@ -73,7 +56,6 @@ def save(controller: BaseController, path: Union[Path, str],
         archive.writestr("controller_class",
                          controller_class)
         archive.writestr("robot", controller.robot_data.to_string())
-        controller.save_to_archive(archive, *args, **kwargs)
 
         _infos = controller.infos.copy()
         if infos is not None:
@@ -81,6 +63,9 @@ def save(controller: BaseController, path: Union[Path, str],
         if _infos:
             archive.writestr("infos",
                              json.dumps(_infos).encode("utf-8"))
+
+        # noinspection PyProtectedMember
+        controller._save_to_archive(archive, *args, **kwargs)
 
     logger.debug(f"Saved controller to {path}")
 
@@ -96,11 +81,6 @@ def load(path: Union[Path, str], *args, **kwargs):
     logger.debug(f"Loading controller from {path}")
     with ZipFile(path, "r") as archive:
         controller_class = archive.read("controller_class").decode("utf-8")
-        logger.debug(f"> controller class: {controller_class}")
-
-        robot = Robot.BuildData.from_string(
-            archive.read("robot").decode("utf-8"))
-        logger.debug(f"> Robot build data: {robot}")
 
         if (c_type := CONTROLLERS.get(controller_class)) is None:
             msg = f"Unsupported controller type {controller_class}."
@@ -109,7 +89,14 @@ def load(path: Union[Path, str], *args, **kwargs):
                         f" extension?")
             raise ValueError(msg)
 
-        c = c_type.load_from_archive(archive, robot=robot, *args, **kwargs)
+        logger.debug(f"> controller class: {controller_class}")
+
+        robot = Robot.BuildData.from_string(
+            archive.read("robot").decode("utf-8"))
+        logger.debug(f"> Robot build data: {robot}")
+
+        # noinspection PyProtectedMember
+        c = c_type._load_from_archive(archive, robot=robot, *args, **kwargs)
         if "infos" in archive.namelist():
             c.infos = json.loads(archive.read("infos").decode("utf-8"))
         return c

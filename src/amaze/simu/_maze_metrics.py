@@ -5,17 +5,13 @@ Private module for computing maze metrics
 import enum
 from collections import defaultdict, namedtuple
 from math import log2 as log
-from pathlib import Path
 from typing import Tuple
 
 import numpy as np
-from PyQt5.QtGui import QImage, QPainter
-from PyQt5.QtWidgets import QApplication
 
-from amaze.simu.maze import Maze
-from amaze.simu.types import InputType
-from amaze.visu.resources import Sign
-from amaze.visu.widgets.labels import InputsLabel
+from .maze import Maze
+from .types import InputType
+from ..misc.resources import Sign
 
 
 class MazeMetrics(enum.Flag):
@@ -29,9 +25,9 @@ def __inputs(c, r, maze, visuals):
     i = np.zeros(8)
     i[:4] = [maze.wall(c, r, d) for d in Maze.Direction]
 
-    if d := visuals[c, r]:
-        if not isinstance(d, float) or not np.isnan(d):
-            i[4 + d[1].value] = d[0]
+    d = visuals[c, r]
+    if not isinstance(d, float) or not np.isnan(d):
+        i[4 + d[1].value] = d[0]
 
     return i
 
@@ -80,24 +76,24 @@ def __solution_path(maze, visuals):
         yield tuple(i), d_to, cost
 
 
-def __deadend_cost(maze, cell, offset):
-    c_i, c_j = cell
-    d_i, d_j = offset
-    c_i, c_j = c_i + d_i, c_j + d_j
-    cost = 1
-    visited = {cell, (c_i, c_j)}
-    stack = [(c_i, c_j)]
-    while stack:
-        c_i, c_j = stack.pop()
-        for d, (d_i, d_j) in Maze._offsets.items():
-            i, j = c_i + d_i, c_j + d_j
-            if maze.valid(i, j) and not maze.wall(c_i, c_j, d) \
-                    and (i, j) not in visited:
-                cost += 1
-                stack.append((i, j))
-                visited.add((i, j))
-
-    return cost
+# def __deadend_cost(maze, cell, offset):
+#     c_i, c_j = cell
+#     d_i, d_j = offset
+#     c_i, c_j = c_i + d_i, c_j + d_j
+#     cost = 1
+#     visited = {cell, (c_i, c_j)}
+#     stack = [(c_i, c_j)]
+#     while stack:
+#         c_i, c_j = stack.pop()
+#         for d, (d_i, d_j) in Maze._offsets.items():
+#             i, j = c_i + d_i, c_j + d_j
+#             if maze.valid(i, j) and not maze.wall(c_i, c_j, d) \
+#                     and (i, j) not in visited:
+#                 cost += 1
+#                 stack.append((i, j))
+#                 visited.add((i, j))
+#
+#     return cost
 
 
 class InputsEntropy:
@@ -217,9 +213,9 @@ def __inseparability(maze: Maze):
     entropy = 0
     for r in ranges:
         p = r.u - r.l
-        # print(p, math.log(p), math.log2(p), math.log10(p))
-        if p > 0:
-            entropy += -p * log(p)
+        assert p > 0
+        # print(r, p, log(p))
+        entropy += -p * log(p)
     #
     # print(f"{entropy=}")
     # print("=====")
@@ -228,25 +224,10 @@ def __inseparability(maze: Maze):
     return entropy
 
 
-def __debug_draw_inputs(inputs, name):
-    _ = QApplication([])
-    label = InputsLabel()
-    label.setFixedSize(5, 5)
-    folder = Path(f"tmp/complexity/{name}")
-    folder.mkdir(parents=True, exist_ok=True)
-    for i in inputs:
-        str_i = "_".join(f"{v:g}" for v in i)
-        img = QImage(5, 5, QImage.Format_RGB32)
-        painter = QPainter(img)
-        label.set_inputs(np.array(i), InputType.DISCRETE)
-        label.render(painter)
-        painter.end()
-        img.save(str(folder.joinpath(f"{str_i}.png")))
-
-
 def metrics(maze: Maze, visuals: np.ndarray, input_type: InputType):
-    if input_type is not InputType.DISCRETE:
-        raise NotImplementedError
+    inputs = InputType.DISCRETE  # Input type currently has no impact
+    # if input_type is not InputType.DISCRETE:
+    #     raise NotImplementedError
 
     n_inputs = {}
     s_entropy = {}
@@ -274,8 +255,6 @@ def metrics(maze: Maze, visuals: np.ndarray, input_type: InputType):
     d_entropy = d_metric.value()
 
     # ======
-
-    # __debug_draw_inputs(i, maze.to_string())
 
     return {
         MazeMetrics.INSEPARABILITY: __inseparability(maze),

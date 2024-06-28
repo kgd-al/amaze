@@ -13,7 +13,7 @@ class TestSize(IntFlag):
 
 
 @functools.lru_cache(maxsize=1)
-def generate_large_maze_data_sample(size: TestSize):  # pragma no cover
+def generate_large_maze_data_sample(size: TestSize):
     small = size is TestSize.SMALL
 
     def signs(value: float, _small):
@@ -23,8 +23,8 @@ def generate_large_maze_data_sample(size: TestSize):  # pragma no cover
         return [none, one] if _small else [none, one, two]
 
     data = dict(
-        width=[5] if small else [5, 10],
-        height=[5] if small else [5, 10],
+        width=[5],  # if small else [5, 10],
+        height=[5],  # if small else [5, 10],
         seed=[10] if small else [0, 10],
         start=[StartLocation.SOUTH_WEST, StartLocation.NORTH_EAST],
         rotated=[True, False],
@@ -37,17 +37,22 @@ def generate_large_maze_data_sample(size: TestSize):  # pragma no cover
     )
 
     count = math.prod(len(d) for d in data.values())
-    print("-"*60)
-    print(len(data), "fields")
-    print("-"*30)
+    counts = (str(count) + " = "
+              + " * ".join(f"{len(d):{len(k)}}" for k, d in data.items()))
+    print("-"*len(counts))
+    print("Normal scale mazes:", len(data), "fields")
+    print("-"*(len(counts)//2))
     print(" "*len(str(count)), " ", "   ".join(k for k in data))
-    print(count, "=", " * ".join(f"{len(d):{len(k)}}" for k, d in data.items()))
-    print("-"*60)
+    print(counts)
+    print("Items")
+    print("-"*len(counts))
 
-    return (dict(zip(data.keys(), t))
-            for t in itertools.product(*data.values()))
+    return [dict(zip(data.keys(), t))
+            for t in itertools.product(*data.values())]
 
 
 MAZE_DATA_SAMPLE = [
+    "M10_5x5_U",
+    "M10_5x5_l.25_L.4_L.5",
     "M10_10x10_C1_l.2_L.25_t.5_T.5",
 ]

@@ -9,7 +9,7 @@ from pathlib import Path
 from amaze.simu.maze import Maze
 from amaze.simu.types import InputType
 from amaze.simu.simulation import Simulation
-from amaze.visu.resources import Sign
+from amaze.misc.resources import Sign
 from amaze.visu.widgets.maze import MazeWidget
 
 

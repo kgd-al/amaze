@@ -6,7 +6,7 @@ from typing import Optional
 from amaze.simu.maze import Maze
 from amaze.simu.robot import Robot
 from amaze.simu.types import OutputType
-from amaze.visu.resources import SignType
+from amaze.misc.resources import SignType
 
 logger = getLogger(__name__)
 

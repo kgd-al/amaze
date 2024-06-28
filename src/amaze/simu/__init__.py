@@ -2,14 +2,16 @@
 Main module for the simulation side of AMaze.
 """
 
-from amaze.simu.maze import Maze
-from amaze.simu.robot import Robot
-from amaze.simu.simulation import Simulation
-from amaze.simu.types import InputType, OutputType, StartLocation
-from amaze.simu.controllers.control import load
+from .maze import Maze
+from .robot import Robot
+from .simulation import Simulation, MazeMetrics
+from .types import InputType, OutputType, StartLocation
+from .controllers.control import save, load, controller_factory
+from .controllers.base import BaseController
 
 __all__ = [
     "Maze", "Robot", "Simulation",
+    "MazeMetrics",
     "InputType", "OutputType", "StartLocation",
-    "load"
+    "controller_factory", "save", "load", "BaseController"
 ]

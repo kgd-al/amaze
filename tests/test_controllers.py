@@ -1,18 +1,20 @@
 import itertools
 from random import Random
 from typing import Type, Optional, Callable
+from zipfile import ZipFile
 
 import pytest
-from PyQt5.QtCore import Qt
+from PyQt5.QtCore import Qt, QEvent
 from PyQt5.QtGui import QKeyEvent
 
-from amaze import Maze, Robot, Simulation, qt_application
-from amaze.simu.controllers.base import BaseController
-from amaze.simu.controllers.cheater import CheaterController
-from amaze.simu.controllers.keyboard import KeyboardController
-from amaze.simu.controllers.random import RandomController
-from amaze.simu.controllers.tabular import TabularController
-from amaze.simu.types import State, Action
+from amaze import Maze, Robot, Simulation, qt_application, load
+from amaze.simu.controllers import (controller_factory, BaseController,
+                                    CheaterController, RandomController,
+                                    KeyboardController, TabularController,
+                                    builtin_controllers)
+from amaze.simu.controllers.control import save
+from amaze.simu.pos import Vec
+from amaze.simu.types import OutputType
 
 TABULAR_ARGS = dict(actions=TabularController.discrete_actions,
                     epsilon=0.1, seed=0)
@@ -28,6 +30,13 @@ CONTROLLERS = [
 ]
 
 
+def _make_simulation(maze: Maze.BuildData, robot: str, **kwargs):
+    maze = Maze.generate(maze)
+    robot = Robot.BuildData.from_string(robot)
+    simulation = Simulation(maze, robot, **kwargs)
+    return maze, robot, simulation
+
+
 def _run_simulation(maze: Maze.BuildData, robot: str,
                     controller_type: Type[BaseController],
                     controller_kwargs: Optional[dict] = None,
@@ -40,9 +49,8 @@ def _run_simulation(maze: Maze.BuildData, robot: str,
     if controller_type is KeyboardController:
         _ = qt_application()
 
-    maze = Maze.generate(maze)
-    robot = Robot.BuildData.from_string(robot)
-    simulation = Simulation(maze, robot, **kwargs)
+    maze, robot, simulation = _make_simulation(maze, robot, **kwargs)
+
     kwargs = controller_kwargs or {}
     if controller_type.cheats:
         kwargs["simulation"] = simulation
@@ -59,6 +67,17 @@ def _run_simulation(maze: Maze.BuildData, robot: str,
     assert simulation.success() or simulation.failure()
 
     return simulation, controller
+
+
+def _unsavable(controller: BaseController, tmp_path):
+    assert not controller.savable
+    path = tmp_path.joinpath("bad.zip")
+    pytest.raises(NotImplementedError, controller.save, path)
+    pytest.raises(NotImplementedError, controller._save_to_archive, None)
+    pytest.raises(NotImplementedError, controller.load, path)
+    pytest.raises(NotImplementedError,
+                  controller._load_from_archive, None, None)
+    pytest.raises(NotImplementedError, controller.assert_equal, None, None)
 
 
 @pytest.mark.slow
@@ -80,7 +99,7 @@ def test_controllers_fast(maze_str, robot,
 
     infos = simulation.infos()
 
-    print(controller.name(), controller.details())
+    print(controller.name, controller.details())
     print(controller.input_type, controller.output_type, controller.vision)
     print(controller.inputs_types(), controller.outputs_types())
     print(controller.is_simple)
@@ -97,7 +116,7 @@ def test_controllers_fast(maze_str, robot,
 @pytest.mark.parametrize("c_type, c_args, robot",
                          [param for param in CONTROLLERS
                           if not param.values[0].savable])
-def test_controller_not_implemented(c_type, c_args, robot):
+def test_controller_not_implemented(c_type, c_args, robot, tmp_path):
     robot = Robot.BuildData.from_string(robot)
     c_args = dict(**c_args)
     if c_type.cheats:
@@ -105,9 +124,7 @@ def test_controller_not_implemented(c_type, c_args, robot):
     c_args["robot_data"] = robot
     controller = c_type(**c_args)
 
-    pytest.raises(NotImplementedError, controller.save_to_archive, None)
-    pytest.raises(NotImplementedError,
-                  controller.load_from_archive, None, None)
+    _unsavable(controller, tmp_path)
 
 
 def test_controller_cheater():
@@ -149,20 +166,99 @@ def test_controller_tabular(maze_str, learner, tmp_path):
 
 
 @pytest.mark.parametrize("robot", "DHC")
-def test_controller_keyboard(maze_str, robot):
+def test_controller_keyboard(maze_str, robot, tmp_path):
     print(maze_str, robot)
 
     app = qt_application(allow_create=True)
     rng = Random(0)
     keys = [Qt.Key_Down, Qt.Key_Up, Qt.Key_Left, Qt.Key_Right]
 
-    def fake_events(_, c, *args):
+    actions = []
+
+    def fake_key(c, k):
         for t in [QKeyEvent.KeyPress, QKeyEvent.KeyRelease]:
-            app.postEvent(c, QKeyEvent(t, rng.choice(keys), Qt.NoModifier))
+            app.postEvent(c, QKeyEvent(t, k, Qt.NoModifier))
         app.processEvents()
 
-    _, controller = _run_simulation(
+    def fake_events(_, c, *args):
+        key = rng.choice(keys)
+        actions.append(key)
+        fake_key(c, key)
+
+    simulation, controller = _run_simulation(
         Maze.BuildData.from_string(maze_str), robot,
         KeyboardController, dict(), pre_step=fake_events)
 
-# def test_control
+    infos = simulation.infos()
+
+    controller.reset()
+    simulation.reset()
+
+    pos = simulation.robot.pos
+    original_pos = pos.copy()
+
+    def test_ignored_event(e_type, *args):
+        app.postEvent(controller, e_type(*args))
+        app.processEvents()
+        assert pos == original_pos
+        assert not controller.eventFilter(controller, e_type(*args))
+
+    test_ignored_event(QEvent, QEvent.None_)
+    test_ignored_event(QKeyEvent, QKeyEvent.KeyPress,
+                       Qt.Key_Down, Qt.ControlModifier)
+    if controller.output_type is OutputType.DISCRETE:
+        test_ignored_event(QKeyEvent, QKeyEvent.KeyRelease,
+                           Qt.Key_Up, Qt.NoModifier)
+    test_ignored_event(QKeyEvent, QKeyEvent.ShortcutOverride,
+                       Qt.Key_Down, Qt.NoModifier)
+    test_ignored_event(QKeyEvent, QKeyEvent.KeyPress,
+                       Qt.Key_Enter, Qt.NoModifier)
+
+    controller.reset()
+    simulation.reset()
+
+    while not simulation.done():
+        fake_key(controller, actions[simulation.timestep])
+        simulation.step(controller(simulation.observations))
+
+    assert infos == simulation.infos()
+    assert controller(simulation.observations) == Vec.null()
+    _unsavable(controller, tmp_path)
+
+
+@pytest.mark.parametrize("c_type, c_args, robot", CONTROLLERS)
+def test_control(c_type, c_args, robot, tmp_path):
+    print(builtin_controllers())
+    print(c_type, c_type.short_name)
+
+    c_args = c_args.copy()
+    c_args["simulation"] = _make_simulation(Maze.BuildData(), robot)[-1]
+    robot = Robot.BuildData.from_string(robot)
+    c_args["robot_data"] = robot
+
+    controller = controller_factory(c_type.short_name, c_args)
+
+    if c_type.savable:
+        base_path = tmp_path.joinpath(c_type.short_name)
+
+        def roundabout(fn, *args):
+            _path = save(controller, fn(base_path), *args)
+            controller_roundabout = load(_path)
+            controller.assert_equal(controller, controller_roundabout)
+
+        roundabout(lambda p: p)
+        roundabout(lambda p: p.with_suffix(".zip"))
+        roundabout(lambda p: str(p) + "_str")
+        roundabout(lambda p: p.with_name(c_type.short_name + "_infos"),
+                   dict(name=c_type.short_name))
+
+
+def test_error_control(tmp_path):
+    pytest.raises(ValueError, save, True, "foo")
+
+    for t in ["bool", "extension.bool"]:
+        path = tmp_path.joinpath(f"bad-${t}.zip")
+        with ZipFile(path, "w") as archive:
+            archive.writestr("controller_class", t)
+
+        pytest.raises(ValueError, load, path)
