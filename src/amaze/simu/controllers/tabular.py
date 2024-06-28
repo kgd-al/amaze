@@ -15,7 +15,7 @@ class TabularController(BaseController):
 
     def __init__(self,
                  robot_data: Robot.BuildData,
-                 actions, epsilon, seed):
+                 epsilon, seed, actions=BaseController.discrete_actions):
         super().__init__(robot_data)
         self._actions = actions
         self._actions_ix = {a: i for i, a in enumerate(actions)}

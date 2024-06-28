@@ -6,8 +6,7 @@ from abc import ABC
 from copy import copy
 from dataclasses import fields, dataclass
 from functools import lru_cache
-from typing import get_args, get_origin, Union, Annotated
-
+from typing import get_args, get_origin, Union, Annotated, Optional
 
 logger = logging.getLogger(__name__)
 

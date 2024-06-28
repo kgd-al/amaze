@@ -8,7 +8,7 @@ from PyQt5 import QtWidgets
 from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QImage, QPainter
 from gymnasium import spaces, Env
-from stable_baselines3.common.env_checker import check_env
+from stable_baselines3.common.env_checker import check_env as _check_env
 from stable_baselines3.common.env_util import make_vec_env
 
 from amaze import qt_application
@@ -26,14 +26,15 @@ logger = logging.getLogger(__name__)
 
 def make_vec_maze_env(mazes: List[Maze.BuildData],
                       robot: Robot.BuildData,
-                      seed, **kwargs):
+                      seed, check_env=True, **kwargs):
     """ Encapsulates the creation of a vectorized environment """
 
     mazes = [m for m in mazes]
 
     def env_fn():
         env = MazeEnv(mazes.pop(0), robot, **kwargs)
-        check_env(env)
+        if check_env:
+            _check_env(env)
         env.reset(full_reset=True)
         return env
 
@@ -85,14 +86,14 @@ class MazeEnv(Env):
                      f"\n{log_trajectory=}")
 
         self.observation_type = robot.inputs
-        self.observation_space = {
-            InputType.DISCRETE: spaces.Box(low=-1, high=1, shape=(8, ),
-                                           dtype=np.float32),
-            InputType.CONTINUOUS:
-                spaces.Box(low=0, high=255,
-                           shape=(1, robot.vision, robot.vision),
-                           dtype=np.uint8)
-        }[robot.inputs]
+        if robot.inputs is InputType.DISCRETE:
+            self.observation_space = spaces.Box(low=-1, high=1, shape=(8, ),
+                                                dtype=np.float32)
+        else:
+            self.observation_space = spaces.Box(
+                low=0, high=255,
+                shape=(1, robot.vision, robot.vision),
+                dtype=np.uint8)
 
         self.action_type = robot.outputs
         self.action_space = {

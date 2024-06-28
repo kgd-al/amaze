@@ -243,15 +243,12 @@ class Maze:
                 else:
                     raise ValueError(f"Unknown or malformed token '{token}'")
 
-            if overrides:
-                for _field in fields(bd):
-                    if not isinstance(v := getattr(overrides, _field.name),
-                                      BaseBuildData.Unset):
-                        setattr(bd, _field.name, v)
-
             bd._post_init(allow_unset=False)
 
-            return bd
+            if overrides:
+                return bd.override_with(overrides)
+            else:
+                return bd
 
         def all_rotations(self):
             """ Returns a list describing the same maze with all four rotations

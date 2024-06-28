@@ -4,13 +4,8 @@ import random
 import shutil
 import time
 
-from amaze.simu.controllers.control import (controller_factory, save,
-                                            check_types)
 from amaze.simu.controllers.tabular import TabularController
-from amaze.simu.maze import Maze
-from amaze.simu.robot import Robot
-from amaze.simu.simulation import Simulation
-from amaze.simu.types import InputType, OutputType, StartLocation
+from amaze import Maze, Robot, Simulation, InputType, OutputType, StartLocation
 
 ALPHA = 0.1
 GAMMA = 0.5
@@ -18,16 +13,10 @@ GAMMA = 0.5
 FOLDER = pathlib.Path("tmp/demos/q_learning/")
 
 
-def robot_build_data():
-    return Robot.BuildData(
-        inputs=InputType.DISCRETE,
-        outputs=OutputType.DISCRETE,
-        control="tabular",
-        control_data=dict(
-            actions=Simulation.discrete_actions(),
-            epsilon=0.1, seed=0
-        )
-    )
+ROBOT = Robot.BuildData(
+    inputs=InputType.DISCRETE,
+    outputs=OutputType.DISCRETE
+)
 
 
 def train():
@@ -52,12 +41,9 @@ def train():
         for start in StartLocation
     ]
 
-    robot = robot_build_data()
-    policy: TabularController = controller_factory(robot.control,
-                                                   robot.control_data)
-    assert check_types(policy, robot)
+    policy = TabularController(robot_data=ROBOT, epsilon=0.1, seed=0)
 
-    simulation = Simulation(train_mazes[0], robot)
+    simulation = Simulation(train_mazes[0], ROBOT)
 
     steps = [0, 0]
 
@@ -133,7 +119,6 @@ def q_eval(simulation, policy):
 def evaluate_generalization(policy):
     policy.epsilon = 0
     rng = random.Random(0)
-    robot = robot_build_data()
 
     n = 1000
     rewards = []
@@ -153,7 +138,7 @@ def evaluate_generalization(policy):
             p_lure=0, p_trap=0
         )
         maze = Maze.generate(maze_data)
-        simulation = Simulation(maze, robot)
+        simulation = Simulation(maze, ROBOT)
         simulation.run(policy)
         reward = simulation.normalized_reward()
         rewards.append(reward)
@@ -175,8 +160,9 @@ def main(is_test=False):
 
     policy = train()
 
-    policy_file = save(policy, FOLDER.joinpath("policy"),
-                       dict(comment="Can solve unicursive mazes"))
+    policy_file = policy.save(
+        FOLDER.joinpath("policy"),
+        dict(comment="Can solve unicursive mazes"))
     print("Saved optimized policy to", policy_file)
 
     evaluate_generalization(policy)

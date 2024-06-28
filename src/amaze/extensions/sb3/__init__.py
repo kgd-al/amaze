@@ -3,7 +3,8 @@
 from pathlib import Path
 from typing import Type
 
-from amaze.extensions.sb3.guard import CV2QTGuard
+from ...simu.robot import Robot
+from .guard import CV2QTGuard
 
 # print("[kgd-debug] >>> sb3 is being imported <<<")
 
@@ -14,12 +15,12 @@ with CV2QTGuard():
     from stable_baselines3.common.base_class import \
         BaseAlgorithm as _BaseAlgorithm
 
-    from amaze.extensions.sb3.callbacks import TensorboardCallback
-    from amaze.extensions.sb3.controller import wrapped_sb3_model as _wrap
-    from amaze.extensions.sb3.maze_env import make_vec_maze_env, env_method
-    from amaze.simu.controllers.base import BaseController as _BaseController
-    from amaze.simu.controllers.control import \
-        CONTROLLERS as __BASE_CONTROLLERS, load
+    from .callbacks import TensorboardCallback
+    from .controller import wrapped_sb3_model as _wrap
+    from .maze_env import make_vec_maze_env, env_method
+    from ...simu.controllers.base import BaseController as _BaseController
+    from ...simu.controllers.control import (CONTROLLERS as __BASE_CONTROLLERS,
+                                             load)
 
 
 __all__ = [
@@ -40,13 +41,17 @@ for c in compatible_models():
     __SB3_CONTROLLERS[c] = c_type
 
 
-def sb3_controller(model_type: Type[_BaseAlgorithm], *args, **kwargs):
+def sb3_controller(robot_data: Robot.BuildData,
+                   model_type: Type[_BaseAlgorithm],
+                   *args, **kwargs):
     """ Creates a wrapper for a stable baselines 3 model.
 
+     :param robot_data: Input and output spaces specifications
      :param model_type: the type of SB3 model to wrap (PPO, A2C, ...)
      :param args: positional arguments to pass to the model
      :param kwargs: keyword arguments to pass to the model
      """
+    kwargs["robot_data"] = robot_data
     return __SB3_CONTROLLERS[model_type](*args, **kwargs)
 
 

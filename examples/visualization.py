@@ -40,5 +40,8 @@ print(f"Plotted {agent_path}"
       f" to {trajectory_img}")
 
 # Invoke the main from python (with arguments)
-amaze_main(["--maze", maze_str, "--controller", "cheater", "--auto-quit",
-            "--dt", "0.01", "--no-restore-config"])
+amaze_main(["--maze", maze_str,
+            "--robot", "D",
+            "--controller", "cheater",
+            "--dt", "0.1", "--auto-quit",
+            "--no-restore-config", "--width", "500"])

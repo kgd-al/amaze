@@ -44,7 +44,8 @@ class Robot:
                 self.vision = self.__class__.vision
 
         @classmethod
-        def from_string(cls, robot: str):
+        def from_string(cls, robot: str,
+                        overrides: Optional['Robot.BuildData'] = None):
             """ Parses a string into input/output types and, optionally, vision
             size
 
@@ -103,7 +104,11 @@ class Robot:
                         raise ValueError("Retina size must be odd")
                 else:
                     bd.vision = cls.vision
-            return bd
+
+            if overrides:
+                return bd.override_with(overrides)
+            else:
+                return bd
 
         @classmethod
         def from_controller(cls, controller: 'BaseController') \

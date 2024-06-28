@@ -40,6 +40,14 @@ class Options:
         :meth:`~amaze.simu.maze.Maze.from_string`
     """
 
+    robot: Optional[str] = None
+    """ String description of the robot's attributes
+
+    :see:
+        :meth:`~amaze.simu.robot.Robot.BuildData.to_string`
+        :meth:`~amaze.simu.robot.Robot.BuildData.from_string`
+    """
+
     controller: Optional[str] = None
     """ Path to a pre-trained controller or name of built-in.
 
@@ -120,6 +128,9 @@ class Options:
         parser.add_argument("--maze", dest="maze",
                             help="Use provided string-format maze")
 
+        parser.add_argument("--robot", dest="robot",
+                            help="Use provided string-format robot details")
+
         parser.add_argument("--auto-start", dest="autostart",
                             action="store_false",
                             help="Whether to autostart the evaluation")
@@ -177,8 +188,8 @@ class Options:
                             help="Plot trajectory of provided agent to"
                                  " provided path")
 
-        parser.add_argument("--width", type=int,
-                            help="Offscreen rendering target width")
+        parser.add_argument("--width", type=int, default=None,
+                            help="Window or offscreen rendering target width")
         parser.add_argument("--cell-width", type=int,
                             help="Offscreen rendering target width of a"
                                  " single cell")
@@ -201,7 +212,11 @@ def __make_simulation(args, trajectory=False):
     if args.cell_width is not None:
         args.width = args.cell_width * maze.width
 
-    robot = Robot.BuildData.from_argparse(args)
+    if args.robot:
+        robot = Robot.BuildData.from_string(args.robot).override_with(
+            Robot.BuildData.from_argparse(args, set_defaults=False))
+    else:
+        robot = Robot.BuildData.from_argparse(args, set_defaults=True)
     controller = __make_controller(args, robot)
 
     return Simulation(

@@ -12,11 +12,12 @@ from gymnasium.spaces import Discrete, Box
 from stable_baselines3 import SAC, A2C, DQN, PPO, TD3
 from stable_baselines3.common.base_class import BaseAlgorithm
 
-from amaze.extensions.sb3.utils import IOMapper
-from amaze.simu.controllers.base import BaseController
-from amaze.simu.controllers.control import save
-from amaze.simu.pos import Vec
-from amaze.simu.types import InputType, OutputType, State
+from .utils import IOMapper
+from ...simu.controllers.base import BaseController
+from ...simu.controllers.control import save
+from ...simu.pos import Vec
+from ...simu.robot import Robot
+from ...simu.types import InputType, OutputType, State
 
 _classes = {
     c.__name__: c for c in [
@@ -44,9 +45,9 @@ def wrapped_sb3_model(model_type: Type[BaseAlgorithm]):
 
         _model_type = model_type
 
-        def __init__(self, *args, **kwargs):
+        def __init__(self, robot_data: Robot.BuildData, *args, **kwargs):
             # noinspection PyTypeChecker
-            BaseController.__init__(self, None, None, None)
+            BaseController.__init__(self, robot_data=robot_data)
             model_type.__init__(self, *args, **kwargs)
 
             # print(f"[kgd-debug] policy={self.policy.__class__.__name__}"
@@ -57,10 +58,11 @@ def wrapped_sb3_model(model_type: Type[BaseAlgorithm]):
             print("[kgd-debug] SB3 model setup")
             input_type = _i_types_mapping[len(self.observation_space.shape)]
             output_type = _o_types_mapping[self.action_space.__class__]
+            vision = (None if input_type is InputType.DISCRETE
+                      else self.observation_space.shape[1])
             BaseController.__init__(
                 self, input_type, output_type,
-                (None if input_type is InputType.DISCRETE
-                 else self.observation_space.shape[1])
+                ()
             )
 
             self._mapper = IOMapper(observation_space=self.observation_space,

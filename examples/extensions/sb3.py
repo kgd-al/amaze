@@ -29,6 +29,8 @@ def train(is_test):
     eval_mazes = [d.where(seed=test_seed) for d in train_mazes]
     robot = Robot.BuildData.from_string(ROBOT)
 
+    print("[kgd-debug]", robot)
+
     train_env = make_vec_maze_env(train_mazes, robot, SEED)
     eval_env = make_vec_maze_env(eval_mazes, robot, SEED, log_trajectory=True)
 
@@ -50,6 +52,7 @@ def train(is_test):
 
     # model = PPO("MlpPolicy", env=train_env, ...)
     model = sb3_controller(
+        robot,
         PPO, policy="MlpPolicy", env=train_env, seed=SEED, learning_rate=1e-3)
 
     print("== Starting", "="*68)
