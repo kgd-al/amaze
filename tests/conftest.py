@@ -1,5 +1,3 @@
-from typing import Dict, Any
-
 import pytest
 
 from _common import TestSize, generate_large_maze_data_sample, MAZE_DATA_SAMPLE
@@ -134,12 +132,9 @@ def pytest_collection_modifyitems(config, items):
     skip_slow = pytest.mark.skip(reason="Skipping slow tests with small-scale option")
 
     scale = config.getoption("scale")
-    removed, kept = [], []
     for item in items:
         if _DEBUG > 1:
             print(item.originalname)
-
-        keep = True
 
         # Specific case of extensions exemples
         if hasattr(item, "callspec"):
@@ -173,18 +168,3 @@ def pytest_collection_modifyitems(config, items):
 
         if "slow" in item.keywords and scale < TestSize.NORMAL:
             item.add_marker(skip_slow)
-
-        if hasattr(item, "callspec"):
-            keep = scale >= max_scale_for(item.callspec.params)
-
-        if keep:
-            kept.append(item)
-        else:
-            removed.append(item)
-
-        if _DEBUG > 1:
-            print(f"> {keep=}" f" skip={item.get_closest_marker('skip') is not None}")
-
-    if removed:
-        config.hook.pytest_deselected(items=removed)
-        items[:] = kept
