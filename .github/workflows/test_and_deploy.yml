@@ -27,7 +27,8 @@ jobs:
           mkdir logs
           log=logs/wheel.log
           pip install --upgrade pip
-          ./commands.sh pytest --small-scale --test-examples --test-extension all | tee $log
+          ./commands.sh --no-venv \
+            pytest --small-scale --test-examples --test-extension all | tee $log
           res=${PIPESTATUS[0]}
           echo "[kgd-build-status] $res" >> $log
           exit $res
