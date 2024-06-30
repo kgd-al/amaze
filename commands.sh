@@ -67,8 +67,6 @@ cmd_pytest(){  # Perform the test suite (small scale)
   coverage_tmp=$(basename $coverage)
   coverage_config_tmp=$(basename $coverage_config)
 
-  cp -v .coveragerc $coverage_config_tmp
-
   rm -rf $out
   mkdir -p $cout
 

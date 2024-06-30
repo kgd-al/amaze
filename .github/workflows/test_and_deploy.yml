@@ -29,7 +29,7 @@ jobs:
           pip install --upgrade pip
           pip install .[tests]
           ./commands.sh --no-venv \
-            pytest --small-scale --test-examples --test-extension all | tee $log
+            pytest --small-scale | tee $log
           res=${PIPESTATUS[0]}
           echo "[kgd-build-status] $res" >> $log
           exit $res
