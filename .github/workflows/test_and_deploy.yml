@@ -60,7 +60,7 @@ jobs:
           path: ./logs/*.log
 
   post_build:
-    needs: [build_wheels, build_sdist]
+    needs: [build_wheel, build_sdist]
     name: Post-build processing
     runs-on: ubuntu-latest
     if: ${{ always() && !cancelled() }}
