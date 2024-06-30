@@ -9,30 +9,66 @@ from typing import Optional, Union
 
 try:
     import PIL
+
     logging.getLogger("PIL.PngImagePlugin").propagate = False
     HAS_PIL = True
 except ImportError:
     HAS_PIL = False
 
-from PyQt5.QtCore import (QSettings, QTimer, Qt, QSignalBlocker, QObject,
-                          pyqtSignal, QPoint)
+from PyQt5.QtCore import (
+    QSettings,
+    QTimer,
+    Qt,
+    QSignalBlocker,
+    QObject,
+    pyqtSignal,
+    QPoint,
+)
 from PyQt5.QtGui import QImage, QRegion, QPainter
-from PyQt5.QtWidgets import (QHBoxLayout, QWidget, QLabel,
-                             QVBoxLayout, QToolButton, QSpinBox, QGroupBox,
-                             QStyle, QAbstractButton, QCheckBox, QComboBox,
-                             QDoubleSpinBox, QFormLayout, QFrame, QGridLayout,
-                             QFileDialog, QSizePolicy, QScrollArea,
-                             QMessageBox)
+from PyQt5.QtWidgets import (
+    QHBoxLayout,
+    QWidget,
+    QLabel,
+    QVBoxLayout,
+    QToolButton,
+    QSpinBox,
+    QGroupBox,
+    QStyle,
+    QAbstractButton,
+    QCheckBox,
+    QComboBox,
+    QDoubleSpinBox,
+    QFormLayout,
+    QFrame,
+    QGridLayout,
+    QFileDialog,
+    QSizePolicy,
+    QScrollArea,
+    QMessageBox,
+)
 
 from amaze.misc.resources import SignType
 from ..visu.widgets.collapsible import CollapsibleBox
-from ..visu.widgets.labels import (InputsLabel, OutputsLabel, ValuesLabel,
-                                   ElidedLabel)
+from ..visu.widgets.labels import (
+    InputsLabel,
+    OutputsLabel,
+    ValuesLabel,
+    ElidedLabel,
+)
 from ..visu.widgets.lists import SignList
 from ..visu.widgets.maze import MazeWidget
 from ..simu.controllers import BaseController
-from ..simu import (MazeMetrics, controller_factory, load, Maze, Robot,
-                    InputType, OutputType, StartLocation, Simulation)
+from ..simu import (
+    MazeMetrics,
+    controller_factory,
+    load,
+    Maze,
+    Robot,
+    InputType,
+    OutputType,
+    StartLocation,
+    Simulation,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -68,7 +104,7 @@ class MainWindow(QWidget):
             self.playing = False
             self.speed = 1
 
-            self.timer_dt = args.dt if args and args.dt else .1
+            self.timer_dt = args.dt if args and args.dt else 0.1
 
             self.timer = QTimer()
 
@@ -80,8 +116,7 @@ class MainWindow(QWidget):
         self.sections: dict[MainWindow.Sections, CollapsibleBox] = {}
         self.buttons: dict[str, QAbstractButton] = {}
         self.config, self.stats = {}, {}
-        self.visu: dict[str, Union[InputsLabel, OutputsLabel, ValuesLabel]] = \
-            {}
+        self.visu: dict[str, Union[InputsLabel, OutputsLabel, ValuesLabel]] = {}
 
         controls = self._build_controls()
 
@@ -94,9 +129,11 @@ class MainWindow(QWidget):
             # Restore settings and maze/robot configuration
             maze_w_options = self._restore_settings(args)
 
-        self.simulation = Simulation(maze=self._generate_maze(),
-                                     robot=self._robot_data(),
-                                     save_trajectory=args and args.plot)
+        self.simulation = Simulation(
+            maze=self._generate_maze(),
+            robot=self._robot_data(),
+            save_trajectory=args and args.plot,
+        )
 
         self.maze_w = MazeWidget.from_simulation(self.simulation)
         self.maze_w.update_config(**maze_w_options)
@@ -112,16 +149,17 @@ class MainWindow(QWidget):
         self.robot_mode = args and args.is_robot
         if self.robot_mode:  # Prepare robot mode variables
             self._layout_holder = QWidget()
-            self._trajectory_plotter = \
-                lambda: self.plot_current_trajectory(
-                    args.width,
-                    Path(f"tmp/trajectories/human"
-                         f"_{Maze.to_string()}"
-                         f"_{time().strftime('%Y-%m-%d_%H-%M-%S')}"
-                         f".png"),
-                    symlink=True,
-                    config=dict(cycles=False)
-                )
+            self._trajectory_plotter = lambda: self.plot_current_trajectory(
+                args.width,
+                Path(
+                    f"tmp/trajectories/human"
+                    f"_{Maze.to_string()}"
+                    f"_{time().strftime('%Y-%m-%d_%H-%M-%S')}"
+                    f".png"
+                ),
+                symlink=True,
+                config=dict(cycles=False),
+            )
 
         else:
             self._layout_holder = None
@@ -139,8 +177,7 @@ class MainWindow(QWidget):
         self._update()
         self.buttons["play"].setFocus()
 
-        self._movie = (_MovieRecorder(self, args.movie)
-                       if args and args.movie else None)
+        self._movie = _MovieRecorder(self, args.movie) if args and args.movie else None
 
         if self.robot_mode:  # Trimmed down version for the robot
             self._set_robot_mode_layout()
@@ -163,15 +200,18 @@ class MainWindow(QWidget):
 
         self.maze_w.render_to_file(str(folder.joinpath("maze.png")))
         self.visu["img_inputs"].grab().save(
-            str(folder.joinpath(
-                f"inputs_{self.simulation.data.inputs.name.lower()}.png")))
+            str(folder.joinpath(f"inputs_{self.simulation.data.inputs.name.lower()}.png"))
+        )
 
-    def plot_current_trajectory(self, width: int, path: Path,
-                                config: Optional[dict] = None,
-                                symlink: bool = False):
+    def plot_current_trajectory(
+        self,
+        width: int,
+        path: Path,
+        config: Optional[dict] = None,
+        symlink: bool = False,
+    ):
         r = MazeWidget.plot_trajectory(
-            simulation=self.simulation, size=width, path=path,
-            config=config
+            simulation=self.simulation, size=width, path=path, config=config
         )
 
         if symlink:
@@ -215,15 +255,17 @@ class MainWindow(QWidget):
         self._update()
 
         maze_metrics = Simulation.compute_metrics(
-            self.simulation.maze, self.simulation.data.inputs,
-            self.simulation.data.vision)
-        s_str = (
-            ', '.join([f'{v:.2g}' for v in
-                       maze_metrics[MazeMetrics.SURPRISINGNESS].values()]))
+            self.simulation.maze,
+            self.simulation.data.inputs,
+            self.simulation.data.vision,
+        )
+        s_str = ", ".join([f"{v:.2g}" for v in maze_metrics[MazeMetrics.SURPRISINGNESS].values()])
         d_str = f"{maze_metrics[MazeMetrics.DECEPTIVENESS]}"
-        for m, v in [(MazeMetrics.SURPRISINGNESS, f"{{{s_str}}}"),
-                     (MazeMetrics.DECEPTIVENESS, f"{{{d_str}}}"),
-                     (MazeMetrics.INSEPARABILITY, None)]:
+        for m, v in [
+            (MazeMetrics.SURPRISINGNESS, f"{{{s_str}}}"),
+            (MazeMetrics.DECEPTIVENESS, f"{{{d_str}}}"),
+            (MazeMetrics.INSEPARABILITY, None),
+        ]:
             if v is None:
                 v = f"{maze_metrics[m]:.2g}"
             self.stats[f"m_{m.name.lower()}"].setText(v)
@@ -261,8 +303,11 @@ class MainWindow(QWidget):
     def _step(self):
         self.sections[self.Sections.CONFIG].setEnabled(False)
 
-        if (self._combobox_value("control").upper() == "KEYBOARD" and
-                not self.next_action and not self.simulation.robot.vel):
+        if (
+            self._combobox_value("control").upper() == "KEYBOARD"
+            and not self.next_action
+            and not self.simulation.robot.vel
+        ):
             reward = None
         else:
             reward = self.simulation.step(self.next_action)
@@ -290,10 +335,12 @@ class MainWindow(QWidget):
             print(f"reward = {reward}. Infos:\n{pprint.pformat(infos)}")
         if not self.args.autoquit:
             QMessageBox.information(
-                self, "Failed" if infos["failure"] else "Success",
+                self,
+                "Failed" if infos["failure"] else "Success",
                 f"          Actions: {infos['steps']}\n"
                 f"Cumulative reward: {reward}"
-                f" ({100 * infos['pretty_reward']:3.2f}%)")
+                f" ({100 * infos['pretty_reward']:3.2f}%)",
+            )
 
         if self._trajectory_plotter is not None:
             self._trajectory_plotter()
@@ -316,28 +363,33 @@ class MainWindow(QWidget):
         if not self.runnable:
             return
 
-        def update(k, v, fmt="{}"): self.stats[k].setText(fmt.format(v))
-        update("s_step", f"{self.simulation.time():g}s "
-                         f"({self.simulation.timestep} timesteps)")
-        update("s_deadline",
-               f"({self.simulation.deadline - self.simulation.timestep:g}"
-               f" remaining)")
+        def update(k, v, fmt="{}"):
+            self.stats[k].setText(fmt.format(v))
 
-        update("r_pos",
-               ", ".join([f"{v:.2g}" for v in self.simulation.robot.pos]))
-        update("r_reward",
-               f"{self.simulation.last_reward:+g}"
-               f" ({self.simulation.robot.reward:g})")
+        update(
+            "s_step",
+            f"{self.simulation.time():g}s " f"({self.simulation.timestep} timesteps)",
+        )
+        update(
+            "s_deadline",
+            f"({self.simulation.deadline - self.simulation.timestep:g}" f" remaining)",
+        )
+
+        update("r_pos", ", ".join([f"{v:.2g}" for v in self.simulation.robot.pos]))
+        update(
+            "r_reward",
+            f"{self.simulation.last_reward:+g}" f" ({self.simulation.robot.reward:g})",
+        )
 
         if self.simulation.data is not None:
-            def lbl(k): return self.visu["img_" + k]
-            lbl("inputs").set_inputs(self.simulation.observations,
-                                     self.simulation.data.inputs)
+
+            def lbl(k):
+                return self.visu["img_" + k]
+
+            lbl("inputs").set_inputs(self.simulation.observations, self.simulation.data.inputs)
             if self.controller is not None:
-                lbl("outputs").set_outputs(self.next_action,
-                                           self.simulation.data.outputs)
-            lbl("values").set_values(self.controller,
-                                     self.simulation.observations)
+                lbl("outputs").set_outputs(self.next_action, self.simulation.data.outputs)
+            lbl("values").set_values(self.controller, self.simulation.observations)
 
     # =========================================================================
     # == Config collectors
@@ -346,31 +398,41 @@ class MainWindow(QWidget):
     def _generate_maze(self):
         maze = Maze.generate(self.maze_data())
         stats = maze.stats()
-        self.stats["m_size"].setText(
-            f"{stats['size']} ({maze.width * maze.height} cells)")
-        self.stats["m_path"].setText(str(stats['path']))
-        self.stats["m_intersections"].setText(str(stats['intersections']))
+        self.stats["m_size"].setText(f"{stats['size']} ({maze.width * maze.height} cells)")
+        self.stats["m_path"].setText(str(stats["path"]))
+        self.stats["m_intersections"].setText(str(stats["intersections"]))
         for t in [SignType.LURE, SignType.TRAP]:
             key = t.value.lower() + "s"
             data = stats[key]
-            self.stats[f"m_{key}"].setText(
-                str(data) if data is not None else "/")
+            self.stats[f"m_{key}"].setText(str(data) if data is not None else "/")
 
         return maze
 
     def _combobox_value(self, name):
         return self.config[name].currentText().upper()
 
-    def _enum_value(self, name, enum): return enum[self._combobox_value(name)]
+    def _enum_value(self, name, enum):
+        return enum[self._combobox_value(name)]
 
     def maze_data(self):
-        def _sbv(name): return self.config[name].value()
-        def _cbv(name): return self._combobox_value(name)
-        def _cbb(name): return self.config[name].isChecked()
-        def _sign(name): return self.config[name].signs()
-        def _on(name): return _cbb("with_" + name + "s")
+        def _sbv(name):
+            return self.config[name].value()
+
+        def _cbv(name):
+            return self._combobox_value(name)
+
+        def _cbb(name):
+            return self.config[name].isChecked()
+
+        def _sign(name):
+            return self.config[name].signs()
+
+        def _on(name):
+            return _cbb("with_" + name + "s")
+
         return Maze.BuildData(
-            width=_sbv("width"), height=_sbv("height"),
+            width=_sbv("width"),
+            height=_sbv("height"),
             seed=_sbv("seed"),
             unicursive=_cbb("unicursive"),
             rotated=_cbb("rotated"),
@@ -379,35 +441,41 @@ class MainWindow(QWidget):
             lure=_sign("lures") if _on("lure") else [],
             p_lure=float(_sbv("p_lure")) / 100,
             trap=_sign("traps") if _on("trap") else [],
-            p_trap=float(_sbv("p_trap")) / 100
+            p_trap=float(_sbv("p_trap")) / 100,
         )
 
     def _robot_data(self):
-        def _sbv(name): return self.config[name].value()
-        def _cbv(name): return self._combobox_value(name)
-        def _ecbv(name, enum): return self._enum_value(name, enum)
+        def _sbv(name):
+            return self.config[name].value()
+
+        def _cbv(name):
+            return self._combobox_value(name)
+
+        def _ecbv(name, enum):
+            return self._enum_value(name, enum)
 
         return Robot.BuildData(
             vision=_sbv("vision"),
             inputs=_ecbv("inputs", InputType),
-            outputs=_ecbv("outputs", OutputType)
+            outputs=_ecbv("outputs", OutputType),
         )
 
     def _generate_controller(self, new_value=None, open_dialog=False):
-        c: BaseController = getattr(self, 'controller', None)
+        c: BaseController = getattr(self, "controller", None)
         if c and new_value is None and not open_dialog:
             return
 
-        ccb: QComboBox = self.config['control']
+        ccb: QComboBox = self.config["control"]
 
         settings = self._settings()
 
         old_path = settings.value("controller", None)
         if open_dialog:
             path, _ = QFileDialog.getOpenFileName(
-                parent=self, caption="Open controller",
+                parent=self,
+                caption="Open controller",
                 directory=old_path,
-                filter="Controllers (*.ctrl)"
+                filter="Controllers (*.ctrl)",
             )
             if not path:
                 return
@@ -425,7 +493,7 @@ class MainWindow(QWidget):
                 settings.setValue("controller", new_value)
                 settings.sync()
 
-                ccb.setCurrentIndex(ccb.count()-1)
+                ccb.setCurrentIndex(ccb.count() - 1)
             else:
                 logger.warning(f"Could not find controller at '{new_value}'.")
                 error = True
@@ -439,18 +507,15 @@ class MainWindow(QWidget):
 
         ct = ccb.currentText()
         if (ct.lower() != "autonomous") or c is None:
-            args = dict(
-                robot_data=self._robot_data(),
-                simulation=self.simulation
-            )
+            args = dict(robot_data=self._robot_data(), simulation=self.simulation)
             c: BaseController = controller_factory(ct, args)
 
         simple = c.is_simple
         if not simple:
             if i_t := c.input_type:
-                self.config['inputs'].setCurrentText(i_t.name.lower())
+                self.config["inputs"].setCurrentText(i_t.name.lower())
             if o_t := c.output_type:
-                self.config['outputs'].setCurrentText(o_t.name.lower())
+                self.config["outputs"].setCurrentText(o_t.name.lower())
             if v := c.vision:
                 self.config["vision"].setValue(v)
 
@@ -466,6 +531,7 @@ class MainWindow(QWidget):
                         i.widget().setParent(None)
                     elif i.layout():
                         clear_layout(i.layout())
+
             clear_layout(l)
 
             stats = c.details()
@@ -539,12 +605,14 @@ class MainWindow(QWidget):
             return w_
 
         layout = QGridLayout()
-        for n, t, c in [("Inputs", InputsLabel, (0, 0, 1, 2)),
-                        ("Outputs", OutputsLabel, (1, 0, 1, 1)),
-                        ("Values", ValuesLabel, (1, 1, 1, 1))]:
+        for n, t, c in [
+            ("Inputs", InputsLabel, (0, 0, 1, 2)),
+            ("Outputs", OutputsLabel, (1, 0, 1, 1)),
+            ("Values", ValuesLabel, (1, 1, 1, 1)),
+        ]:
             i, j, si, sj = c
-            layout.addWidget(self._section(n), 2*i, j, si, sj)
-            layout.addWidget(widget(n, t), 2*i+1, j, si, sj)
+            layout.addWidget(self._section(n), 2 * i, j, si, sj)
+            layout.addWidget(widget(n, t), 2 * i + 1, j, si, sj)
 
         return layout
 
@@ -588,10 +656,14 @@ class MainWindow(QWidget):
             layout.addLayout(sub_layout)
             return sub_layout
 
-        size_layout = \
-            row("Size", [widget(QSpinBox, "width"),
-                         QLabel("x"),
-                         widget(QSpinBox, "height")])
+        size_layout = row(
+            "Size",
+            [
+                widget(QSpinBox, "width"),
+                QLabel("x"),
+                widget(QSpinBox, "height"),
+            ],
+        )
         for i, s in enumerate([0, 1, 0, 1]):
             size_layout.setStretch(i, s)
         for w in ["width", "height"]:
@@ -599,7 +671,7 @@ class MainWindow(QWidget):
 
         w = widget(QSpinBox, "seed")
         row("Seed", w)
-        w.setRange(0, 2**31-1)
+        w.setRange(0, 2**31 - 1)
         w.setWrapping(True)
 
         rl = QHBoxLayout()
@@ -628,12 +700,12 @@ class MainWindow(QWidget):
         layout.addWidget(sign_section("clues"))
 
         w = widget(QDoubleSpinBox, "p_lure")
-        w.setSuffix('%')
+        w.setSuffix("%")
         w.setRange(0, 100)
         layout.addWidget(sign_section("lures", {"p_lure": w}))
 
         w = widget(QDoubleSpinBox, "p_trap")
-        w.setSuffix('%')
+        w.setSuffix("%")
         w.setRange(0, 100)
         layout.addWidget(sign_section("traps", {"p_trap": w}))
 
@@ -652,8 +724,7 @@ class MainWindow(QWidget):
         row("Outputs", cb)
 
         cb = widget(QComboBox, "control")
-        cb.addItems([v.lower() for v in ["Cheater", "Random",
-                                         "Keyboard", "Autonomous"]])
+        cb.addItems([v.lower() for v in ["Cheater", "Random", "Keyboard", "Autonomous"]])
         row("Control", cb)
 
         return layout
@@ -662,8 +733,7 @@ class MainWindow(QWidget):
         layout = QVBoxLayout()
         h_layout = QHBoxLayout()
 
-        self.__button(h_layout, "c_load", QStyle.SP_DirOpenIcon,
-                      "Ctrl+Shift+O")
+        self.__button(h_layout, "c_load", QStyle.SP_DirOpenIcon, "Ctrl+Shift+O")
         self.stats["c_path"] = w = ElidedLabel(mode=Qt.ElideLeft)
         w.setSizePolicy(QSizePolicy.Ignored, QSizePolicy.Preferred)
         h_layout.addWidget(w)
@@ -687,9 +757,10 @@ class MainWindow(QWidget):
                 self.stats[name] = lbl
 
         layout.addRow(self._section("Maze"))
-        add_fields(["m_size", "m_path", "m_intersections",
-                    "m_lures", "m_traps"]
-                   + [f"m_{m.name.lower()}" for m in MazeMetrics])
+        add_fields(
+            ["m_size", "m_path", "m_intersections", "m_lures", "m_traps"]
+            + [f"m_{m.name.lower()}" for m in MazeMetrics]
+        )
         layout.addRow(self._section("Simulation"))
         add_fields(["s_step"])
         layout.addRow("", lbl := QLabel())
@@ -753,26 +824,31 @@ class MainWindow(QWidget):
             c = self.config[k]
             c.dataChanged.connect(reset_maze)
             self.config["with_" + k].clicked.connect(reset_maze)
-            self.config["with_" + k].clicked.connect(
-                lambda b, c_=c: c_.hide(not b))
+            self.config["with_" + k].clicked.connect(lambda b, c_=c: c_.hide(not b))
         self.config["start"].currentTextChanged.connect(reset_maze)
         self.config["unicursive"].clicked.connect(reset_maze)
 
         reset_robot = functools.partial(
-            self.reset, MainWindow.Reset.ROBOT | MainWindow.Reset.CONTROL)
+            self.reset, MainWindow.Reset.ROBOT | MainWindow.Reset.CONTROL
+        )
         for k in ["inputs", "outputs"]:
             self.config[k].currentTextChanged.connect(reset_robot)
 
         self.config["control"].currentTextChanged.connect(
             lambda: self._generate_controller(
-                new_value=self.config['control'].currentText(),
-                open_dialog=False))
+                new_value=self.config["control"].currentText(),
+                open_dialog=False,
+            )
+        )
 
         for k in ["solution", "robot", "dark", "colorblind"]:
             self.config["show_" + k].clicked.connect(
-                lambda v, k_=k: self.maze_w.update_config(**{k_: v}))
+                lambda v, k_=k: self.maze_w.update_config(**{k_: v})
+            )
 
-        def connect(name, f): self.buttons[name].clicked.connect(f)
+        def connect(name, f):
+            self.buttons[name].clicked.connect(f)
+
         connect("stop", self.stop)
         connect("play", lambda: self._play(None))
         connect("next", self.next)
@@ -780,9 +856,7 @@ class MainWindow(QWidget):
         save: QAbstractButton = self.buttons["save"]
         save.clicked.connect(self.save)
 
-        connect("c_load",
-                lambda: self._generate_controller("",
-                                                  open_dialog=True))
+        connect("c_load", lambda: self._generate_controller("", open_dialog=True))
 
     # =========================================================================
     # == Persistent storage
@@ -820,15 +894,17 @@ class MainWindow(QWidget):
 
         if args.robot is not None:
             args_robot = Robot.BuildData.from_string(
-                args.robot, Robot.BuildData.from_argparse(args,
-                                                          set_defaults=False))
+                args.robot,
+                Robot.BuildData.from_argparse(args, set_defaults=False),
+            )
         else:
             args_robot = Robot.BuildData.from_argparse(args, set_defaults=True)
 
         if args.maze is not None:
             args_maze = Maze.BuildData.from_string(
-                args.maze, Maze.BuildData.from_argparse(args,
-                                                        set_defaults=False))
+                args.maze,
+                Maze.BuildData.from_argparse(args, set_defaults=False),
+            )
         else:
             args_maze = Maze.BuildData.from_argparse(args, set_defaults=True)
 
@@ -839,17 +915,16 @@ class MainWindow(QWidget):
                 viewer_options[k] = b
 
             self._init_from_robot_build_data(
-                args_robot.override_with(
-                    Robot.BuildData(**_try("robot", default={}))))
+                args_robot.override_with(Robot.BuildData(**_try("robot", default={})))
+            )
 
             self._init_from_maze_build_data(
-                args_maze.override_with(
-                    Maze.BuildData(**_try("maze", default={}))))
+                args_maze.override_with(Maze.BuildData(**_try("maze", default={})))
+            )
 
             config.beginGroup("sections")
-            for k, v in self.sections.items():
-                self.sections[k].set_collapsed(
-                    bool(int(config.value(k.value.lower(), False))))
+            for k in self.sections:
+                self.sections[k].set_collapsed(bool(int(config.value(k.value.lower(), False))))
             config.endGroup()
 
         else:
@@ -865,11 +940,11 @@ class MainWindow(QWidget):
         config = self._settings()
         logger.info(f"Saving configuration to {config.fileName()}")
 
-        config.setValue('pos', self.pos())
-        config.setValue('size', self.size())
+        config.setValue("pos", self.pos())
+        config.setValue("size", self.size())
 
-        config.setValue('maze', self.maze_data().__dict__)
-        config.setValue('robot', self._robot_data().__dict__)
+        config.setValue("maze", self.maze_data().__dict__)
+        config.setValue("robot", self._robot_data().__dict__)
 
         config.beginGroup("show")
         for k in MazeWidget.default_config().keys():
@@ -892,7 +967,8 @@ class MainWindow(QWidget):
     # =========================================================================
 
     def _init_from_maze_build_data(self, data: Maze.BuildData):
-        def val(k): return getattr(data, k)
+        def val(k):
+            return getattr(data, k)
 
         def _set(f, *args, **kwargs):
             assert isinstance(f.__self__, QObject)
@@ -910,11 +986,13 @@ class MainWindow(QWidget):
         for name in ["clue", "lure", "trap"]:
             _set(self.config[name + "s"].set_signs, val(name))
 
-        for name, val_ in [("with_clues", val("clue")),
-                           ("with_lures", val("lure")),
-                           ("with_traps", val("trap")),
-                           ("unicursive", val("unicursive")),
-                           ("rotated", val("rotated"))]:
+        for name, val_ in [
+            ("with_clues", val("clue")),
+            ("with_lures", val("lure")),
+            ("with_traps", val("trap")),
+            ("unicursive", val("unicursive")),
+            ("rotated", val("rotated")),
+        ]:
             _set(self.config[name].setChecked, bool(val_))
 
         for name in ["clues", "lures", "traps"]:
@@ -923,7 +1001,8 @@ class MainWindow(QWidget):
         _set(self.config["start"].setCurrentText, val("start").name.lower())
 
     def _init_from_robot_build_data(self, data: Robot.BuildData):
-        def val(k): return getattr(data, k)
+        def val(k):
+            return getattr(data, k)
 
         for name in ["vision"]:
             self.config[name].setValue(val(name) or 15)
@@ -940,13 +1019,12 @@ class _MovieRecorder:
         self.save_intermediates = True
         self.viewer = viewer
         self.path = path
-        self.folder = self.path.with_suffix('')
+        self.folder = self.path.with_suffix("")
         self.folder.mkdir(parents=True, exist_ok=True)
         self.frames = []
 
         max_timestep = self.viewer.simulation.deadline
-        self.step_format = (f"{{:0{math.ceil(math.log10(max_timestep))}d}}"
-                            f".png")
+        self.step_format = f"{{:0{math.ceil(math.log10(max_timestep))}d}}" f".png"
 
     def _path(self, name=None):
         if name:
@@ -973,17 +1051,16 @@ class _MovieRecorder:
         v_ratio = m_size / v_size
         v_offset = (
             (vision.width() - v_size) // 2,
-            (vision.height() - v_size) // 2
+            (vision.height() - v_size) // 2,
         )
 
         v_img = QImage(m_img.size(), m_img.format())
         painter = QPainter(v_img)
         painter.scale(v_ratio, v_ratio)
-        vision.render(painter, QPoint(0, 0),
-                      QRegion(*v_offset, v_size, v_size))
+        vision.render(painter, QPoint(0, 0), QRegion(*v_offset, v_size, v_size))
         painter.end()
 
-        img = QImage(2*size, size, m_img.format())
+        img = QImage(2 * size, size, m_img.format())
         painter = QPainter(img)
         painter.setRenderHint(QPainter.SmoothPixmapTransform)
         painter.drawImage(0, 0, m_img)
@@ -1003,11 +1080,17 @@ class _MovieRecorder:
         if HAS_PIL:
             print("Generating", self.path, "...")
             duration = 1000 // len(self.frames)
-            self.frames[0].save(self.path, format="GIF",
-                                append_images=self.frames,
-                                save_all=True, duration=duration,
-                                loop=0)
+            self.frames[0].save(
+                self.path,
+                format="GIF",
+                append_images=self.frames,
+                save_all=True,
+                duration=duration,
+                loop=0,
+            )
             print("Done!")
         else:
-            print("PIL module not installed. Generate gif manually using"
-                  " files under", self.folder)
+            print(
+                "PIL module not installed. Generate gif manually using" " files under",
+                self.folder,
+            )

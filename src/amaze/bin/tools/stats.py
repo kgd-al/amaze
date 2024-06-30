@@ -8,8 +8,8 @@ from typing import Optional, List, Sequence
 import pandas as pd
 
 from amaze.simu.maze import Maze
-from amaze.simu.types import InputType
 from amaze.simu.simulation import Simulation
+from amaze.simu.types import InputType
 
 
 @dataclass
@@ -20,14 +20,17 @@ class Options:
 
     @staticmethod
     def populate(parser: argparse.ArgumentParser):
-        parser.add_argument("mazes", metavar="maze",
-                            nargs='*',
-                            help="Extract stats from provided maze")
-        parser.add_argument("--file",
-                            help="Read provided panda dataframe and outputs"
-                                 " with added stats columns")
-        parser.add_argument("--out",
-                            help="Store formatted table into target file")
+        parser.add_argument(
+            "mazes",
+            metavar="maze",
+            nargs="*",
+            help="Extract stats from provided maze",
+        )
+        parser.add_argument(
+            "--file",
+            help="Read provided panda dataframe and outputs" " with added stats columns",
+        )
+        parser.add_argument("--out", help="Store formatted table into target file")
 
 
 def _get_stats(maze: str):
@@ -39,24 +42,23 @@ def _get_stats(maze: str):
 
 
 def main(sys_args: Optional[Sequence[str]] = None):
-    """ Tool to print stats about mazes without having to simulate them """
+    """Tool to print stats about mazes without having to simulate them"""
     args = Options()
     parser = argparse.ArgumentParser(
-        description="Outputs stats for selected maze in a multitude of"
-                    " formats")
+        description="Outputs stats for selected maze in a multitude of" " formats"
+    )
     Options.populate(parser)
     parser.parse_args(args=sys_args, namespace=args)
 
     if args.file:
-        in_df = pd.read_csv(args.file, sep=None, engine='python',
-                            index_col=False)
+        in_df = pd.read_csv(args.file, sep=None, engine="python", index_col=False)
         stats_df = None
         try:
             _ = list(in_df.columns).index("Name")
         except ValueError:
             raise KeyError("No name column in provided file")
         in_df.set_index("Name", inplace=True)
-        for i, r in in_df.iterrows():
+        for i, _r in in_df.iterrows():
             # print(f"{i=}, {r=}")
             stats = _get_stats(str(i))
             if stats_df is None:
@@ -69,7 +71,7 @@ def main(sys_args: Optional[Sequence[str]] = None):
         df = None
         for maze_str in args.mazes:
             stats = _get_stats(maze_str)
-            stats['Name'] = maze_str
+            stats["Name"] = maze_str
             if df is None:
                 df = pd.DataFrame(columns=stats.keys())
             df.loc[len(df)] = stats.values()
@@ -81,5 +83,5 @@ def main(sys_args: Optional[Sequence[str]] = None):
     return 0
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     exit(main())

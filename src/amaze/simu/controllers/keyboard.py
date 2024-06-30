@@ -5,8 +5,8 @@ from typing import List
 from PyQt5.QtCore import QObject, Qt, QEvent
 from PyQt5.QtGui import QKeyEvent
 
-from .base import BaseController, Robot, Vec, OutputType, InputType
 from amaze.misc.utils import qt_application
+from .base import BaseController, Robot, Vec, OutputType, InputType
 
 logger = getLogger(__name__)
 
@@ -34,7 +34,7 @@ class KeyboardController(QObject, BaseController, metaclass=__Meta):
             self.down_keys = {a: False for a in self.actions.keys()}
             self.current_action = Vec.null()
 
-    def eventFilter(self, obj: 'QObject', e: 'QEvent') -> bool:
+    def eventFilter(self, obj: "QObject", e: "QEvent") -> bool:
         if not isinstance(e, QKeyEvent):
             return False
         if e.modifiers() != Qt.NoModifier:
@@ -83,10 +83,10 @@ class KeyboardController(QObject, BaseController, metaclass=__Meta):
 
         if e.key() in self.actions:
             self.down_keys[e.key()] = down
-            self.current_action = sum([self.actions[k]
-                                       for k, down in self.down_keys.items()
-                                       if down],
-                                      Vec.null())
+            self.current_action = sum(
+                [self.actions[k] for k, down in self.down_keys.items() if down],
+                Vec.null(),
+            )
             if (length := self.current_action.length()) > 0:
                 self.current_action /= length
             return True

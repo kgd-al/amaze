@@ -1,6 +1,5 @@
 import pprint
 from math import floor, ceil
-from pathlib import Path
 
 import pytest
 
@@ -28,7 +27,7 @@ def test_maze(mbd_kwargs, tmpdir):
     pprint.pprint(mbd_kwargs)
     pprint.pprint(stats)
     if p_lure := bd.p_lure:
-        lures = (path-1) * p_lure
+        lures = (path - 1) * p_lure
         assert floor(lures) <= stats["lures"] <= ceil(lures)
 
     if p_trap := bd.p_trap:

@@ -8,25 +8,25 @@ The file |FILE| showcases the use of graphical visualization elements:
     - plotting an agent's trajectory in a maze
     - accessing the main entry point programmatically
 
-.. kgd-literal-include:: 1
+.. kgd-literal-include:: 1-9
 
 As with the simulation-side, all major components are available in a single
 import statement.
 
-.. kgd-literal-include:: 3-10
+.. kgd-literal-include:: 11-18
     :emphasize-lines: 8
 
 Next we define some helpful variables including the maze string.
 Notice that, in this case, we do not provide a seed to the maze thereby
 implying that we want a random one.
 Thus, in the highlighted line, we "resolve" the maze string so that the seed
-is known.
+(determined on the line above) is known.
 
-.. kgd-literal-include:: 13-19
+.. kgd-literal-include:: 21-32
 
-The graphical elements are introduced, first, by creating a QtApplication
-object which is essential for PyQt (the underlying widgets library) to work
-properly.
+The graphical elements are introduced, first, by creating a QtApplication object which is essential
+for PyQt (the underlying widgets library) to work properly.
+This is done transparently through the :meth:`~amaze.misc.utils.qt_application` function.
 Then, rendering a maze to a given file is trivially done by
 :meth:`~amaze.visu.widgets.maze.MazeWidget.static_render_to_file`.
 The various rendering options which can be provided to tweak the
@@ -41,13 +41,13 @@ until completion.
 Note, however, the `save_trajectory` flag provided to the simulation so that
 we can later plot it.
 
-.. kgd-literal-include:: 31-36
+.. kgd-literal-include:: 34-38
 
-This is actually done similarly to render an empty maze, although we now
+This is actually done similarly the rendering of an empty maze, although we now
 provide the whole simulation and use
 :meth:`~amaze.visu.widgets.maze.MazeWidget.plot_trajectory`.
 
-.. kgd-literal-include:: 42
+.. kgd-literal-include:: 43-47
 
 Finally, we also could call the main script from python and provide it with
 arguments.

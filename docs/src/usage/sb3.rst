@@ -10,15 +10,15 @@ In this example, we showcase how the built-in stable baselines 3 (sb3)
 extension can be used to smoothly leverage the large associated
 collection of algorithm and policies.
 
-.. kgd-literal-include:: 1-22
-    :emphasize-lines: 10-13
+.. kgd-literal-include:: 1-21
+    :emphasize-lines: 13-20
 
 As usual, we start by importing the necessary packages and we define some global
 configuration options.
 Note that, in addition to the traditional amaze classes, we also import
 extension-specific items (detailed below).
 
-.. kgd-literal-include:: 1-4
+.. kgd-literal-include:: 7-11
     :pyobject: train
 
 The training function is defined much more shortly than in the hand-written
@@ -30,7 +30,7 @@ extension-specific function
 used to create Vectorized Environments
 (:class:`~stable_baselines3.common.vec_env.VecEnv`)
 
-.. kgd-literal-include:: 6-7
+.. kgd-literal-include:: 13
     :pyobject: train
 
 We also, sometimes, need access to the underlying environments (regular mazes) as
@@ -40,7 +40,7 @@ There we collect the average optimal reward by calling
 used for intermediate performance evaluation thanks to
 :meth:`~amaze.extensions.sb3.maze_env.env_method`.
 
-.. kgd-literal-include:: 9-23
+.. kgd-literal-include:: 14-28
     :pyobject: train
 
 Next we create a
@@ -54,12 +54,12 @@ The following lines define such an object, in a traditional SB3 fashion, while
 adding our own tensorboard callback and also using the optimal reward to stop
 as soon as the agent is behaving optimally.
 
-.. kgd-literal-include:: 25-33
+.. kgd-literal-include:: 31-44
     :pyobject: train
 
 Finally, we create the sb3 model, using the dedicated wrapper
-:meth:`~amaze.extensions.sb3.sb3_controller`, by providing, first, the type
-of underlying model (one of :meth:`~amaze.extensions.sb3.compatible_models`)
+:meth:`~amaze.extensions.sb3.sb3_controller`, by providing the robot data and the
+of underlying model type (one of :meth:`~amaze.extensions.sb3.compatible_models`)
 and, afterwards, the usual parameters.
 Then after setting up the logger and letting the training process run its
 course, we perform a final step of the callback to render the final
@@ -77,7 +77,7 @@ The only difference is the use of the dedicated loading function
 :meth:`~amaze.extensions.sb3.load_sb3_controller` which is a verbose alias to
 :meth:`~amaze.simu.controllers.control.load`.
 The reminder of this function being the same, we refer the reader to the
-previous example, if needed.
+previous example (:ref:`usage/training:Generalization`), if needed.
 
 .. kgd-literal-include::
     :pyobject: main

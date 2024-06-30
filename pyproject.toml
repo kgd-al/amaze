@@ -19,7 +19,7 @@ classifiers = [
   "Topic :: Scientific/Engineering :: Artificial Life",
 ]
 dependencies = [
-  "numpy",
+  "numpy<2.0.0",
   "pandas",
   "PyQt5"
 ]
@@ -58,7 +58,8 @@ tests = [
   "pytest",
   "pytest-steps", "pytest-sugar",
   "coverage",
-  "flake8",
+  "flake8", "flake8-bugbear", "flake8-pyproject",
+  "black"
 ]
 
 docs = [
@@ -77,3 +78,11 @@ addopts = ["-ra", "--showlocals", "--strict-markers", "--strict-config"]
 xfail_strict = true
 filterwarnings = ["error"]
 testpaths = ["tests"]
+
+[tool.black]
+line-length = 100
+
+[tool.flake8]
+max-line-length = 100
+extend-select = ['B950']
+extend-ignore = ['E203', 'E501', 'E701']

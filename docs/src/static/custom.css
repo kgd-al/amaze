@@ -3,6 +3,10 @@
   --padding-bottom: .75ex;
 }
 
+section {
+    text-align: justify;
+}
+
 .method {
     padding-top: var(--padding-top);
     padding-bottom: var(--padding-bottom);

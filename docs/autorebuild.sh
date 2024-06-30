@@ -3,7 +3,7 @@
 out=docs/_build/html
 rm -r $out
 rm -fr docs/src/_*
-args="-Ea"
+args="-ETa"
 
 sphinx-autobuild $args docs/src/ $out \
     --ignore '*/_autogen/errors.rst' --ignore '*/_auto*' \

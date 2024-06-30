@@ -1,5 +1,4 @@
 from typing import List
-from zipfile import ZipFile
 
 from .base import BaseController, InputType, OutputType, Robot, Vec
 
@@ -10,8 +9,7 @@ class CheaterController(BaseController):
 
     def __init__(self, robot_data: Robot.BuildData, simulation):
         if simulation is None and not hasattr(self, "simulation"):
-            raise ValueError("Cheater controller missing required 'simulation'"
-                             " parameter")
+            raise ValueError("Cheater controller missing required 'simulation'" " parameter")
         elif simulation is not None:
             self.simulation = simulation
 
@@ -34,12 +32,9 @@ class CheaterController(BaseController):
 
         self.current_cell = self.simulation.robot.pos
         if self.simulation.robot.data.outputs is OutputType.DISCRETE:
-            self.action = (Vec(*self.path.pop(0))
-                           - Vec(*self.current_cell.aligned()))
+            self.action = Vec(*self.path.pop(0)) - Vec(*self.current_cell.aligned())
         else:
-            self.action = (Vec(*self.path[0])
-                           + Vec(.5, .5)
-                           - self.current_cell)
+            self.action = Vec(*self.path[0]) + Vec(0.5, 0.5) - self.current_cell
             self.action /= self.action.length()
             cell_index = self.current_cell.aligned()
             if cell_index != self.previous_cell:

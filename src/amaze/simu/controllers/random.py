@@ -1,11 +1,10 @@
 import math
 from random import Random
 from typing import List
-from zipfile import ZipFile
 
-from ..robot import Robot, InputType, OutputType
 from amaze.simu.controllers.base import BaseController
 from amaze.simu.types import Action
+from ..robot import Robot, InputType, OutputType
 
 
 class RandomController(BaseController):
@@ -20,8 +19,7 @@ class RandomController(BaseController):
         if self.output_type is OutputType.DISCRETE:
             return self.rng.choice(self.discrete_actions)
         else:
-            return Action.from_polar(self.rng.random() * math.pi,
-                                     self.rng.random())
+            return Action.from_polar(self.rng.random() * math.pi, self.rng.random())
 
     def reset(self):
         self.rng = Random(self.seed)

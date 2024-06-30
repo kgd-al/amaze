@@ -7,21 +7,21 @@ from PyQt5.QtCore import Qt, QPointF, QRectF, QSize
 from PyQt5.QtGui import QPainter, QColor, QPainterPath, QImage
 from PyQt5.QtWidgets import QLabel
 
-from ...simu.robot import Robot
+from amaze.misc.resources import SignType, qimage_to_numpy, qt_images
+from amaze.misc.utils import has_qt_application, qt_application
+from ._trajectory_plotter import plot_trajectory
+from ..maze import MazePainter, Color, logger
 from ...simu.maze import Maze
+from ...simu.robot import Robot
 from ...simu.simulation import Simulation
 from ...simu.types import InputType, OutputType
-from ..maze import MazePainter, Color, logger
-from amaze.misc.resources import SignType, qimage_to_numpy, qt_images
-from ._trajectory_plotter import plot_trajectory
-from amaze.misc.utils import has_qt_application, qt_application
 
 
 class QtPainter(MazePainter):
     def __init__(self, p: QPainter, config: dict):
         self.painter = p
-        dark = config['dark']
-        if config['colorblind']:
+        dark = config["dark"]
+        if config["colorblind"]:
             c1 = QColor("#de8f05")
             c2 = QColor("#0173b2")
             c3 = QColor("#029e73")
@@ -32,18 +32,28 @@ class QtPainter(MazePainter):
         self.colors = {
             Color.FOREGROUND: Qt.white if dark else Qt.black,
             Color.BACKGROUND: Qt.black if dark else Qt.white,
-            Color.START: c1, Color.FINISH: c2, Color.PATH: c3,
-            Color.COLOR1: c1, Color.COLOR2: c2, Color.COLOR3: c3
+            Color.START: c1,
+            Color.FINISH: c2,
+            Color.PATH: c3,
+            Color.COLOR1: c1,
+            Color.COLOR2: c2,
+            Color.COLOR3: c3,
         }
 
     def draw_line(self, x0: float, y0: float, x1: float, y1: float, c: Color):
         self.painter.setPen(self.colors[c])
-        self.painter.drawLine(QPointF(x0, y0),
-                              QPointF(x1, y1))
+        self.painter.drawLine(QPointF(x0, y0), QPointF(x1, y1))
 
-    def fill_rect(self, x: float, y: float, w: float, h: float,
-                  draw: Optional[Color], fill: Optional[Color],
-                  alpha: float = 1):
+    def fill_rect(
+        self,
+        x: float,
+        y: float,
+        w: float,
+        h: float,
+        draw: Optional[Color],
+        fill: Optional[Color],
+        alpha: float = 1,
+    ):
         r = QRectF(x, y, w, h)
         if fill:
             fc = QColor(self.colors[fill])
@@ -54,14 +64,19 @@ class QtPainter(MazePainter):
             self.painter.setPen(self.colors[draw])
             self.painter.drawRect(r)
 
-    def fill_circle(self, x: float, y: float, r: float,
-                    draw: Optional[Color], fill: Optional[Color]):
+    def fill_circle(
+        self,
+        x: float,
+        y: float,
+        r: float,
+        draw: Optional[Color],
+        fill: Optional[Color],
+    ):
         path = QPainterPath()
-        path.addEllipse(QRectF(x-r, y-r, 2 * r, 2 * r))
+        path.addEllipse(QRectF(x - r, y - r, 2 * r, 2 * r))
         self.painter.fillPath(path, self.colors[fill])
 
-    def draw_image(self, x: float, y: float, w: float, h: float,
-                   img: QImage):
+    def draw_image(self, x: float, y: float, w: float, h: float, img: QImage):
         self.painter.drawImage(QRectF(x, y, w, h).toRect(), img, img.rect())
 
     def draw_start(self, x: float, y: float, w: float, h: float, c: Color):
@@ -69,10 +84,10 @@ class QtPainter(MazePainter):
 
     def draw_finish(self, x: float, y: float, w: float, h: float, c: Color):
         path = QPainterPath()
-        path.addRect(QRectF(x + .5 * w - 2, y + .2 * h, 3, .6 * h))
-        path.moveTo(x + .5 * w + 1, y + .5 * h)
-        path.lineTo(x + .8 * w, y + .65 * h)
-        path.lineTo(x + .5 * w + 1, y + .8 * h)
+        path.addRect(QRectF(x + 0.5 * w - 2, y + 0.2 * h, 3, 0.6 * h))
+        path.moveTo(x + 0.5 * w + 1, y + 0.5 * h)
+        path.lineTo(x + 0.8 * w, y + 0.65 * h)
+        path.lineTo(x + 0.5 * w + 1, y + 0.8 * h)
         path.closeSubpath()
 
         self.painter.setPen(Qt.black)
@@ -82,13 +97,15 @@ class QtPainter(MazePainter):
 
 class MazeWidget(QLabel):
 
-    def __init__(self,
-                 maze: Optional[Union[Maze, Maze.BuildData, str]] = None,
-                 robot: Optional[Robot] = None,
-                 config: Optional[Dict[str, Any]] = None,
-                 resolution: Optional[int] = 15,
-                 input_type: Optional[InputType] = InputType.DISCRETE,
-                 is_reset=False):
+    def __init__(
+        self,
+        maze: Optional[Union[Maze, Maze.BuildData, str]] = None,
+        robot: Optional[Robot] = None,
+        config: Optional[Dict[str, Any]] = None,
+        resolution: Optional[int] = 15,
+        input_type: Optional[InputType] = InputType.DISCRETE,
+        is_reset=False,
+    ):
 
         assert has_qt_application()
         if not is_reset:
@@ -135,9 +152,9 @@ class MazeWidget(QLabel):
         self._compute_scale()
 
     @classmethod
-    def from_simulation(cls, simulation: Simulation,
-                        config: Optional[Dict[str, Any]] = None) \
-            -> 'MazeWidget':
+    def from_simulation(
+        cls, simulation: Simulation, config: Optional[Dict[str, Any]] = None
+    ) -> "MazeWidget":
         return cls(maze=simulation.maze, robot=simulation.robot, config=config)
 
     def reset_from_simulation(self, simulation: Simulation):
@@ -145,12 +162,14 @@ class MazeWidget(QLabel):
 
     def set_maze(self, maze: Union[Maze, Maze.BuildData, str]):
         maze = self.__to_maze(maze)
-        self.__init__(maze=maze,
-                      robot=self._robot,
-                      config=self._config,
-                      resolution=self._vision,
-                      input_type=self._inputs,
-                      is_reset=True)
+        self.__init__(
+            maze=maze,
+            robot=self._robot,
+            config=self._config,
+            resolution=self._vision,
+            input_type=self._inputs,
+            is_reset=True,
+        )
         self.update()
 
     @staticmethod
@@ -160,15 +179,12 @@ class MazeWidget(QLabel):
         elif isinstance(maze, str):
             maze = Maze.from_string(maze)
         elif not isinstance(maze, Maze):
-            raise ValueError("Invalid maze argument."
-                             " Expecting Maze, Maze.BuildData or str")
+            raise ValueError("Invalid maze argument." " Expecting Maze, Maze.BuildData or str")
         return maze
 
     @staticmethod
     def __qt_images(size, maze):
-        return (qt_images(v, size)
-                if (v := maze.signs[t]) is not None else None
-                for t in SignType)
+        return (qt_images(v, size) if (v := maze.signs[t]) is not None else None for t in SignType)
 
     def update_config(self, **kwargs):
         self._config.update(kwargs)
@@ -176,7 +192,7 @@ class MazeWidget(QLabel):
 
     @staticmethod
     def default_config():
-        """ Returns the default rendering configuration.
+        """Returns the default rendering configuration.
 
         - solution: show the path the target (True)
         - robot: show the robot (True)
@@ -184,13 +200,7 @@ class MazeWidget(QLabel):
         - colorblind: use a colorblind-friendly palette (False)
         - cycles: detect and simplify cycles when plotting trajectories (True)
         """
-        return dict(
-            solution=True,
-            robot=True,
-            dark=True,
-            colorblind=False,
-            cycles=True
-        )
+        return dict(solution=True, robot=True, dark=True, colorblind=False, cycles=True)
 
     def minimumSize(self) -> QSize:
         return 3 * QSize(self._maze.width, self._maze.height)
@@ -213,8 +223,12 @@ class MazeWidget(QLabel):
             return width, width * maze.height // maze.width
 
     def _compute_scale(self):
-        self._scale = math.floor(min((self.width() - 2) / self._maze.width,
-                                     (self.height() - 2) / self._maze.height))
+        self._scale = math.floor(
+            min(
+                (self.width() - 2) / self._maze.width,
+                (self.height() - 2) / self._maze.height,
+            )
+        )
 
     def paintEvent(self, e):
         maze = self._maze
@@ -226,7 +240,7 @@ class MazeWidget(QLabel):
 
         sw = maze.width * self._scale + 2
         sh = maze.height * self._scale + 2
-        painter.translate(.5 * (self.width() - sw), .5 * (self.height() - sh))
+        painter.translate(0.5 * (self.width() - sw), 0.5 * (self.height() - sh))
 
         painter.fillRect(QRectF(0, 0, sw, sh), self._background_color())
 
@@ -235,7 +249,7 @@ class MazeWidget(QLabel):
         painter.end()
 
     def render_to_file(self, path, width: Optional[int] = None):
-        """ Render this widget to a file """
+        """Render this widget to a file"""
         img, painter = self._image_drawer(width=width)
         self.render_onto(painter)
         return self._save_image(path, img, painter)
@@ -251,7 +265,7 @@ class MazeWidget(QLabel):
 
     @classmethod
     def static_render_to_file(cls, maze, path, size=None, **kwargs):
-        """ Render the provided maze to a file (in png format).
+        """Render the provided maze to a file (in png format).
 
         Additional arguments refer to the rendering configuration, see
         :meth:`default_config`.
@@ -259,10 +273,15 @@ class MazeWidget(QLabel):
         width, height = cls.__compute_size(maze, size or maze.width * 15)
         scale = width / maze.width
         config = cls.default_config()
-        config.update(dict(
-            scale=scale,
-            outputs=OutputType.DISCRETE,
-            solution=True, robot=None, dark=True))
+        config.update(
+            dict(
+                scale=scale,
+                outputs=OutputType.DISCRETE,
+                solution=True,
+                robot=None,
+                dark=True,
+            )
+        )
         config.update(kwargs)
         fill = cls.__background_color(config["dark"])
         img, painter = cls.__static_image_drawer(width + 2, height + 2, fill)
@@ -272,8 +291,7 @@ class MazeWidget(QLabel):
         return cls._save_image(path, img, painter)
 
     @classmethod
-    def __render(cls, painter: QPainter, maze: Maze,
-                 height: float, config: dict):
+    def __render(cls, painter: QPainter, maze: Maze, height: float, config: dict):
         painter.translate(1, height)
         painter.scale(1, -1)
 
@@ -289,38 +307,44 @@ class MazeWidget(QLabel):
                 robot = None
 
         config = dict(self._config)
-        config.update(dict(
-            scale=self._scale,
-            clues=self._clues, lures=self._lures, traps=self._traps,
-            outputs=outputs,
-            solution=bool(self._config["solution"]),
-            robot=robot))
+        config.update(
+            dict(
+                scale=self._scale,
+                clues=self._clues,
+                lures=self._lures,
+                traps=self._traps,
+                outputs=outputs,
+                solution=bool(self._config["solution"]),
+                robot=robot,
+            )
+        )
 
         if width is not None:
-            config['scale'] = width / self._maze.width
+            config["scale"] = width / self._maze.width
 
-        self.__render(
-            painter, self._maze,
-            self._maze.height * config['scale'],
-            config)
+        self.__render(painter, self._maze, self._maze.height * config["scale"], config)
 
     @staticmethod
-    def __foreground_color(dark: bool): return Qt.white if dark else Qt.black
+    def __foreground_color(dark: bool):
+        return Qt.white if dark else Qt.black
 
     def _foreground_color(self):
         return self.__foreground_color(self._config.get("dark", False))
 
     @staticmethod
-    def __background_color(dark: bool): return Qt.black if dark else Qt.white
+    def __background_color(dark: bool):
+        return Qt.black if dark else Qt.white
 
     def _background_color(self):
         return self.__background_color(self._config.get("dark", False))
 
     @staticmethod
-    def __static_image_drawer(width: int, height: int,
-                              fill: QColor,
-                              img_format: QImage.Format = QImage.Format_RGB32)\
-            -> Tuple[QImage, QPainter]:
+    def __static_image_drawer(
+        width: int,
+        height: int,
+        fill: QColor,
+        img_format: QImage.Format = QImage.Format_RGB32,
+    ) -> Tuple[QImage, QPainter]:
 
         assert has_qt_application()
         img = QImage(width, height, img_format)
@@ -329,11 +353,12 @@ class MazeWidget(QLabel):
         painter = QPainter(img)
         return img, painter
 
-    def _image_drawer(self,
-                      fill: Optional[QColor] = None,
-                      width: Optional[int] = None,
-                      img_format: QImage.Format = QImage.Format_RGB32) \
-            -> Tuple[QImage, QPainter]:
+    def _image_drawer(
+        self,
+        fill: Optional[QColor] = None,
+        width: Optional[int] = None,
+        img_format: QImage.Format = QImage.Format_RGB32,
+    ) -> Tuple[QImage, QPainter]:
         if fill is None:
             fill = self._background_color()
 
@@ -341,16 +366,13 @@ class MazeWidget(QLabel):
             width = self._scale * self._maze.width + 2
             height = self._scale * self._maze.height + 2
         else:
-            scale = (width-2) / self._maze.width
+            scale = (width - 2) / self._maze.width
             height = round(self._maze.height * scale) + 2
 
-        return self.__static_image_drawer(
-            width, height,
-            fill, img_format)
+        return self.__static_image_drawer(width, height, fill, img_format)
 
     @staticmethod
-    def _save_image(path: Union[str, Path],
-                    img: QImage, painter: Optional[QPainter] = None):
+    def _save_image(path: Union[str, Path], img: QImage, painter: Optional[QPainter] = None):
         if painter:
             painter.end()
 
@@ -364,17 +386,19 @@ class MazeWidget(QLabel):
         return ok
 
     @classmethod
-    def plot_trajectory(cls, simulation: Simulation,
-                        size: int,
-                        trajectory: Optional[pd.DataFrame] = None,
-                        config: Optional[dict] = None,
-                        path: Optional[Path | str] = None,
-                        verbose: int = 0,
-                        side: int = 0,
-                        square: bool = False,
-                        img_format: QImage.Format = QImage.Format_RGB32) \
-            -> Optional[QImage]:
-        """ Plots a trajectory stored in the provided simulation to the
+    def plot_trajectory(
+        cls,
+        simulation: Simulation,
+        size: int,
+        trajectory: Optional[pd.DataFrame] = None,
+        config: Optional[dict] = None,
+        path: Optional[Path | str] = None,
+        verbose: int = 0,
+        side: int = 0,
+        square: bool = False,
+        img_format: QImage.Format = QImage.Format_RGB32,
+    ) -> Optional[QImage]:
+        """Plots a trajectory stored in the provided simulation to the
         requested file.
 
         :param simulation: the simulation to plot from
@@ -397,7 +421,7 @@ class MazeWidget(QLabel):
             image_painter=cls.__static_image_drawer,
             qt_images=cls.__qt_images,
             render=cls.__render,
-            save=cls._save_image
+            save=cls._save_image,
         )
 
         if trajectory is None:
@@ -419,4 +443,5 @@ class MazeWidget(QLabel):
             side=side,
             square=square,
             path=path,
-            img_format=img_format)
+            img_format=img_format,
+        )

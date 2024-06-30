@@ -14,59 +14,56 @@ reader being redirected to the |FILE| for the unabridged sources.
 Configuration
 -------------
 
-.. kgd-literal-include::
-    :pyobject: robot_build_data
+.. kgd-literal-include:: 10-12
 
 Here, we use the verbose version of the
 :class:`~amaze.simu.robot.Robot.BuildData` initializer to also specify what
 kind of controller it will use and to provide the necessary parameters.
 We rely on the simulation to give the list of possible discrete actions and
 set the exploration rate and seed for the controller's random number generator.
-The inputs and outputs are specified via the enumeration instead of single
-characters for increase readability.
+The inputs and outputs are specified via the corresponding enumerations instead of single
+characters for increased readability.
 
 Training loop
 -------------
 
 The training process itself, detailed below, mostly boils down to three things:
-- pick training (and evaluation) maze(s)
-- create a controller
-- simulate a lot of episodes and apply the appropriate training operator
+    - pick training (and evaluation) maze(s)
+    - create a controller
+    - simulate a lot of episodes and apply the appropriate training operator
 
-.. kgd-literal-include:: 1-14
+.. kgd-literal-include:: 4-6
     :pyobject: train
 
 This time around, we use the explicit initializer for the
 :class:`~amaze.simu.maze.Maze.BuildData`.
 
-.. kgd-literal-include:: 16-21
+.. kgd-literal-include:: 8-10
     :pyobject: train
 
 We then tweak it slightly to get different maze for the agents to be evaluated
 in so that we can ensure some small measure of generalized performance.
 
-.. kgd-literal-include:: 23-28
+.. kgd-literal-include:: 12-13
     :pyobject: train
 
-We then use the robot data to instantiate one of the builtin controller and
-we confirm that the inputs / outputs are compatible with the controller (
-:meth:`~amaze.simu.controllers.base.BaseController.inputs_types`,
-:meth:`~amaze.simu.controllers.base.BaseController.outputs_types`).
-Using that same robot we create a simulation with any one maze.
+The robot data is used to instantiate one of the builtin controller to which we provide
+specific arguments.
+Using that same robot data we create a simulation with any one maze.
 
-.. kgd-literal-include:: 32
+.. kgd-literal-include:: 17
     :pyobject: train
-.. kgd-literal-include:: 42
+.. kgd-literal-include:: 28
     :pyobject: train
 
 Then for a certain number of episodes:
 
-.. kgd-literal-include:: 43-45
+.. kgd-literal-include:: 29-30
     :pyobject: train
 
 we let the agent experience a maze and learn from it ...
 
-.. kgd-literal-include:: 49-56
+.. kgd-literal-include:: 36-38
     :pyobject: train
 
 ... while also monitoring its performance on unseen mazes.
@@ -105,19 +102,31 @@ Generalization
 
 .. kgd-literal-include::
     :pyobject: evaluate_generalization
+    :emphasize-lines: 20
 
-Finally, in the context of training generalized agents, we illustrate how to
-easily evaluate on a large range of mazes.
-As we no longer need to explore with this policy, we start by setting
-epsilon to 0, ensuring the agent will always take the greedy action.
-Then, as previously, we generate a maze (here randomly), create a simulation
-and let it run until completion.
+Finally, we illustrate two methods to evaluate the generalization performance of an AMaze
+agent.
+As we no longer need to explore with this policy, we start by setting epsilon to 0,
+ensuring the agent will always take the greedy action.
+
+The first method then consists in generating a large number of random mazes and, for each,
+creating a simulation and letting it run until completion.
 Thanks to the
 :meth:`~amaze.simu.simulation.Simulation.normalized_reward`, we can know if
-the agent has followed the optimal trajectory by verifying that it is equal to
-1.
-This makes it easy to ascertain if the agent is indeed performing adequately,
-even on unseen mazes.
+the agent has followed the optimal trajectory by verifying that it is equal to 1.
+By performing this on a large enough sample, we can get a measure of how well the agent
+adapts to unseen mazes.
+
+The second method is more straightforward (and computationally cheaper): when inputs are
+discrete (either pre-processed with :attr:`~amaze.simu.types.InputType.DISCRETE`/
+:attr:`~amaze.simu.types.OutputType.DISCRETE` or aligned images with
+:attr:`~amaze.simu.types.InputType.CONTINUOUS`/:attr:`~amaze.simu.types.OutputType.DISCRETE`)
+it is possible to actually enumerate all possible combinations.
+Such an approach has advantages compared to the more straightforward maze-navigation as a
+single error has no potential for catastrophic failure.
+At the same time, by being more abstract, it only evaluates the subset of the agents
+capabilities responsible for immediate action.
+The returned values describe, with various levels of detail, the agents performance.
 
 The main
 ----------

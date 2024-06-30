@@ -7,15 +7,14 @@ from amaze.misc import resources
 
 class ZoomingComboBox(QComboBox):
     def event(self, e: QEvent):
-        if e.type() == QEvent.ToolTip \
-                and (k := self.currentText()):
+        if e.type() == QEvent.ToolTip and (k := self.currentText()):
             i = resources.image(k, 128)
             e: QHelpEvent
 
             p = i.scaledToHeight(128)
             buffer = QBuffer()
             buffer.open(QIODevice.WriteOnly)
-            p.save(buffer, 'png')
+            p.save(buffer, "png")
             image = bytes(buffer.data().toBase64()).decode()
             html = f'<img src="data:image/png;base64,{image}">'
             QToolTip.showText(e.globalPos(), html)

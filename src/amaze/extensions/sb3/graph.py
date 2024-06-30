@@ -10,11 +10,17 @@ from torch.nn import Linear, Conv2d, ReLU, Flatten, Sequential
 
 
 class _Module(ABC):
-    def __init__(self): pass
     @abstractmethod
-    def input(self) -> Tuple[str, int]: pass
+    def __init__(self):
+        pass
+
     @abstractmethod
-    def output(self) -> Tuple[str, int]: pass
+    def input(self) -> Tuple[str, int]:
+        pass
+
+    @abstractmethod
+    def output(self) -> Tuple[str, int]:
+        pass
 
 
 class _AtomicModule(_Module):
@@ -33,8 +39,11 @@ class _AtomicModule(_Module):
             raise ValueError(f"Unhandled module {m}")
         self.id = n_id
 
-    def input(self) -> Tuple[str, int]: return self.id, self.i_arity
-    def output(self) -> Tuple[str, int]: return self.id, self.o_arity
+    def input(self) -> Tuple[str, int]:
+        return self.id, self.i_arity
+
+    def output(self) -> Tuple[str, int]:
+        return self.id, self.o_arity
 
 
 class _SubGraph(_Module):
@@ -44,19 +53,23 @@ class _SubGraph(_Module):
         self._input = children[0][1].input()
         self._output = children[-1][1].output()
 
-    def input(self) -> Tuple[str, int]: return self._input
-    def output(self) -> Tuple[str, int]: return self._output
-    def __getitem__(self, item): return self.children[item]
+    def input(self) -> Tuple[str, int]:
+        return self._input
+
+    def output(self) -> Tuple[str, int]:
+        return self._output
+
+    def __getitem__(self, item):
+        return self.children[item]
 
     def pretty(self, indent=0):
         for name, c in self.children.items():
             print(f"{indent*2*' '}{name}")
             if isinstance(c, _SubGraph):
-                c.pretty(indent+1)
+                c.pretty(indent + 1)
 
 
-def __edge(graph: graphviz.Digraph,
-           lhs: Union[_Module, str], rhs: Union[_Module, str]):
+def __edge(graph: graphviz.Digraph, lhs: Union[_Module, str], rhs: Union[_Module, str]):
     if isinstance(lhs, str):
         lhs_name, lhs_arity = lhs, -1
     else:
@@ -68,9 +81,7 @@ def __edge(graph: graphviz.Digraph,
         rhs_name, rhs_arity = rhs.input()
 
     # assert lhs_arity < 0 or rhs_arity < 0 or lhs_arity == rhs_arity
-    label = str(lhs_arity) if lhs_arity > 0 \
-        else str(rhs_arity) if rhs_arity > 0 \
-        else ""
+    label = str(lhs_arity) if lhs_arity > 0 else str(rhs_arity) if rhs_arity > 0 else ""
     graph.edge(lhs_name, rhs_name, label)
 
 
@@ -79,9 +90,10 @@ def __to_dot(module, g: graphviz.Digraph, name, p_name=""):
     full_name = name if not p_name else f"{p_name}_{name}"
     if len(named_children):
         cluster_name = f"{name}: {module.__class__.__name__}"
-        with g.subgraph(name="cluster_" + full_name,
-                        graph_attr={'label': cluster_name,
-                                    'labeljust': 'l'}) as sg:
+        with g.subgraph(
+            name="cluster_" + full_name,
+            graph_attr={"label": cluster_name, "labeljust": "l"},
+        ) as sg:
             # print(f"{s_str}  label=\"{name}\"")
             children = []
             for c_name, child in named_children:
@@ -104,17 +116,17 @@ def __to_dot(module, g: graphviz.Digraph, name, p_name=""):
 
 
 def to_dot(policy):
-    """ Generates a (dot) graph from the underlying pytorch elements """
+    """Generates a (dot) graph from the underlying pytorch elements"""
     # print("="*80)
     # print("== Graph")
     # print("="*80)
 
     graph = graphviz.Digraph(
-        format='pdf', node_attr={'shape': 'box'},
+        format="pdf",
+        node_attr={"shape": "box"},
     )
 
-    pytorch_total_params = (
-        sum(p.numel() for p in policy.parameters() if p.requires_grad))
+    pytorch_total_params = sum(p.numel() for p in policy.parameters() if p.requires_grad)
 
     graph.node("obs", str(policy.observation_space))
 
@@ -125,10 +137,8 @@ def to_dot(policy):
         __edge(graph, v_g, "value")
 
         if policy.share_features_extractor:
-            fe_g = __to_dot(policy.features_extractor, graph,
-                            "features_extractor")
-            mlp_g = __to_dot(policy.mlp_extractor, graph,
-                             "mlp_extractor")
+            fe_g = __to_dot(policy.features_extractor, graph, "features_extractor")
+            mlp_g = __to_dot(policy.mlp_extractor, graph, "mlp_extractor")
             __edge(graph, "obs", fe_g)
             __edge(graph, fe_g["cnn"], fe_g["linear"])
             if mlp_g:
@@ -141,27 +151,25 @@ def to_dot(policy):
                 __edge(graph, fe_g, v_g)
 
         else:
-            pi_fe_g = __to_dot(policy.pi_features_extractor, graph,
-                               "pi_features_extractor")
-            pi_mlp_g = __to_dot(policy.mlp_extractor.policy_net, graph,
-                                "pi_mlp_extractor")
+            pi_fe_g = __to_dot(policy.pi_features_extractor, graph, "pi_features_extractor")
+            pi_mlp_g = __to_dot(policy.mlp_extractor.policy_net, graph, "pi_mlp_extractor")
             __edge(graph, "obs", pi_fe_g)
             __edge(graph, pi_fe_g, pi_mlp_g)
             __edge(graph, pi_mlp_g, a_g)
 
-            vf_fe_g = __to_dot(policy.vf_features_extractor, graph,
-                               "vf_features_extractor")
-            vf_mlp_g = __to_dot(policy.mlp_extractor.value_net, graph,
-                                "vf_mlp_extractor")
+            vf_fe_g = __to_dot(policy.vf_features_extractor, graph, "vf_features_extractor")
+            vf_mlp_g = __to_dot(policy.mlp_extractor.value_net, graph, "vf_mlp_extractor")
             __edge(graph, "obs", vf_fe_g)
             __edge(graph, vf_fe_g, vf_mlp_g)
             __edge(graph, vf_mlp_g, v_g)
 
     # print(graph.source)
 
-    graph.attr('graph',
-               label=f"{policy.__class__.__name__}"
-                     f" ({pytorch_total_params} parameters)\n\n",
-               labelloc='t', labeljust='l')
+    graph.attr(
+        "graph",
+        label=f"{policy.__class__.__name__}" f" ({pytorch_total_params} parameters)\n\n",
+        labelloc="t",
+        labeljust="l",
+    )
 
     return graph

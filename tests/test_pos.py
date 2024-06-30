@@ -28,7 +28,7 @@ def test_vec_null():
 
     assert Vec.from_polar(0, 0) == Vec.null()
     assert Vec.from_polar(0, 1) == Vec(1, 0)
-    assert Vec.from_polar(.5 * math.pi, 1) == Vec(0, 1)
+    assert Vec.from_polar(0.5 * math.pi, 1) == Vec(0, 1)
     assert Vec.from_polar(math.pi, 1) == Vec(-1, 0)
     assert Vec.from_polar(1.5 * math.pi, 1) == Vec(0, -1)
 
@@ -36,9 +36,7 @@ def test_vec_null():
     assert Pos.null().aligned() == Vec.null()
 
 
-@pytest.mark.parametrize("coords", [
-    (x, y) for x, y in itertools.product(COORDS, COORDS)
-])
+@pytest.mark.parametrize("coords", [(x, y) for x, y in itertools.product(COORDS, COORDS)])
 def test_vec(coords):
     p0 = Vec(*coords)
     print(p0)
@@ -59,8 +57,8 @@ def test_vec(coords):
 
     assert (2 * p0) / 2 == p0
     assert (p0 / 2) * 2 == p0
-    assert (.5 * p0) / .5 == p0
-    assert (p0 / .5) * .5 == p0
+    assert (0.5 * p0) / 0.5 == p0
+    assert (p0 / 0.5) * 0.5 == p0
 
     assert all(lhs == rhs for lhs, rhs in zip(p0, iter(p0)))
     pytest.raises(IndexError, p0.__getitem__, -1)
@@ -71,7 +69,7 @@ def test_vec(coords):
     print(p0)
     p1 = p0.copy()
     assert p0 == p1
-    p1 += p0 + (.1, .1)
+    p1 += p0 + (0.1, 0.1)
     assert p0 != p1
 
     assert Vec(*coords) == Vec(*p0)

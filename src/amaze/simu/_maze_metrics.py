@@ -44,7 +44,7 @@ def __all_inputs(maze: Maze, visuals):
         for j in range(4):
             if not i[j]:
                 i_ = i.copy()
-                i_[j] = .5
+                i_[j] = 0.5
                 yield tuple(i_)
 
 
@@ -56,7 +56,7 @@ def __solution_path(maze, visuals):
             c1_i, c1_j = maze.solution[j]
             di, dj = c0_i - c1_i, c0_j - c1_j
             d_from = maze._offsets_inv[(di, dj)]
-            i[d_from.value] = .5
+            i[d_from.value] = 0.5
 
         d_to = None
         if j < len(maze.solution) - 1:
@@ -109,11 +109,14 @@ class InputsEntropy:
         entropy = 0
         for n in self.__inputs.values():
             p = n / self.__count
-            entropy += - p * log(p)
+            entropy += -p * log(p)
         return entropy
 
-    def count(self): return self.__count
-    def reset(self): self.__init__()
+    def count(self):
+        return self.__count
+
+    def reset(self):
+        self.__init__()
 
 
 class _StatesEntropy:
@@ -146,8 +149,9 @@ class _StatesEntropy:
                 if self.__costs[(*cell, *signs)] > 0:
                     entropy[self.__intersection(cell)] += -p * log(p)
 
-        return (sum(self.__types[i] * entropy[not i] for i in [True, False])
-                / sum(self.__types.values()))
+        return sum(self.__types[i] * entropy[not i] for i in [True, False]) / sum(
+            self.__types.values()
+        )
 
 
 # noinspection PyPep8Naming
@@ -159,15 +163,14 @@ def __mutual_information(maze: Maze):
     TRUTH = {s.value: v for signs, v in [(c, True), (t, False)] for s in signs}
     X = set(TRUTH.keys())
     Y = set(TRUTH.values())
-    P_XY = {(x.value, y): y == v for signs, v in [(c, True), (t, False)]
-            for x in signs for y in Y}
+    P_XY = {(x.value, y): y == v for signs, v in [(c, True), (t, False)] for x in signs for y in Y}
     P_X = 1 / len(X)
     P_Y = {y: 0 for y in Y}
 
     X_ = sorted(list(X))
     for i, (s, v) in enumerate(sorted(TRUTH.items())):
-        left = 0 if i == 0 else .5 * (s + X_[i-1])
-        right = 1 if i == len(X)-1 else .5 * (X_[i+1] + s)
+        left = 0 if i == 0 else 0.5 * (s + X_[i - 1])
+        right = 1 if i == len(X) - 1 else 0.5 * (X_[i + 1] + s)
         P_Y[v] += right - left
 
     mi = 0
@@ -184,13 +187,17 @@ def __inseparability(maze: Maze):
     sc = maze.clues()
     sl = maze.lures() if maze.p_lure and maze.p_lure > 0 else []
     st = maze.traps() if maze.p_trap and maze.p_trap > 0 else []
-    if len(sc+sl+st) == 0:
+    if len(sc + sl + st) == 0:
         return 0
 
-    sorted_signs = sorted([(s.value, t) for lst, t in [(sc, Sign.CLUE),
-                                                       (sl, Sign.LURE),
-                                                       (st, Sign.TRAP)]
-                           for s in lst], key=lambda x: x[0])
+    sorted_signs = sorted(
+        [
+            (s.value, t)
+            for lst, t in [(sc, Sign.CLUE), (sl, Sign.LURE), (st, Sign.TRAP)]
+            for s in lst
+        ],
+        key=lambda x: x[0],
+    )
     range_t = namedtuple("Range", ["l", "u", "t"])
 
     ranges = [range_t(0, *sorted_signs[0])]
@@ -199,7 +206,7 @@ def __inseparability(maze: Maze):
         if last.t == t:
             ranges[-1] = range_t(last.l, v, t)
         else:
-            mid = .5 * (last.u + v)
+            mid = 0.5 * (last.u + v)
             ranges[-1] = range_t(last.l, mid, last.t)
             ranges.append(range_t(mid, v, t))
     ranges[-1] = range_t(ranges[-1].l, 1, ranges[-1].t)
@@ -225,7 +232,6 @@ def __inseparability(maze: Maze):
 
 
 def metrics(maze: Maze, visuals: np.ndarray, input_type: InputType):
-    inputs = InputType.DISCRETE  # Input type currently has no impact
     # if input_type is not InputType.DISCRETE:
     #     raise NotImplementedError
 
@@ -260,10 +266,8 @@ def metrics(maze: Maze, visuals: np.ndarray, input_type: InputType):
         MazeMetrics.INSEPARABILITY: __inseparability(maze),
         MazeMetrics.SURPRISINGNESS: s_entropy,
         MazeMetrics.DECEPTIVENESS: d_entropy,
-
         "n_inputs": n_inputs,
         "mutual_information": __mutual_information(maze),
-
         # "__debug_entropy": {
         #     k: __entropy_bits(f(maze, visuals))
         #     for k, f in [("all", __all_inputs), ("path", __solution_path)]

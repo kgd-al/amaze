@@ -11,6 +11,7 @@ Core functionalities
     :recursive:
 
     amaze.simu
+    amaze.misc
     amaze.visu
     amaze.bin
 

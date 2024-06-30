@@ -29,26 +29,24 @@ def generate_large_maze_data_sample(size: TestSize):
         start=[StartLocation.SOUTH_WEST, StartLocation.NORTH_EAST],
         rotated=[True, False],
         unicursive=[True, False],
-        p_lure=[.5] if small else [0, .5],
-        p_trap=[0, .5],
+        p_lure=[0.5] if small else [0, 0.5],
+        p_trap=[0, 0.5],
         clue=signs(1, small),
-        lure=signs(.25, small),
-        trap=signs(.5, False),
+        lure=signs(0.25, small),
+        trap=signs(0.5, False),
     )
 
     count = math.prod(len(d) for d in data.values())
-    counts = (str(count) + " = "
-              + " * ".join(f"{len(d):{len(k)}}" for k, d in data.items()))
-    print("-"*len(counts))
+    counts = str(count) + " = " + " * ".join(f"{len(d):{len(k)}}" for k, d in data.items())
+    print("-" * len(counts))
     print("Normal scale mazes:", len(data), "fields")
-    print("-"*(len(counts)//2))
-    print(" "*len(str(count)), " ", "   ".join(k for k in data))
+    print("-" * (len(counts) // 2))
+    print(" " * len(str(count)), " ", "   ".join(k for k in data))
     print(counts)
     print("Items")
-    print("-"*len(counts))
+    print("-" * len(counts))
 
-    return [dict(zip(data.keys(), t))
-            for t in itertools.product(*data.values())]
+    return [dict(zip(data.keys(), t)) for t in itertools.product(*data.values())]
 
 
 MAZE_DATA_SAMPLE = [

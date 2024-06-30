@@ -62,10 +62,12 @@ cmd_pytest(){  # Perform the test suite (small scale)
   coverage_txt=$cout/coverage.table
   coverage_tree=$cout/coverage.tree
   coverage_config=$cout/coverage.conf
-  coverage_args=""
+  coverage_args="$coverage_args --rcfile=$coverage_config_tmp"
 
   coverage_tmp=$(basename $coverage)
   coverage_config_tmp=$(basename $coverage_config)
+
+  cp -v .coveragerc $coverage_config_tmp
 
   rm -rf $out
   mkdir -p $cout
@@ -78,26 +80,32 @@ cmd_pytest(){  # Perform the test suite (small scale)
         echo "[report]"
         echo "exclude_also ="
         echo "    @pytest.mark.slow"
-      ) > $coverage_config_tmp
-      coverage_args="$coverage_args --rcfile=$coverage_config_tmp"
+      ) >> $coverage_config_tmp
     fi
   done
 
-  coverage run --branch --data-file=$coverage_tmp\
-    --source=. --omit "setup.py,tests/conftest.py,examples/*.py,tests/test_examples.py" \
+  coverage run --branch --data-file=$coverage_tmp \
+    --omit "setup.py,tests/conftest.py,examples/*.py,tests/test_examples.py" \
     -m \
     pytest --durations=10 --basetemp=$out -x -ra "$@" || exit 2
+
+  echo
   mkdir -p $cout # pytest will have cleared everything. Build it back
   mv -v $coverage_tmp $coverage
   coverage report --data-file=$coverage $coverage_args > $coverage_txt
-  coverage html  --fail-under=100 --data-file=$coverage $coverage_args -d $cout/html
+  coverage html  --data-file=$coverage $coverage_args -d $cout/html
 
   echo
-  echo "Hierarchical coverage:"
+  echo "Simulation coverage:"
+  coverage report --data-file=$coverage $coverage_args \
+    --skip-covered --include="src/amaze/simu/*" --fail-under=100
+
+  echo
+  echo "Hierarchical coverage (all):"
   ~/work/utils/coverage_tree.py $coverage --skip-covered --sort=cover $coverage_args \
   | tee $coverage_tree
 
-  [ -f $coverage_config_tmp ] && mv -v $coverage_config_tmp $coverage_config
+  mv -v $coverage_config_tmp $coverage_config
 
 #  line
 #  coverage report --data-file=best-coverage.info
@@ -151,7 +159,7 @@ cmd_before-deploy(){  # Run a lot of tests to ensure that the package is clean
     fi
   }
   trap check exit
-  $(dirname $0)/deploy_test.sh
+  $(dirname $0)/deploy_tests.sh
   ok=0
 }
 

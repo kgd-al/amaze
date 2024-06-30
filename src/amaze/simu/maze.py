@@ -5,7 +5,7 @@ import random
 import re
 import time
 from collections import namedtuple
-from dataclasses import dataclass, fields, field
+from dataclasses import dataclass, field
 from enum import Enum
 from itertools import islice, cycle
 from logging import getLogger
@@ -14,27 +14,25 @@ from typing import Annotated, Tuple, Optional, List, Dict
 
 import numpy as np
 
+from amaze.misc.resources import Sign, SignType
 from ._build_data import BaseBuildData
 from .types import StartLocation, classproperty
-from amaze.misc.resources import Sign, SignType
-
 
 logger = getLogger(__name__)
 
 
 class Maze:
-    """Main data structure storing everything needed during simulation
-    """
+    """Main data structure storing everything needed during simulation"""
 
     @dataclass
     class BuildData(BaseBuildData):
-        """ Structure describing all of a mazes parameters.
+        """Structure describing all of a mazes parameters.
 
-         Used during building and thrown afterward. Also used for
-         string conversion.
+        Used during building and thrown afterward. Also used for
+        string conversion.
         """
 
-        _FIELD_SEP = '_'
+        _FIELD_SEP = "_"
 
         width: Annotated[int, "number of horizontal cells"] = 10
         """ The width of the maze
@@ -45,38 +43,30 @@ class Maze:
 
         seed: Annotated[Optional[int], "seed for the RNG"] = None
 
-        start: Annotated[StartLocation, "location of the initial position"] = \
+        start: Annotated[StartLocation, "location of the initial position"] = (
             StartLocation.SOUTH_WEST
-        rotated: Annotated[bool,
-                           ("Are mazes obtained by different start points or"
-                            " rotating SW version")] = True
+        )
+        rotated: Annotated[
+            bool,
+            ("Are mazes obtained by different start points or" " rotating SW version"),
+        ] = True
 
         unicursive: Annotated[bool, "Single path?"] = False
 
         Signs = List[Sign]
         custom_classes = {
-            Signs: SimpleNamespace(
-                type_parser=str,
-                type_name=str,
-                default=[],
-                action='append'
-            )
+            Signs: SimpleNamespace(type_parser=str, type_name=str, default=[], action="append")
         }
 
-        clue: Annotated[Signs, "image name for (helpful) clues"] = \
-            field(default_factory=list)
+        clue: Annotated[Signs, "image name for (helpful) clues"] = field(default_factory=list)
 
-        lure: Annotated[Signs, "image name for (unhelpful) lures"] = \
-            field(default_factory=list)
+        lure: Annotated[Signs, "image name for (unhelpful) lures"] = field(default_factory=list)
 
-        p_lure: Annotated[Optional[float],
-                          "probability of generating a lure (per-cell)"] = None
+        p_lure: Annotated[Optional[float], "probability of generating a lure (per-cell)"] = None
 
-        trap: Annotated[Signs, "image name for (harmful) traps"] = \
-            field(default_factory=list)
+        trap: Annotated[Signs, "image name for (harmful) traps"] = field(default_factory=list)
 
-        p_trap: Annotated[Optional[float],
-                          "probability of generating a trap (per-cell)"] = None
+        p_trap: Annotated[Optional[float], "probability of generating a trap (per-cell)"] = None
 
         def __post_init__(self):
             self._post_init(allow_unset=False)
@@ -114,12 +104,18 @@ class Maze:
             assert_ok("unicursive")
 
             if self.p_lure is not None:
-                assert_ok("p_lure", field_type=float,
-                          value_tester=self._valid_probability)
+                assert_ok(
+                    "p_lure",
+                    field_type=float,
+                    value_tester=self._valid_probability,
+                )
 
             if self.p_trap is not None:
-                assert_ok("p_trap", field_type=float,
-                          value_tester=self._valid_probability)
+                assert_ok(
+                    "p_trap",
+                    field_type=float,
+                    value_tester=self._valid_probability,
+                )
 
             if self.p_lure == 0 or not self.lure:
                 if not isinstance(self.p_lure, self.Unset):
@@ -136,13 +132,15 @@ class Maze:
             for k in ["clue", "lure", "trap"]:
                 attr = getattr(self, k)
                 if isinstance(attr, list):
-                    setattr(self, k,
-                            [Sign.from_string(s)
-                             if isinstance(s, str) else s for s in attr])
+                    setattr(
+                        self,
+                        k,
+                        [Sign.from_string(s) if isinstance(s, str) else s for s in attr],
+                    )
                 assert_ok(k, field_type=list, value_tester=self._valid_signs)
 
         def to_string(self) -> str:
-            """ Generate a string representation of this object
+            """Generate a string representation of this object
 
             :see: from_string
             """
@@ -157,16 +155,15 @@ class Maze:
                 tokens.append("R")
             tokens.extend(f"C{Sign.to_string(s)}" for s in self.clue)
             if self.p_lure and self.lure:
-                tokens.append(f"l{self.p_lure:.2g}".lstrip('0'))
+                tokens.append(f"l{self.p_lure:.2g}".lstrip("0"))
                 tokens.extend(f"L{Sign.to_string(s)}" for s in self.lure)
             if self.p_trap and self.trap:
-                tokens.append(f"t{self.p_trap:.2g}".lstrip('0'))
+                tokens.append(f"t{self.p_trap:.2g}".lstrip("0"))
                 tokens.extend(f"T{Sign.to_string(s)}" for s in self.trap)
             return sep.join(tokens)
 
         @classmethod
-        def from_string(cls, s, overrides: Optional['Maze.BuildData'] = None) \
-                -> 'Maze.BuildData':
+        def from_string(cls, s, overrides: Optional["Maze.BuildData"] = None) -> "Maze.BuildData":
             """
             Parses a string to create a BuildData object.
 
@@ -188,8 +185,8 @@ class Maze:
             A sign specification contains two parameters:
 
             - C[shape]-[value]: sign will use the requested shape (either from
-                the :meth:`~amaze.visu.resources.builtins()` or an image file
-                in :meth:`~amaze.visu.resources.resources_path()`)
+                the :meth:`~amaze.misc.resources.builtins()` or an image file
+                in :meth:`~amaze.misc.resources.resources_path()`)
             - C[value]: sign will have a default shape with the given value
 
             Examples:
@@ -216,28 +213,28 @@ class Maze:
             bd = cls()
 
             # Remove prefix (if any)
-            s = s.split('__')[-1]
+            s = s.split("__")[-1]
 
             for token in s.replace(cls._FIELD_SEP, " ").split():
                 t, tail = token[0], token[1:]
-                if t == 'M':
+                if t == "M":
                     bd.seed = s if (s := int(tail)) >= 0 else bd.seed
-                elif t == 'U':
+                elif t == "U":
                     bd.unicursive = True
-                elif t == 'R':
+                elif t == "R":
                     bd.rotated = False
-                elif t == 'C':
+                elif t == "C":
                     bd.clue.append(Sign.from_string(tail))
-                elif t == 'l':
+                elif t == "l":
                     bd.p_lure = float(tail) if tail else bd.p_lure
-                elif t == 'L':
+                elif t == "L":
                     bd.lure.append(Sign.from_string(tail))
-                elif t == 't':
+                elif t == "t":
                     bd.p_trap = float(tail) if tail else bd.p_trap
-                elif t == 'T':
+                elif t == "T":
                     bd.trap.append(Sign.from_string(tail))
                 elif s_re.match(token):
-                    bd.width, bd.height = [int(x) for x in token.split('x')]
+                    bd.width, bd.height = [int(x) for x in token.split("x")]
                 elif d_re.match(token):
                     bd.start = StartLocation.from_shorthand(token)
                 else:
@@ -251,13 +248,14 @@ class Maze:
                 return bd
 
         def all_rotations(self):
-            """ Returns a list describing the same maze with all four rotations
-            """
+            """Returns a list describing the same maze with all four rotations"""
             return [
                 self.where(start=s)
                 for s in [
-                    StartLocation.NORTH_WEST, StartLocation.NORTH_EAST,
-                    StartLocation.SOUTH_WEST, StartLocation.SOUTH_EAST
+                    StartLocation.NORTH_WEST,
+                    StartLocation.NORTH_EAST,
+                    StartLocation.SOUTH_WEST,
+                    StartLocation.SOUTH_EAST,
                 ]
             ]
 
@@ -265,6 +263,7 @@ class Maze:
 
     class Direction(Enum):
         """One of the cardinal directions"""
+
         EAST = 0
         NORTH = 1
         WEST = 2
@@ -274,7 +273,7 @@ class Maze:
         Direction.EAST: (+1, +0),
         Direction.NORTH: (+0, +1),
         Direction.WEST: (-1, +0),
-        Direction.SOUTH: (+0, -1)
+        Direction.SOUTH: (+0, -1),
     }
 
     _offsets_inv = {v: k for k, v in _offsets.items()}
@@ -283,19 +282,16 @@ class Maze:
         Direction.EAST: Direction.WEST,
         Direction.NORTH: Direction.SOUTH,
         Direction.WEST: Direction.EAST,
-        Direction.SOUTH: Direction.NORTH
+        Direction.SOUTH: Direction.NORTH,
     }
 
     __private_key = object()
 
-    PlacedSign = namedtuple(
-        'PlacedSign',
-        ['visual_index', 'solution_index', 'direction', 'truth'])
+    PlacedSign = namedtuple("PlacedSign", ["visual_index", "solution_index", "direction", "truth"])
     """ A physically instantiated sign with a position, ..."""
 
-    def __init__(self, data: 'Maze.BuildData', key=None):
-        """ Private maze constructor. See `build` for the public API.
-        """
+    def __init__(self, data: "Maze.BuildData", key=None):
+        """Private maze constructor. See `build` for the public API."""
         if key is not self.__private_key:
             raise RuntimeError("Cannot create maze directly")
 
@@ -317,35 +313,44 @@ class Maze:
         }
         self.p_lure: float = data.p_lure
         self.p_trap: float = data.p_trap
-        self.signs_data: Dict[SignType, List[Maze.PlacedSign]] = {
-            t: [] for t in SignType
-        }
+        self.signs_data: Dict[SignType, List[Maze.PlacedSign]] = {t: [] for t in SignType}
 
-    def __repr__(self): return self.to_string()
+    def __repr__(self):
+        return self.to_string()
 
-    def intersections(self): return self._intersections
-    def unicursive(self): return self.intersections() == 0
+    def intersections(self):
+        return self._intersections
 
-    def clues(self): return self.signs[SignType.CLUE]
-    def lures(self): return self.signs[SignType.LURE]
-    def traps(self): return self.signs[SignType.TRAP]
+    def unicursive(self):
+        return self.intersections() == 0
+
+    def clues(self):
+        return self.signs[SignType.CLUE]
+
+    def lures(self):
+        return self.signs[SignType.LURE]
+
+    def traps(self):
+        return self.signs[SignType.TRAP]
 
     def stats(self):
         return dict(
             size=(self.width, self.height),
-            path=len(self.solution), intersections=self._intersections,
+            path=len(self.solution),
+            intersections=self._intersections,
             clues=len(self.signs_data[SignType.CLUE]),
             lures=len(self.signs_data[SignType.LURE]),
             traps=len(self.signs_data[SignType.TRAP]),
         )
 
-    def iter_cells(self): return ((i, j)
-                                  for i in range(self.width)
-                                  for j in range(self.height))
+    def iter_cells(self):
+        return ((i, j) for i in range(self.width) for j in range(self.height))
 
-    def iter_solutions(self): return (s for s in self.solution)
+    def iter_solutions(self):
+        return (s for s in self.solution)
 
-    def valid(self, i, j): return 0 <= i < self.width and 0 <= j < self.height
+    def valid(self, i, j):
+        return 0 <= i < self.width and 0 <= j < self.height
 
     def wall(self, i: int, j: int, d: Direction):
         return self.walls[i, j, d.value]
@@ -374,10 +379,14 @@ class Maze:
 
     @classmethod
     def generate(cls, data: BuildData):
-        assert isinstance(data, Maze.BuildData), \
-            f"Wrong argument type {type(data)} instead of Maze.BuildData"
+        assert isinstance(
+            data, Maze.BuildData
+        ), f"Wrong argument type {type(data)} instead of Maze.BuildData"
         maze = Maze(data, cls.__private_key)
-        def _reset_rng(): return random.Random(maze.seed)
+
+        def _reset_rng():
+            return random.Random(maze.seed)
+
         rng = _reset_rng()
 
         w, h = maze.width, maze.height
@@ -428,8 +437,10 @@ class Maze:
                 StartLocation.SOUTH_WEST: lambda _i, _j: (_i, _j),
                 StartLocation.SOUTH_EAST: lambda _i, _j: (w - 1 - _j, _i),
                 StartLocation.NORTH_WEST: lambda _i, _j: (_j, h - 1 - _i),
-                StartLocation.NORTH_EAST: lambda _i, _j: (w - 1 - _i,
-                                                          h - 1 - _j),
+                StartLocation.NORTH_EAST: lambda _i, _j: (
+                    w - 1 - _i,
+                    h - 1 - _j,
+                ),
             }[data.start]
 
             # Rotate start/end
@@ -450,7 +461,7 @@ class Maze:
         # Wall off intersections in unicursive mode
         if data.unicursive:
             for i, d in intersections:
-                c0_i, c0_j = maze.solution[i-1]
+                c0_i, c0_j = maze.solution[i - 1]
                 c1_i, c1_j = maze.solution[i]
                 di, dj = c0_i - c1_i, c0_j - c1_j
                 dirs = cls._offsets_inv.copy()
@@ -486,26 +497,22 @@ class Maze:
         else:
             clues_sign_indices = [-1] * maze._intersections
         for i, (sol_index, direction) in enumerate(intersections):
-            clues_data.append(
-                (clues_sign_indices[i], sol_index, direction, direction))
+            clues_data.append((clues_sign_indices[i], sol_index, direction, direction))
 
         # Add un-helpful signs
         lures = maze.signs[SignType.LURE]
         if maze.p_lure and lures:
             rng = _reset_rng()
-            candidates = \
-                set(range(len(maze.solution)-1))\
-                - {i[0] for i in intersections}
+            candidates = set(range(len(maze.solution) - 1)) - {i[0] for i in intersections}
             nl = round(data.p_lure * len(candidates))
             lure_indices = rng_indices(lures, nl)
             lures_data = maze.signs_data[SignType.LURE]
             dirs = list(cls._offsets_inv.values())
             if data.start is not StartLocation.SOUTH_WEST:
                 dirs = list(np.roll(dirs, -data.start.value))
-            for vix, six in zip(lure_indices, rng.sample(list(candidates),
-                                                         nl)):
+            for vix, six in zip(lure_indices, rng.sample(list(candidates), nl)):
                 c_i, c_j = maze.solution[six]
-                nc_i, nc_j = maze.solution[six+1]
+                nc_i, nc_j = maze.solution[six + 1]
                 dirs_ = dirs.copy()
                 d = maze._offsets_inv[(nc_i - c_i, nc_j - c_j)]
                 dirs_.remove(d)
@@ -524,32 +531,29 @@ class Maze:
                 vix, six, sign_dir, true_dir = clues_data.pop(i)
                 pos = maze.solution[six]
                 prev_dir = maze._offsets_inv[
-                    tuple(a - b
-                          for a, b in zip(maze.solution[six-1],
-                                          maze.solution[six]))]
+                    tuple(a - b for a, b in zip(maze.solution[six - 1], maze.solution[six]))
+                ]
                 candidate_dirs = (
-                        set(Maze.Direction)
-                        - {true_dir, prev_dir}
-                        - set(d for d in Maze.Direction
-                              if maze.wall(pos[0], pos[1], d))
+                    set(Maze.Direction)
+                    - {true_dir, prev_dir}
+                    - set(d for d in Maze.Direction if maze.wall(pos[0], pos[1], d))
                 )
                 new_d = rng.choice(list(candidate_dirs))
-                traps_data.append((trap_signs_indices.pop(), six,
-                                   new_d, true_dir))
+                traps_data.append((trap_signs_indices.pop(), six, new_d, true_dir))
 
         # Forget about cues if not needed
         if not clues:
             maze.signs_data[SignType.CLUE] = []
 
         if not data.unicursive and not clues:
-            logger.warning("Mazes with intersections and no clues are"
-                           " practically unsolvable")
+            logger.warning("Mazes with intersections and no clues are" " practically unsolvable")
 
         return maze
 
     def build_data(self):
         return Maze.BuildData(
-            width=self.width, height=self.height,
+            width=self.width,
+            height=self.height,
             seed=self.seed,
             start=self.e_start,
             rotated=self.rotated,
@@ -558,16 +562,16 @@ class Maze:
             p_lure=self.p_lure,
             lure=self.lures(),
             p_trap=self.p_trap,
-            trap=self.traps()
+            trap=self.traps(),
         )
 
     def to_string(self):
-        """ Provides the string representation of this maze """
+        """Provides the string representation of this maze"""
         return self.build_data().to_string()
 
     @classmethod
-    def from_string(cls, s, overrides: Optional[BuildData] = None) -> 'Maze':
-        """ Generate a maze from its string description.
+    def from_string(cls, s, overrides: Optional[BuildData] = None) -> "Maze":
+        """Generate a maze from its string description.
 
         Optionally, specific parameters can be overridden by values set in
         the `overrides` argument.
@@ -575,6 +579,6 @@ class Maze:
         """
         return cls.generate(cls.BuildData.from_string(s, overrides))
 
-    def all_rotations(self) -> List['Maze']:
-        """ Returns all rotated versions of this maze """
+    def all_rotations(self) -> List["Maze"]:
+        """Returns all rotated versions of this maze"""
         return [self.generate(d) for d in self.build_data().all_rotations()]

@@ -7,32 +7,29 @@ from amaze import Maze, StartLocation, Sign
 
 SL = StartLocation
 
-
 TYPE_ERROR_DATA = [
     dict(width="nan"),
     dict(height="nan"),
     dict(seed="nan"),
-    dict(start="down"), dict(start=4),
+    dict(start="down"),
+    dict(start=4),
     dict(unicursive="maybe"),
     dict(p_lure="maybe"),
     dict(p_trap="maybe"),
-    *[{k: v}
-      for k in ["clue", "lure", "trap"]
-      for v in [
-          "nan", 1.0, Sign(value=1)
-      ]
-    ]
+    *[{k: v} for k in ["clue", "lure", "trap"] for v in ["nan", 1.0, Sign(value=1)]],
 ]
 VALUE_ERROR_DATA = [
-    dict(width=0), dict(width=1000),
-    dict(height=0), dict(height=1000),
-    dict(p_lure=-1.), dict(p_lure=1000.),
-    dict(p_trap=-1.), dict(p_trap=1000.),
+    dict(width=0),
+    dict(width=1000),
+    dict(height=0),
+    dict(height=1000),
+    dict(p_lure=-1.0),
+    dict(p_lure=1000.0),
+    dict(p_trap=-1.0),
+    dict(p_trap=1000.0),
 ]
 
-ERROR_STRING_DATA = [
-    "not a maze string"
-]
+ERROR_STRING_DATA = ["not a maze string"]
 
 
 def _assert_valid_build_data(bd: Maze.BuildData):
@@ -44,10 +41,8 @@ def _assert_valid_build_data(bd: Maze.BuildData):
     assert sum([bd.start is sl for sl in SL]) == 1
     assert isinstance(bd.rotated, bool)
     assert isinstance(bd.unicursive, bool)
-    assert (bd.p_lure is None or
-            (isinstance(bd.p_lure, float) and 0 <= bd.p_lure <= 1))
-    assert (bd.p_trap is None or
-            (isinstance(bd.p_trap, float) and 0 <= bd.p_trap <= 1))
+    assert bd.p_lure is None or (isinstance(bd.p_lure, float) and 0 <= bd.p_lure <= 1)
+    assert bd.p_trap is None or (isinstance(bd.p_trap, float) and 0 <= bd.p_trap <= 1)
     for signs in [bd.clue, bd.lure, bd.trap]:
         for sign in signs:
             assert isinstance(sign.name, str)
@@ -93,13 +88,17 @@ def test_maze_build_data_from_string(mbd_kwargs):
         _test_build_data(Maze.BuildData.from_string(bd_str, override))
 
 
-@pytest.mark.parametrize("kwargs,error_type", [
-    pytest.param(d, e,
-                 id="_".join(f"{k}-{v}" for k, v in d.items()))
-    for items, e in [(TYPE_ERROR_DATA, TypeError),
-                     (VALUE_ERROR_DATA, ValueError)]
-    for d in items
-])
+@pytest.mark.parametrize(
+    "kwargs,error_type",
+    [
+        pytest.param(d, e, id="_".join(f"{k}-{v}" for k, v in d.items()))
+        for items, e in [
+            (TYPE_ERROR_DATA, TypeError),
+            (VALUE_ERROR_DATA, ValueError),
+        ]
+        for d in items
+    ],
+)
 def test_error_maze_build_data(kwargs, error_type):
     with pytest.raises(error_type):
         Maze.BuildData(**kwargs)

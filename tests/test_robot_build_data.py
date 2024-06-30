@@ -6,49 +6,54 @@ import pytest
 from amaze import Robot, InputType, OutputType, Maze, Simulation
 from amaze.simu.controllers.cheater import CheaterController
 
-
-I = InputType
-O = OutputType
+IT = InputType
+OT = OutputType
 
 
 DATA = [
-    pytest.param(I.DISCRETE, O.DISCRETE, None, id="discrete"),
-    pytest.param(I.DISCRETE, O.DISCRETE, 11, id="discrete_vision"),
-    pytest.param(I.CONTINUOUS, O.DISCRETE, None, id="hybrid"),
-    pytest.param(I.CONTINUOUS, O.DISCRETE, 11, id="hybrid_vision"),
-    pytest.param(I.CONTINUOUS, O.CONTINUOUS, None, id="continuous"),
-    pytest.param(I.CONTINUOUS, O.CONTINUOUS, 11, id="continuous_vision"),
+    pytest.param(IT.DISCRETE, OT.DISCRETE, None, id="discrete"),
+    pytest.param(IT.DISCRETE, OT.DISCRETE, 11, id="discrete_vision"),
+    pytest.param(IT.CONTINUOUS, OT.DISCRETE, None, id="hybrid"),
+    pytest.param(IT.CONTINUOUS, OT.DISCRETE, 11, id="hybrid_vision"),
+    pytest.param(IT.CONTINUOUS, OT.CONTINUOUS, None, id="continuous"),
+    pytest.param(IT.CONTINUOUS, OT.CONTINUOUS, 11, id="continuous_vision"),
 ]
 
 
 ERROR_DATA = [
-    pytest.param("D", O.DISCRETE, None, id="istr"),
-    pytest.param(I.DISCRETE, "D", None, id="ostr"),
-    pytest.param(I.DISCRETE, O.DISCRETE, "v", id="vstr"),
-    pytest.param(O.DISCRETE, I.DISCRETE, 11, id="swap"),
+    pytest.param("D", OT.DISCRETE, None, id="istr"),
+    pytest.param(IT.DISCRETE, "D", None, id="ostr"),
+    pytest.param(IT.DISCRETE, OT.DISCRETE, "v", id="vstr"),
+    pytest.param(OT.DISCRETE, IT.DISCRETE, 11, id="swap"),
 ]
 
 
 STRING_DATA = [
-    "DD", "DD11", "CD", "CD11", "CC", "CC11",
-    "D", "D11", "H", "H11", "D", "D11"
+    "DD",
+    "DD11",
+    "CD",
+    "CD11",
+    "CC",
+    "CC11",
+    "D",
+    "D11",
+    "H",
+    "H11",
+    "D",
+    "D11",
 ]
 
 
-TYPE_ERROR_STRING_DATA = [
-    "A", "AD", "DA", "AA", "A11", "AAA", "CDA"
-]
+TYPE_ERROR_STRING_DATA = ["A", "AD", "DA", "AA", "A11", "AAA", "CDA"]
 
-VALUE_ERROR_STRING_DATA = [
-    "DC", "H10"
-]
+VALUE_ERROR_STRING_DATA = ["DC", "H10"]
 
 
 def _assert_valid_build_data(bd: Robot.BuildData):
     assert isinstance(bd.inputs, InputType)
     assert isinstance(bd.outputs, OutputType)
     assert bd.vision is None or isinstance(bd.vision, int)
-    assert (bd.inputs is I.CONTINUOUS) == (bd.vision is not None)
+    assert (bd.inputs is IT.CONTINUOUS) == (bd.vision is not None)
 
 
 def _test_build_data(bd: Robot.BuildData):
@@ -72,7 +77,17 @@ def test_robot_build_data(i: InputType, o: OutputType, v: int):
 
 @pytest.mark.parametrize("s", STRING_DATA)
 def test_robot_build_data_from_string(s):
-    _test_build_data(Robot.BuildData.from_string(s))
+    assert Robot.BuildData.from_string(s) == Robot.BuildData.from_string(s)
+
+    bd = Robot.BuildData.from_string(s)
+    _test_build_data(bd)
+
+    override = Robot.BuildData(
+        (InputType.DISCRETE if bd.inputs is InputType.CONTINUOUS else InputType.CONTINUOUS),
+        (OutputType.DISCRETE if bd.outputs is OutputType.CONTINUOUS else OutputType.CONTINUOUS),
+        None if bd.vision is not None else 11,
+    )
+    assert Robot.BuildData.from_string(s, override) == override
 
 
 @pytest.mark.parametrize("i,o,v", ERROR_DATA)
@@ -85,8 +100,8 @@ def test_error_robot_build_data(i: InputType, o: OutputType, v: int):
     "s,t",
     [
         *[(s, TypeError) for s in TYPE_ERROR_STRING_DATA],
-        *[(s, ValueError) for s in VALUE_ERROR_STRING_DATA]
-    ]
+        *[(s, ValueError) for s in VALUE_ERROR_STRING_DATA],
+    ],
 )
 def test_error_robot_build_data_from_string(s, t):
     with pytest.raises(t):
@@ -105,7 +120,7 @@ def test_robot_build_data_from_controller(i: InputType, o: OutputType, v: int):
     print(simulation.robot.to_dict())
 
     if robot.outputs is OutputType.CONTINUOUS:
-        simulation.step(-1*action)
+        simulation.step(-1 * action)
 
     bd = Robot.BuildData.from_controller(controller)
     assert robot.inputs == bd.inputs
@@ -130,9 +145,10 @@ def test_robot_base_build_data(i: InputType, o: OutputType, v: int):
     Robot.BuildData.populate_argparser(parser)
     parser.print_help()
 
-    args = parser.parse_args(["--robot-inputs", i.name,
-                              "--robot-outputs", o.name]
-                             + ([f"--robot-vision={v}"] if v else []))
+    args = parser.parse_args(
+        ["--robot-inputs", i.name, "--robot-outputs", o.name]
+        + ([f"--robot-vision={v}"] if v else [])
+    )
     print(args)
     assert args.robot_inputs == i
     assert args.robot_outputs == o

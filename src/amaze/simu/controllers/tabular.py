@@ -13,9 +13,13 @@ class TabularController(BaseController):
     _simple = False
     _savable = True
 
-    def __init__(self,
-                 robot_data: Robot.BuildData,
-                 epsilon, seed, actions=BaseController.discrete_actions):
+    def __init__(
+        self,
+        robot_data: Robot.BuildData,
+        epsilon,
+        seed,
+        actions=BaseController.discrete_actions,
+    ):
         super().__init__(robot_data)
         self._actions = actions
         self._actions_ix = {a: i for i, a in enumerate(actions)}
@@ -48,10 +52,10 @@ class TabularController(BaseController):
         self._updates[b_state][self._actions_ix[a]] += 1
 
         def _update(k, v, f):
-            setattr(self, k, (value if not (a_ := getattr(self, k))
-                              else f(v, a_)))
-        _update('max_value', value, max)
-        _update('min_value', value, min)
+            setattr(self, k, (value if not (a_ := getattr(self, k)) else f(v, a_)))
+
+        _update("max_value", value, max)
+        _update("min_value", value, min)
 
     def __call__(self, state: State):
         # Use epsilon-greedy policy
@@ -61,7 +65,7 @@ class TabularController(BaseController):
             return self.greedy_action(state)
 
     def greedy_action(self, state: State):
-        """ Requests the best possible action (without exploration) """
+        """Requests the best possible action (without exploration)"""
         values = self.values(state)
         a_indices = np.flatnonzero(values == np.max(values))
         return self._rng.choice([self._actions[i] for i in a_indices])
@@ -75,11 +79,10 @@ class TabularController(BaseController):
 
     def __pretty_format(self, table):
         return pd.DataFrame.from_dict(
-            data={
-                self.__signed_tuple(k): table[k] for k in sorted(table.keys())
-            },
+            data={self.__signed_tuple(k): table[k] for k in sorted(table.keys())},
             columns=[self.__signed_tuple(a) for a in self._actions],
-            orient='index')
+            orient="index",
+        )
 
     def pretty_format(self):
         return self.__pretty_format(self._data)
@@ -87,7 +90,7 @@ class TabularController(BaseController):
     def pretty_print(self, show_updates=False):
         header = f"Table ({len(self._data)} states):"
         body = str(self.pretty_format())
-        separator = "-" * max(len(line) for line in body.split('\n'))
+        separator = "-" * max(len(line) for line in body.split("\n"))
 
         print("-" * len(header))
         print(header)
@@ -104,26 +107,33 @@ class TabularController(BaseController):
             "": str(self),
             "init": self.init_value,
             "min": self.min_value,
-            "max": self.max_value
+            "max": self.max_value,
         }
 
     def _save_to_archive(self, archive: ZipFile, *args, **kwargs) -> bool:
-        def fmt(f_): return self.__pretty_format(f_).to_dict(orient='index')
+        def fmt(f_):
+            return self.__pretty_format(f_).to_dict(orient="index")
+
         with archive.open("data.json", "w") as file:
             data = json.dumps(
                 dict(
                     actions=[a.tuple() for a in self._actions],
                     init_val=self.init_value,
-                    min_val=self.min_value, max_val=self.max_value,
-                    data=fmt(self._data), updates=fmt(self._updates),
-                    epsilon=self.epsilon, seed=self._rng.randint(0, 2**32)
-                )).encode("utf-8")
+                    min_val=self.min_value,
+                    max_val=self.max_value,
+                    data=fmt(self._data),
+                    updates=fmt(self._updates),
+                    epsilon=self.epsilon,
+                    seed=self._rng.randint(0, 2**32),
+                )
+            ).encode("utf-8")
             file.write(data)
             return True
 
     @classmethod
-    def _load_from_archive(cls, archive: ZipFile, robot: Robot.BuildData,
-                           *args, **kwargs) -> 'TabularController':
+    def _load_from_archive(
+        cls, archive: ZipFile, robot: Robot.BuildData, *args, **kwargs
+    ) -> "TabularController":
         def parse_val(v):
             try:
                 return int(v)
@@ -131,18 +141,20 @@ class TabularController(BaseController):
                 return float(v)
 
         def parse_tuple(s):
-            return tuple([parse_val(v) for v in
-                          s.replace('(', '').replace(')', '').split(',')])
+            return tuple([parse_val(v) for v in s.replace("(", "").replace(")", "").split(",")])
 
         def parse_dict(d):
             return {parse_tuple(k): list(v.values()) for k, v in d.items()}
 
         with archive.open("data.json", "r") as file:
             dct = json.loads(file.read().decode("utf-8"))
-            actions = [Action(*t) for t in dct['actions']]
+            actions = [Action(*t) for t in dct["actions"]]
             c = TabularController(
                 robot_data=robot,
-                actions=actions, epsilon=dct["epsilon"], seed=dct["seed"])
+                actions=actions,
+                epsilon=dct["epsilon"],
+                seed=dct["seed"],
+            )
             c._data = parse_dict(dct["data"])
             c._updates = parse_dict(dct["updates"])
             c.init_value = dct["init_val"]
@@ -160,8 +172,7 @@ class TabularController(BaseController):
 
     def __bellman(self, s: State, a: Action, r, alpha, gamma, q_value):
         __v = self.values(s)
-        delta = \
-            alpha * (r + gamma * q_value - self.value(s, a))
+        delta = alpha * (r + gamma * q_value - self.value(s, a))
         ix = self._actions_ix[a]
         __v[ix] += delta
         self.__updated(s, a, __v[ix])
@@ -173,9 +184,8 @@ class TabularController(BaseController):
         self.__bellman(s, a, r, alpha, gamma, max(self.values(s_)))
 
     @staticmethod
-    def assert_equal(lhs: 'TabularController', rhs: 'TabularController'):
-        for (lhs_k, lhs_v), (rhs_k, rhs_v) in zip(lhs.__dict__.items(),
-                                                  rhs.__dict__.items()):
+    def assert_equal(lhs: "TabularController", rhs: "TabularController"):
+        for (lhs_k, lhs_v), (rhs_k, rhs_v) in zip(lhs.__dict__.items(), rhs.__dict__.items()):
             assert lhs_k == rhs_k
             if lhs_k == "_rng":
                 continue

@@ -15,8 +15,11 @@ import PIL.Image
 import numpy as np
 from stable_baselines3.common.callbacks import BaseCallback, EvalCallback
 from stable_baselines3.common.evaluation import evaluate_policy
-from stable_baselines3.common.logger import (Image, HParam,
-                                             TensorBoardOutputFormat)
+from stable_baselines3.common.logger import (
+    Image,
+    HParam,
+    TensorBoardOutputFormat,
+)
 from stable_baselines3.common.vec_env.base_vec_env import tile_images
 
 from amaze.extensions.sb3.maze_env import env_method, env_attr
@@ -29,9 +32,7 @@ def _recurse_avg_dict(dicts: List[Dict], root_key=""):
     for d in dicts:
         for k, v in _recurse_dict(d, root_key):
             avg_dict[k].append(v)
-    return {
-        k: np.average(v) for k, v in avg_dict.items()
-    }
+    return {k: np.average(v) for k, v in avg_dict.items()}
 
 
 def _recurse_dict(dct, root_key):
@@ -45,13 +46,21 @@ def _recurse_dict(dct, root_key):
 
 
 class TensorboardCallback(BaseCallback):
-    def __init__(self, log_trajectory_every: int = 0, verbose: int = 0,
-                 max_timestep: int = 0, prefix: str = "",
-                 multi_env: bool = False):
+    def __init__(
+        self,
+        log_trajectory_every: int = 0,
+        verbose: int = 0,
+        max_timestep: int = 0,
+        prefix: str = "",
+        multi_env: bool = False,
+    ):
         super().__init__(verbose=verbose)
         self.log_trajectory_every = log_trajectory_every
-        fmt = "{:d}" if max_timestep == 0 \
-            else "{:0" + str(math.ceil(math.log10(max_timestep-1))) + "d}"
+        fmt = (
+            "{:d}"
+            if max_timestep == 0
+            else "{:0" + str(math.ceil(math.log10(max_timestep - 1))) + "d}"
+        )
         if prefix:
             if not prefix.endswith("_"):
                 prefix += "_"
@@ -65,7 +74,7 @@ class TensorboardCallback(BaseCallback):
     @staticmethod
     def _rewards(env):
         dd_rewards = defaultdict(list)
-        for d in [e.__dict__ for e in env_method(env, 'atomic_rewards')]:
+        for d in [e.__dict__ for e in env_method(env, "atomic_rewards")]:
             for key, value in d.items():
                 dd_rewards[key].append(value)
         reward_strings = []
@@ -85,23 +94,24 @@ class TensorboardCallback(BaseCallback):
         # note: the failure case (not formatter found) is not handled here,
         # should be done with try/except.
         self.tb_formatter = next(
-            formatter for formatter in output_formats
-            if isinstance(formatter, TensorBoardOutputFormat))
+            formatter
+            for formatter in output_formats
+            if isinstance(formatter, TensorBoardOutputFormat)
+        )
 
         writer = self.tb_formatter.writer
-        io_types = set(
-            i.name[0] + o.name[0] for i, o in
-            env_method(self.training_env, 'io_types')
-        )
+        io_types = set(i.name[0] + o.name[0] for i, o in env_method(self.training_env, "io_types"))
         assert len(io_types) == 1, "Non-uniform I/O types"
 
         if self.multi_env:
             writer.add_text(
                 "train/rewards",
-                self.prefix + ": " + self._rewards(self.training_env))
+                self.prefix + ": " + self._rewards(self.training_env),
+            )
             writer.add_text(
                 "eval/rewards",
-                self.prefix + ":" + self._rewards(self.parent.eval_env))
+                self.prefix + ":" + self._rewards(self.parent.eval_env),
+            )
 
         if self.num_timesteps > 0:
             return
@@ -129,13 +139,10 @@ class TensorboardCallback(BaseCallback):
         logger.info(f"Policy: {policy}")
         folder = Path(self.logger.dir)
         folder.mkdir(exist_ok=True)
-        with open(folder.joinpath("policy.str"), 'w') as f:
+        with open(folder.joinpath("policy.str"), "w") as f:
             f.write(str(policy) + "\n")
 
-        writer.add_text(
-            "policy",
-            str(policy).replace('\n', '<br/>')
-            .replace(' ', '&nbsp;'))
+        writer.add_text("policy", str(policy).replace("\n", "<br/>").replace(" ", "&nbsp;"))
 
         # dummy_inputs = \
         #     policy.obs_to_tensor(policy.observation_space.sample())[0]
@@ -155,14 +162,15 @@ class TensorboardCallback(BaseCallback):
         return True
 
     def _print_trajectory(self, env, key, name):
-        images = env_method(env, "plot_trajectory",
-                            verbose=True, cb_side=0, square=True)
+        images = env_method(env, "plot_trajectory", verbose=True, cb_side=0, square=True)
 
         big_image = tile_images(images)
 
-        self.logger.record(f"infos/{key}_traj",
-                           Image(big_image, "HWC"),
-                           exclude=("stdout", "log", "json", "csv"))
+        self.logger.record(
+            f"infos/{key}_traj",
+            Image(big_image, "HWC"),
+            exclude=("stdout", "log", "json", "csv"),
+        )
         folder = Path(self.logger.dir).joinpath("trajectories")
         folder.mkdir(exist_ok=True)
         pil_img = PIL.Image.fromarray(big_image)
@@ -176,37 +184,34 @@ class TensorboardCallback(BaseCallback):
         assert isinstance(self.parent, EvalCallback)
         env = self.parent.eval_env
 
-        eval_infos = env_attr(env, 'last_infos')
+        eval_infos = env_attr(env, "last_infos")
         for key, value in _recurse_avg_dict(eval_infos, "infos").items():
             self.logger.record_mean(key, value)
 
-        print_trajectory = \
-            (final or (self.log_trajectory_every > 0
-                       and (self.n_calls % self.log_trajectory_every) == 0))
+        print_trajectory = final or (
+            self.log_trajectory_every > 0 and (self.n_calls % self.log_trajectory_every) == 0
+        )
 
         if print_trajectory:
-            t_str = "final" if final else \
-                self.img_format.format(self.num_timesteps)
+            t_str = "final" if final else self.img_format.format(self.num_timesteps)
             self._print_trajectory(env, "eval", t_str)
 
         self.logger.dump(self.model.num_timesteps)
 
         if final:
             train_env = self.training_env
-            env_method(train_env, 'log_trajectory', True)
+            env_method(train_env, "log_trajectory", True)
 
             logger.info("Final log step. Storing performance on training env")
             r = evaluate_policy(model=self.model, env=train_env)
 
-            env_method(train_env, 'log_trajectory', False)
+            env_method(train_env, "log_trajectory", False)
 
-            t_str = "final" if final else \
-                self.img_format.format(self.num_timesteps)
+            t_str = "final" if final else self.img_format.format(self.num_timesteps)
             self._print_trajectory(train_env, "train", t_str)
 
             eval_infos = _recurse_avg_dict(eval_infos, "eval")
-            train_infos = _recurse_avg_dict(env_attr(train_env, 'last_infos'),
-                                            "train")
+            train_infos = _recurse_avg_dict(env_attr(train_env, "last_infos"), "train")
 
             self.last_stats = {
                 "train/reward": np.average(r),
@@ -214,3 +219,6 @@ class TensorboardCallback(BaseCallback):
             }
             self.last_stats.update(eval_infos)
             self.last_stats.update(train_infos)
+
+        if final:
+            self.logger.close()

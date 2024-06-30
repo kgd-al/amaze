@@ -14,13 +14,30 @@ from pathlib import Path
 #
 from typing import List
 
+from docutils.nodes import TextElement, Text
 from sphinx.directives.code import LiteralInclude
 from sphinx.util import logging
 from sphinx_pyproject import SphinxConfig
+import sphinx_qt_documentation
+
+# -- (Temporarily) Hide sphinx_qt_documentation warnings ---------------------
+
+def sphinx_qt_documentation__monkey_patched__missing_reference(
+    app, env, node, contnode: TextElement
+):
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", category=DeprecationWarning)
+        return old__sphinx_qt_documentation__missing_reference(app, env, node, contnode)
+
+
+old__sphinx_qt_documentation__missing_reference = sphinx_qt_documentation.missing_reference
+sphinx_qt_documentation.missing_reference = sphinx_qt_documentation__monkey_patched__missing_reference
+
 
 # -- Ensure up-to-date sources -----------------------------------------------
+
 for module in list(m for m in sys.modules.values() if "amaze" in m.__name__):
-    print(f"Reloading {module.__name__}\r", end='')
+    # print(f"Reloading {module.__name__}\r", end='')
     importlib.reload(module)
 print("[kgd-debug] All amaze modules reloaded.")
 
@@ -277,3 +294,4 @@ def setup(app):
     app.connect('autodoc-process-docstring', autodoc_process_docstring)
     app.connect('autodoc-process-signature', process_signature)
     app.add_directive('kgd-literal-include', DynamicLiteralInclude)
+

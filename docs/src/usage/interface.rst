@@ -3,10 +3,10 @@ Custom interfaces
 
 .. |FILE| replace:: examples/interface.py
 
-The file |FILE| showcases the use of the maze widget to create a custom
+The file |FILE| showcases the integration of the maze widget into a custom
 interface.
 
-.. kgd-literal-include:: 1-4
+.. kgd-literal-include:: 1-12
 
 As usual we start by importing the required package.
 Here, however, we will explicitly qualify every amaze members to better

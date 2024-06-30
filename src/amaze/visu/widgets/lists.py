@@ -2,9 +2,17 @@ from typing import Optional
 
 from PyQt5.QtCore import Qt, QSize, pyqtSignal
 from PyQt5.QtGui import QIcon
-from PyQt5.QtWidgets import (QSizePolicy, QListWidget, QWidget, QVBoxLayout,
-                             QHBoxLayout, QComboBox, QDoubleSpinBox,
-                             QToolButton, QLayout)
+from PyQt5.QtWidgets import (
+    QSizePolicy,
+    QListWidget,
+    QWidget,
+    QVBoxLayout,
+    QHBoxLayout,
+    QComboBox,
+    QDoubleSpinBox,
+    QToolButton,
+    QLayout,
+)
 
 from amaze.misc import resources
 from amaze.misc.resources import Sign, Signs
@@ -43,8 +51,10 @@ class SignList(QWidget):
         return self.inner_layout.count()
 
     def signs(self):
-        return [self._sign(self.inner_layout.itemAt(i).widget())
-                for i in range(self.inner_layout.count())]
+        return [
+            self._sign(self.inner_layout.itemAt(i).widget())
+            for i in range(self.inner_layout.count())
+        ]
 
     def set_signs(self, signs: Signs):
         while self.count():
@@ -64,7 +74,8 @@ class SignList(QWidget):
         # self.setMaximumHeight(0 if hide else self._original_max_height)
         self.setVisible(not hide)
 
-    def add_row(self, sign=Sign()):
+    def add_row(self, sign=None):
+        sign = sign or Sign()
         w = QWidget()
         w.setContentsMargins(0, 0, 0, 0)
         w.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Maximum)
@@ -77,7 +88,7 @@ class SignList(QWidget):
         layout.addWidget(cb, 2)
         sb = QDoubleSpinBox()
         sb.setRange(0, 1)
-        sb.setSingleStep(.05)
+        sb.setSingleStep(0.05)
         sb.setValue(sign.value)
         layout.addWidget(sb, 1)
         tb = QToolButton()
@@ -106,7 +117,8 @@ class CompactList(QListWidget):
         self.setSizeAdjustPolicy(self.AdjustToContents)
         self.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Maximum)
 
-    def minimumSizeHint(self): return QSize(0, 0)
+    def minimumSizeHint(self):
+        return QSize(0, 0)
 
     def viewportSizeHint(self):
         if self.sizeAdjustPolicy() != self.AdjustToContents:

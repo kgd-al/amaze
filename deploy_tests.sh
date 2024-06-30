@@ -21,6 +21,9 @@ short_output(){
     echo
 }
 
+black src tests examples
+flake8 src tests examples
+
 wd=$(pwd)
 download_cache=$(realpath $wd/../__amaze_deploy_test_download_cache__)
 mkdir -pv $download_cache
@@ -82,6 +85,8 @@ deploy(){
     r=$?
     log "Installed package and dependencies: $r"
 
+    pip list | tee $_log
+
     if [ "$type" == "docs" ]
     then
         cd docs/src
@@ -91,7 +96,7 @@ deploy(){
         cd -
     elif [ "$type" == "tests" ]
     then
-        pytest | short_output
+        pytest --small-scale --test-examples --test-extension sb3
     fi
 
     deactivate
@@ -100,7 +105,7 @@ deploy(){
 }
 
 for type in '' 'full' 'tests' 'docs'
-# for type in 'docs'
+#for type in 'tests'
 do
     deploy "$type"
 done
