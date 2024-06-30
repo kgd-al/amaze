@@ -181,12 +181,18 @@ if [ "$1" == "--venv" ]
 then
   source $2/bin/activate
   shift 2
+
+elif [ "$1" == "--no-venv" ]
+then
+  shift 1
+  NO_VIRTUAL_ENV="yes"
 fi
 
-if [ -z $VIRTUAL_ENV ]
+if [ -z $VIRTUAL_ENV ] && [ -z $NO_VIRTUAL_ENV ]
 then
   echo "Refusing to work outside of a virtual environment."
   echo "Activate it beforehand or provide it with the --venv <path/to/venv> option."
+  echo "If you are sure (or on a CI runner) you can also use --no-venv to make me shut up."
   exit 1
 fi
 
