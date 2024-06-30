@@ -27,6 +27,7 @@ jobs:
           mkdir logs
           log=logs/wheel.log
           pip install --upgrade pip
+          pip install .[tests]
           ./commands.sh --no-venv \
             pytest --small-scale --test-examples --test-extension all | tee $log
           res=${PIPESTATUS[0]}
