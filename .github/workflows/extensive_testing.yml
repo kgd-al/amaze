@@ -1,0 +1,46 @@
+name: Testing
+
+# Build on every branch push, tag push, and pull request change:
+on:
+  push:
+    branches:
+      - main
+      - dev
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  test:
+    name: Testing
+    runs-on: ubuntu-latest
+    env:
+      # Display must be available globally for linux to know where xvfb is
+      DISPLAY: ":99.0"
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      # Copied from https://stackoverflow.com/a/77480795/5946661
+      - name: Setup xvfb (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get install -y libxcb-xinerama0 pyqt5-dev-tools
+          sudo /usr/bin/Xvfb $DISPLAY -screen 0 1280x1024x24 &
+
+      - name: Test
+        shell: bash --noprofile --norc {0} # No automatic fail-fast
+        run: |
+          mkdir logs
+          log=logs/wheel.log
+          pip install --upgrade pip
+          pip install .[tests]
+          ./commands.sh --no-venv \
+            pytest --normal-scale | tee $log
+          res=${PIPESTATUS[0]}
+          echo "[kgd-build-status] $res" >> $log
+          exit $res
+          

@@ -1,4 +1,4 @@
-name: Build, test, upload (PyPI)
+name: Auto-Publish
 
 # Build on every branch push, tag push, and pull request change:
 on:
