@@ -62,10 +62,11 @@ cmd_pytest(){  # Perform the test suite (small scale)
   coverage_txt=$cout/coverage.table
   coverage_tree=$cout/coverage.tree
   coverage_config=$cout/coverage.conf
-  coverage_args="$coverage_args --rcfile=$coverage_config_tmp"
 
   coverage_tmp=$(basename $coverage)
   coverage_config_tmp=$(basename $coverage_config)
+
+  coverage_args="--rcfile=$coverage_config_tmp"
 
   rm -rf $out
   mkdir -p $cout

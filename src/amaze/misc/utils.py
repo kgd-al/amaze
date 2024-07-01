@@ -16,7 +16,7 @@ def qt_application(allow_create=True, start_offscreen=False):
             args = []
             if start_offscreen:
                 args.extend(["-platform", "offscreen"])
-            app = QApplication([])
+            app = QApplication(args)
         else:
             raise RuntimeError(
                 "No QTApplication found. Create one first (in a" " large enough scope)"
