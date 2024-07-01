@@ -19,7 +19,7 @@ def qt_application(allow_create=True, start_offscreen=False):
             app = QApplication(args)
         else:
             raise RuntimeError(
-                "No QTApplication found. Create one first (in a" " large enough scope)"
+                "No QTApplication found. Create one first (in a large enough scope)"
             )
     return app
 

@@ -55,9 +55,6 @@ def _run_simulation(
     **kwargs: dict,
 ):
 
-    if controller_type is KeyboardController:
-        _ = qt_application(start_offscreen=True)
-
     maze, robot, simulation = _make_simulation(maze, robot, **kwargs)
 
     kwargs = controller_kwargs or {}
