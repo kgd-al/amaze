@@ -59,7 +59,8 @@ tests = [
   "pytest-steps", "pytest-sugar",
   "coverage",
   "flake8", "flake8-bugbear", "flake8-pyproject",
-  "black"
+  "black",
+  "psutil"
 ]
 
 docs = [
