@@ -6,13 +6,16 @@ import os
 from PyQt5.QtWidgets import QApplication
 
 
-def qt_application(allow_create=True):
+def qt_application(allow_create=True, start_offscreen=False):
     """Returns the currently running Qt application or creates a new one.
 
     :raises: RunTimeError if allow_create is False and no application exists.
     """
     if (app := QApplication.instance()) is None:
         if allow_create:
+            args = []
+            if start_offscreen:
+                args.extend(["-platform", "offscreen"])
             app = QApplication([])
         else:
             raise RuntimeError(

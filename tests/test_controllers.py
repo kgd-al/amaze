@@ -56,7 +56,7 @@ def _run_simulation(
 ):
 
     if controller_type is KeyboardController:
-        _ = qt_application()
+        _ = qt_application(start_offscreen=True)
 
     maze, robot, simulation = _make_simulation(maze, robot, **kwargs)
 
@@ -191,7 +191,7 @@ def test_controller_tabular(maze_str, learner, tmp_path):
 def test_controller_keyboard(maze_str, robot, tmp_path):
     print(maze_str, robot)
 
-    app = qt_application(allow_create=True)
+    app = qt_application(allow_create=True, start_offscreen=True)
     rng = Random(0)
     keys = [Qt.Key_Down, Qt.Key_Up, Qt.Key_Left, Qt.Key_Right]
 

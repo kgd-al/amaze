@@ -54,7 +54,7 @@ full = [
 ]
 
 tests = [
-  "amaze-benchmarker[full]",
+  "amaze-benchmarker",
   "pytest",
   "pytest-steps", "pytest-sugar",
   "coverage",
