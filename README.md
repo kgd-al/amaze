@@ -1,12 +1,14 @@
 # AMaze
 
+### Stable branch (main)
 ![main:status](https://github.com/kgd-al/amaze/actions/workflows/test_and_deploy.yml/badge.svg?branch=main)
+[![PyPI version](https://badge.fury.io/py/amaze-benchmarker.svg)](https://badge.fury.io/py/amaze-benchmarker)
+[![Documentation Status](https://readthedocs.org/projects/amaze/badge/?version=latest)](https://amaze.readthedocs.io/en/latest/?badge=latest)
+[![Downloads](https://static.pepy.tech/badge/amaze-benchmarker)](https://pepy.tech/project/amaze-benchmarker)
 
+### Development (dev)
 ![dev:status](https://github.com/kgd-al/amaze/actions/workflows/test_and_deploy.yml/badge.svg?branch=dev)
 
-[![Documentation Status](https://readthedocs.org/projects/amaze/badge/?version=latest)](https://amaze.readthedocs.io/en/latest/?badge=latest)
-[![PyPI version](https://badge.fury.io/py/amaze-benchmarker.svg)](https://badge.fury.io/py/amaze-benchmarker)
-[![Downloads](https://static.pepy.tech/badge/amaze-benchmarker)](https://pepy.tech/project/amaze-benchmarker)
 
 A lightweight maze navigation task generator for sighted AI agents.
 
@@ -113,8 +115,10 @@ installation instruction (pip) and detailed examples.
 
 ## Contributing
 
-Contributions to the library aiming at increasing its ease of use in both the scientific and students communities are welcome.
-Any such contribution can be made via a pull request while bugs (in the code or the documentation) should be reported in the dedicated tracker.
+Contributions to the library aiming at increasing its ease of use in both the scientific and
+students communities are welcome.
+Any such contribution can be made via a pull request while bugs (in the code or the documentation)
+should be reported in the dedicated tracker.
 
 ## Acknowledgement
 
