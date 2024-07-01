@@ -67,6 +67,8 @@ cmd_pytest(){  # Perform the test suite (small scale)
   coverage_config_tmp=$(basename $coverage_config)
 
   coverage_args="--rcfile=$coverage_config_tmp"
+  rm $coverage_config_tmp
+  touch $coverage_config_tmp
 
   rm -rf $out
   mkdir -p $cout
