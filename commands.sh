@@ -95,8 +95,14 @@ cmd_pytest(){  # Perform the test suite (small scale)
   coverage html  --data-file=$coverage $coverage_args -d $cout/html
 
   echo
+  echo "===="
+  ls src
+  echo "===="
+  ls src/amaze
+  echo "===="
+  ls src/amaze/simu
+  echo "===="
   echo "Simulation coverage:"
-  ls
   coverage report --data-file=$coverage $coverage_args \
     --skip-covered --include="src/amaze/simu/*" --fail-under=100
 

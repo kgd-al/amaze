@@ -48,10 +48,16 @@ jobs:
           echo "[kgd-build-status] $res" >> $log
           exit $res
           
+      - name: Build sdist
+        run: |
+          pipx run build --wheel 2>&1 | tee logs/wheel.log
+          exit ${PIPESTATUS[0]}
+
       - uses: actions/upload-artifact@v4
         with:
           name: dist-wheel
           path: ./wheelhouse/*.whl
+
       - uses: actions/upload-artifact@v4
         if: ${{ always() && !cancelled() }}
         with:
@@ -85,6 +91,9 @@ jobs:
     needs: [build_wheel, build_sdist]
     name: Post-build processing
     runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      
     if: ${{ always() && !cancelled() }}
     steps:
       - uses: actions/download-artifact@v4
@@ -105,8 +114,6 @@ jobs:
         uses: pypa/gh-action-pypi-publish@release/v1
         if: always()
         with:
-          user: __token__
-          password: ${{ secrets.testpypi_password }}
           repository-url: https://test.pypi.org/legacy/
           verbose: true
           skip-existing: true
