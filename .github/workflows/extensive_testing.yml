@@ -43,4 +43,3 @@ jobs:
           res=${PIPESTATUS[0]}
           echo "[kgd-build-status] $res" >> $log
           exit $res
-          
