@@ -96,13 +96,18 @@ cmd_pytest(){  # Perform the test suite (small scale)
 
   echo
   echo "Simulation coverage:"
+  ls
   coverage report --data-file=$coverage $coverage_args \
     --skip-covered --include="src/amaze/simu/*" --fail-under=100
 
-  echo
-  echo "Hierarchical coverage (all):"
-  ~/work/utils/coverage_tree.py $coverage --skip-covered --sort=cover $coverage_args \
-  | tee $coverage_tree
+  coverage_tool=~/work/utils/coverage_tree.py
+  if [ -f "$coverage_tool" ]
+  then
+    echo
+    echo "Hierarchical coverage (all):"
+    ~/work/utils/coverage_tree.py $coverage --skip-covered --sort=cover $coverage_args \
+    | tee $coverage_tree
+  fi
 
   mv -v $coverage_config_tmp $coverage_config
 
