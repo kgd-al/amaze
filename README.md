@@ -115,8 +115,10 @@ installation instruction (pip) and detailed examples.
 
 ## Contributing
 
-Contributions to the library aiming at increasing its ease of use in both the scientific and students communities are welcome.
-Any such contribution can be made via a pull request while bugs (in the code or the documentation) should be reported in the dedicated tracker.
+Contributions to the library aiming at increasing its ease of use in both the scientific and
+students communities are welcome.
+Any such contribution can be made via a pull request while bugs (in the code or the documentation)
+should be reported in the dedicated tracker.
 
 ## Acknowledgement
 
