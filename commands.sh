@@ -103,8 +103,10 @@ cmd_pytest(){  # Perform the test suite (small scale)
   ls src/amaze/simu
   echo "===="
   echo "Simulation coverage:"
+  set -x
   coverage report --data-file=$coverage $coverage_args \
     --skip-covered --include="src/amaze/simu/*" --fail-under=100
+  set +x
 
   coverage_tool=~/work/utils/coverage_tree.py
   if [ -f "$coverage_tool" ]

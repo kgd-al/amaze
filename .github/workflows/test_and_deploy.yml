@@ -35,7 +35,7 @@ jobs:
           # start xvfb in the background
           sudo /usr/bin/Xvfb $DISPLAY -screen 0 1280x1024x24 &
 
-      - name: Build wheels
+      - name: Test
         shell: bash --noprofile --norc {0} # No automatic fail-fast
         run: |
           mkdir logs
@@ -48,15 +48,16 @@ jobs:
           echo "[kgd-build-status] $res" >> $log
           exit $res
           
-      - name: Build sdist
+      - name: Build wheel
         run: |
           pipx run build --wheel 2>&1 | tee logs/wheel.log
+          find -name '*.whl'
           exit ${PIPESTATUS[0]}
 
       - uses: actions/upload-artifact@v4
         with:
           name: dist-wheel
-          path: ./wheelhouse/*.whl
+          path: ./dist/*.whl
 
       - uses: actions/upload-artifact@v4
         if: ${{ always() && !cancelled() }}
@@ -93,7 +94,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       id-token: write
-      
+
     if: ${{ always() && !cancelled() }}
     steps:
       - uses: actions/download-artifact@v4
