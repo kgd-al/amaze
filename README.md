@@ -5,8 +5,8 @@
 ![dev:status](https://github.com/github/docs/actions/workflows/test_and_deploy.yml/badge.svg?branch=dev)
 
 [![Documentation Status](https://readthedocs.org/projects/amaze/badge/?version=latest)](https://amaze.readthedocs.io/en/latest/?badge=latest)
-[![PyPI version](https://badge.fury.io/py/amaze.svg)](https://badge.fury.io/py/amaze)
-[![Downloads](https://static.pepy.tech/badge/amaze)](https://pepy.tech/project/amaze)
+[![PyPI version](https://badge.fury.io/py/amaze-benchmarker.svg)](https://badge.fury.io/py/amaze-benchmarker)
+[![Downloads](https://static.pepy.tech/badge/amaze-benchmarker)](https://pepy.tech/project/amaze-benchmarker)
 
 A lightweight maze navigation task generator for sighted AI agents.
 
