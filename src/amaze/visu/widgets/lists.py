@@ -14,8 +14,10 @@ from PyQt5.QtWidgets import (
     QLayout,
 )
 
-from amaze.misc import resources
-from amaze.misc.resources import Sign, Signs
+from ...misc import resources
+from ...misc.resources import Sign, Signs
+
+from .combobox import ZoomingComboBox
 
 
 class SignList(QWidget):
@@ -35,7 +37,7 @@ class SignList(QWidget):
             for w in controls.values():
                 top_layout.addWidget(w)
         top_layout.addStretch()
-        b_add = QToolButton()
+        self.button_add = b_add = QToolButton()
         b_add.setIcon(QIcon.fromTheme("list-add"))
         top_layout.addWidget(b_add)
 
@@ -44,6 +46,8 @@ class SignList(QWidget):
         self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Maximum)
 
         b_add.clicked.connect(lambda: self.add_row())
+
+        self._rows = []
 
         self._original_max_height = self.maximumHeight()
 
@@ -82,18 +86,23 @@ class SignList(QWidget):
         layout = QHBoxLayout()
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(5)
-        cb = QComboBox()
+
+        sb = QDoubleSpinBox()
+        cb = ZoomingComboBox(value_getter=sb.value)
+        tb = QToolButton()
+
         cb.addItems(resources.names())
         cb.setCurrentText(sign.name)
         layout.addWidget(cb, 2)
-        sb = QDoubleSpinBox()
+
         sb.setRange(0, 1)
         sb.setSingleStep(0.05)
         sb.setValue(sign.value)
         layout.addWidget(sb, 1)
-        tb = QToolButton()
+
         tb.setIcon(QIcon.fromTheme("edit-delete"))
         layout.addWidget(tb, 0)
+
         w.setLayout(layout)
         self.inner_layout.addWidget(w)
 
@@ -107,22 +116,3 @@ class SignList(QWidget):
         self.inner_layout.removeWidget(source)
         source.setParent(None)
         self.dataChanged.emit()
-
-
-class CompactList(QListWidget):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
-        self.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
-        self.setSizeAdjustPolicy(self.AdjustToContents)
-        self.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Maximum)
-
-    def minimumSizeHint(self):
-        return QSize(0, 0)
-
-    def viewportSizeHint(self):
-        if self.sizeAdjustPolicy() != self.AdjustToContents:
-            return super().viewportSizeHint()
-        if not self.model() or self.model().rowCount() == 0:
-            return QSize(0, 0)
-        return super().viewportSizeHint()

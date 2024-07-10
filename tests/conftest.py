@@ -83,9 +83,12 @@ def pytest_collection_modifyitems(config, items):
         "pos",
         "maze_build_data",
         "robot_build_data",
+        "resources",
         "maze",
         "simulation",
         "controllers",
+        "interface",
+        "main",
         "examples",
     ]
 

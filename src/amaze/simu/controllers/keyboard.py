@@ -5,7 +5,7 @@ from typing import List
 from PyQt5.QtCore import QObject, Qt, QEvent
 from PyQt5.QtGui import QKeyEvent
 
-from amaze.misc.utils import qt_application
+from ...misc.utils import qt_application
 from .base import BaseController, Robot, Vec, OutputType, InputType
 
 logger = getLogger(__name__)

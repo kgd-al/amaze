@@ -4,8 +4,8 @@ import numpy as np
 from gymnasium import Space
 from gymnasium.spaces import Discrete
 
-from amaze.simu.pos import Vec
-from amaze.simu.simulation import Simulation
+from ...simu.pos import Vec
+from ...simu.simulation import Simulation
 
 
 class IOMapper:

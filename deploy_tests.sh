@@ -21,6 +21,12 @@ short_output(){
     echo
 }
 
+if grep -rn 'from amaze' src
+then
+  log 31 "Absolute imports in sources"
+  exit 2
+fi
+
 black src tests examples
 flake8 src tests examples
 

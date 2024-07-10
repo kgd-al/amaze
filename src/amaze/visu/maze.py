@@ -3,10 +3,10 @@ from enum import Enum, auto
 from logging import getLogger
 from typing import Optional
 
-from amaze.misc.resources import SignType
-from amaze.simu.maze import Maze
-from amaze.simu.robot import Robot
-from amaze.simu.types import OutputType
+from ..misc.resources import SignType
+from ..simu.maze import Maze
+from ..simu.robot import Robot
+from ..simu.types import OutputType
 
 logger = getLogger(__name__)
 
@@ -71,45 +71,11 @@ class MazePainter(ABC):
         scale = options["scale"]
         wall = maze.wall
 
-        for i in range(w):
-            j = h - 1
-            if wall(i, j, NORTH):
-                self.draw_line(
-                    i * scale - 1,
-                    (j + 1) * scale,
-                    (i + 1) * scale,
-                    (j + 1) * scale,
-                    Color.FOREGROUND,
-                )
-            j = 0
-            if wall(i, j, SOUTH):
-                self.draw_line(
-                    i * scale - 1,
-                    j * scale - 1,
-                    (i + 1) * scale,
-                    j * scale - 1,
-                    Color.FOREGROUND,
-                )
+        self.draw_line(-1, -1, w * scale, -1, Color.FOREGROUND)
+        self.draw_line(-1, h * scale, w * scale, h * scale, Color.FOREGROUND)
 
-        for j in range(h):
-            i = w - 1
-            if wall(i, j, EAST):
-                self.draw_line(
-                    (i + 1) * scale,
-                    j * scale - 1,
-                    (i + 1) * scale,
-                    (j + 1) * scale,
-                    Color.FOREGROUND,
-                )
-            i = 0
-            if wall(i, j, WEST):
-                self.draw_line(
-                    i * scale - 1,
-                    j * scale - 1,
-                    i * scale - 1,
-                    (j + 1) * scale,
-                    Color.FOREGROUND,
-                )
+        self.draw_line(-1, -1, -1, h * scale, Color.FOREGROUND)
+        self.draw_line(w * scale, -1, w * scale, h * scale, Color.FOREGROUND)
 
         for i in range(w):
             for j in range(h):
@@ -222,5 +188,5 @@ class MazePainter(ABC):
                     a *= scale
                     self.draw_line(x, y, x + a.x, y + a.y, Color.COLOR1)
 
-            else:
+            else:  # pragma: no cover
                 raise ValueError

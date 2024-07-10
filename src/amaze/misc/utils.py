@@ -6,17 +6,20 @@ import os
 from PyQt5.QtWidgets import QApplication
 
 
+QT_PLATFORM_PLUGIN_KEY = "QT_QPA_PLATFORM"
+QT_PLATFORM_OFFSCREEN_PLUGIN = "offscreen"
+
+
 def qt_application(allow_create=True, start_offscreen=False):
     """Returns the currently running Qt application or creates a new one.
 
-    :raises: RunTimeError if allow_create is False and no application exists.
+    :raises: RuntimeError if allow_create is False and no application exists.
     """
     if (app := QApplication.instance()) is None:
         if allow_create:
-            args = []
             if start_offscreen:
-                args.extend(["-platform", "offscreen"])
-            app = QApplication(args)
+                qt_offscreen(offscreen=True)
+            app = QApplication([])
         else:
             raise RuntimeError(
                 "No QTApplication found. Create one first (in a large enough scope)"
@@ -34,7 +37,10 @@ class NoQtApplicationException(EnvironmentError):
 
 
 def has_qt_application():
-    """Sanity check to ensure that a QtApplication exists"""
+    """Sanity check to ensure that a QtApplication exists
+
+    :raises: NoQtApplicationException if no Qt application exists
+    """
     if QApplication.instance() is None:
         raise NoQtApplicationException()
     return True
@@ -43,6 +49,28 @@ def has_qt_application():
 def qt_offscreen(offscreen=True):
     """Whether to request offscreen rendering from Qt (for headless environments)"""
     if offscreen:
-        os.environ["QT_QPA_PLATFORM"] = "offscreen"
+        os.environ[QT_PLATFORM_PLUGIN_KEY] = QT_PLATFORM_OFFSCREEN_PLUGIN
     else:
-        os.environ.pop("QT_QPA_PLATFORM", None)
+        os.environ.pop(QT_PLATFORM_PLUGIN_KEY, None)
+
+
+def is_qt_offscreen():
+    """Tests whether the offscreen has been requested either through the environmental variable
+    or through the Qt application itself"""
+    if (platform := os.environ.get(QT_PLATFORM_PLUGIN_KEY)) is not None:
+        return platform == QT_PLATFORM_OFFSCREEN_PLUGIN
+
+    try:
+        app = qt_application(allow_create=False)
+        return app.platformName() == QT_PLATFORM_OFFSCREEN_PLUGIN
+    finally:
+        return False
+
+
+class QtOffscreen:
+    def __enter__(self):
+        qt_offscreen(True)
+        return qt_application()
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        qt_offscreen(False)

@@ -28,6 +28,9 @@ class BaseController(ABC):
 
     def __init__(self, robot_data: Robot.BuildData):
         self._robot_data = robot_data
+        if not isinstance(robot_data, Robot.BuildData):
+            raise ValueError(f"Wrong argument type. Robot.BuildData expected, got"
+                             f"{type(robot_data)}")
 
         def test(name, field_type, field_types):
             if field_type not in field_types:

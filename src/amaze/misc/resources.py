@@ -30,13 +30,28 @@ logger = getLogger(__name__)
 
 
 _DEFAULT_BUILTIN = "arrow"
+_ERROR_BUILTIN = "error"
 _DEFAULT_LIGHTNESS = 0.5
 _DEFAULT_SIZE = 15
+
+
+NO_FILE_CACHE = "KGD_AMAZE_NOCACHE"
+""" Environment variable to set to disable file caching """
+
+
+def no_file_cache() -> bool:
+    """Returns whether resources file caching is disabled """
+    return os.getenv(NO_FILE_CACHE, "False").lower() not in ["false"]
 
 
 def default_builtin():
     """Returns the default sign shape"""
     return _DEFAULT_BUILTIN
+
+
+def error_builtin():
+    """Returns the default sign shape for signaling an error"""
+    return _ERROR_BUILTIN
 
 
 def default_lightness():
@@ -78,16 +93,20 @@ class Sign:
         name: str = _DEFAULT_BUILTIN,
         value: float = _DEFAULT_LIGHTNESS,
     ):
-        self.name: str | Path = name
-        if not isinstance(self.name, str) and not isinstance(self.name, Path):
+        self.name = name
+        if not isinstance(self.name, str):
             raise ValueError(
-                f"Invalid name type: {type(self.name)}" f" should be <str> or <libpath.Path>"
+                f"Invalid name type: {type(self.name)} should be <str> or <libpath.Path>"
             )
-        self.value: float = float(value)
-        if not isinstance(self.value, float):
-            raise TypeError(f"Invalid value: {type(self.value)}" f" should be <float>")
+        else:
+            self.name = self.name.lower()
+
+        try:
+            self.value: float = float(value)
+        except TypeError:
+            raise TypeError(f"Invalid value: {value} {type(value)} should be <float>")
         if not 0 < self.value <= 1:
-            raise ValueError(f"Invalid value: {self.value}" f" should be in ]0, 1]")
+            raise ValueError(f"Invalid value: {self.value} should be in ]0, 1]")
 
     def __iter__(self):
         return iter((self.name, self.value))
@@ -120,6 +139,7 @@ class Sign:
         else:
             raise ValueError(f"Mis-formed sign: {tokens}")
 
+        name = name.lower()
         if name not in names():
             raise ValueError(
                 f"Unknown cue name '{name}'."
@@ -163,12 +183,155 @@ def resources_format() -> str:
     return "png"
 
 
+def clear_cache(verbose=False, files=True):
+    """Clear the image cache
+
+    :param verbose: Whether to print what has been cleared
+    :param files: Whether to also clear the cached files
+    """
+
+    # print(f"[kgd-debug] clear_cache({verbose=}, {files=}):")
+    # print(" > cache:")
+    # print("".join(" - " + str(k) + "\n" for k in _cache.keys()))
+    # print(" > files:")
+    # print("".join(" - " + str(f) + "\n"
+    #               for f in cached_resources_path().glob(f"*{resources_format()}")))
+
+    if files:
+        no_cache = no_file_cache()
+        if no_cache:
+            logging.warning(f"File cache clearing requested but it is disabled by the"
+                            f" environment: {NO_FILE_CACHE}={no_cache}")
+        for k in _cache:
+            file = _key_to_path(k)
+            if file.exists():
+                file.unlink(missing_ok=False)
+                if verbose:
+                    logging.info(f"Clearing cached {file}")
+
+        for file in cached_resources_path().glob(f"*{resources_format()}"):
+            file.unlink(missing_ok=False)
+            if verbose:
+                logging.info(f"Clearing uncached {file}")
+    else:
+        if verbose:
+            logging.info(f"Clearing {len(_cache)} entries from cache")
+    _cache.clear()
+
+
+def builtins():
+    """List of all programmatically drawn signs"""
+    return list(_factories().keys())
+
+
+def __extract_names():
+    nlist = []
+    cdict = {}
+    for f in custom_resources_path().glob(f"*.{resources_format()}"):
+        nlist.append(f.stem)
+        cdict[f.stem] = f
+    nlist.extend(builtins())
+    return nlist, cdict
+
+
+def rebuild_signs_database():
+    """Triggers an update of the lists of available signs (builtin and custom)"""
+    global _names, _custom_paths
+    _names, _custom_paths = __extract_names()
+
+
+def names():
+    """List of all possible sign shapes, including both built-ins and those
+    found in :meth:`~resources_path`"""
+    return _names
+
+
+def image(sign: Sign, size: int) -> QImage:
+    """Return the image associated with given sign in the requested size
+
+    :raises ValueError: If the size is invalid (lower than 3)
+    """
+    if size < 3:
+        raise ValueError(f"Requested size {size} < 3")
+    return _get_image(_key(sign, size))
+
+
+def image_cached_path(sign: Sign, size: int) -> Path:
+    """Returns the path under which the image is cached for this specific resolution"""
+    return _key_to_path(_key(sign, size))
+
+
+def qt_images(signs: Signs, resolution: int) -> List[List[QImage]]:
+    """Returns images *in Qt format* (QImage) for all provided signs, with the
+    requested resolution"""
+    images = []
+    for sign in signs:
+        img: QImage = image(sign, resolution)
+        w, h = img.width(), img.height()
+        # tgt_w, tgt_h = resolution if w == h else resolution, 4 * resolution
+        # if w != tgt_w and h != tgt_h:
+        #     img = img.scaled(tgt_w, tgt_h, Qt.KeepAspectRatio, Qt.SmoothTransformation)
+
+        img_list = []
+        if w == h:
+            img_list.append(img)
+            for a in [90, 180, 270]:
+                img_list.append(img.transformed(QTransform().rotate(a)))
+        else:
+            assert 4 * w == h
+            for i in range(4):
+                img_list.append(img.copy(0, i * resolution, resolution, resolution))
+        images.append(img_list)
+    return images
+
+
+def np_images(signs: Signs, resolution: int, rgb_fill: int = 0) -> List[List[np.ndarray]]:
+    """Returns images *in numpy format* (array) for all provided signs, with
+    the requested resolution"""
+
+    def _scale(x):
+        return x / 255.0
+
+    _v_scale = np.vectorize(_scale)
+    _images = qt_images(signs, resolution)
+    arrays = []
+    for p_list in _images:
+        subarray = []
+        for p in p_list:
+            img = QImage(p.size(), QImage.Format_Grayscale8)
+            img.fill(QColor.fromRgb(rgb_fill))
+            painter = QPainter(img)
+            painter.drawImage(img.rect(), p, p.rect())
+            painter.end()
+            subarray.append(copy.deepcopy(_v_scale(np.flipud(qimage_to_numpy(img)))))
+        arrays.append(subarray)
+
+    return arrays
+
+
+def qimage_to_numpy(img: QImage) -> np.ndarray:
+    """Converts a QImage into a numpy array"""
+    w, h, d = img.width(), img.height(), img.depth() // 8
+    b = img.constBits().asstring(img.byteCount())
+    bw = img.bytesPerLine() // d
+    shape = (h, bw) if d == 1 else (h, bw, d)
+    return np.ndarray(shape=shape, buffer=b, dtype=np.uint8)[:, :w]
+
+
 # =============================================================================
+# Private API
+
+# -----------------------------------------------------------------------------
 # Image loader/generator
 
 
-def _key_to_path(key: DataKey) -> str:
-    return f"{key[0]}_{key[1]:.2}_{key[2]}.{resources_format()}"
+def _key_to_path(key: DataKey) -> Path:
+    return cached_resources_path().joinpath(
+        f"{key[0]}_{key[1]:.2}_{key[2]}.{resources_format()}")
+
+
+def _key(sign: Sign, size: int):
+    return sign.name, sign.value, size
 
 
 @cache
@@ -181,13 +344,18 @@ def _factories():
 
 
 def _get_image(key: DataKey):
+    def __error():
+        return __generator__error(key[1], max(3, key[2]))
+
     # First look in RAM cache
     if (img := _cache.get(key)) is not None:
+        logging.info(f"Using cached image for {key}")
         return img
 
     # Else look in file cache
-    filename = cached_resources_path().joinpath(_key_to_path(key))
-    if not os.environ.get("KGD_AMAZE_NOCACHE", False):
+    filename = _key_to_path(key)
+    no_cache = no_file_cache()
+    if not no_cache:
         if filename.exists():
             img = QImage(str(filename))
             if not img.isNull():
@@ -195,16 +363,24 @@ def _get_image(key: DataKey):
                 return img
             else:
                 logger.warning(f"Error loading file {filename}")
-                return __generator__error()
+                return __error()
+
+    def _maybe_save(_img):
+        if not no_cache:
+            ok = _img.save(str(filename))
+            if ok:
+                logger.info(f"Saved {key} to cache ({filename})")
+            else:
+                logger.warning(f"Could not save {key} to cache ({filename})")
 
     if (factory := _factories().get(key[0])) is not None:
         img = factory(*key[1:])
         if img.isNull():
             logger.warning(f"Error generating {key}")
-            return __generator__error()
+            return __error()
 
         filename.parent.mkdir(parents=True, exist_ok=True)
-        img.save(str(filename))
+        _maybe_save(img)
         _cache[key] = img
         return img
 
@@ -216,23 +392,25 @@ def _get_image(key: DataKey):
                 f"Malformed image for {key} at {source}: Size is"
                 f" {w}x{h} which is neither a single or 4 squares"
             )
+            return __error()
+
         img = _process_custom_image(img, *key[1:])
         if img.isNull():
-            logger.warning(f"Error loading {key} from {source}")
-            return __generator__error()
+            logger.warning(f"Error loading {key} from custom {source}")
+            return __error()
+
         logger.info(f"Using custom sign ({source}) of size {img.size()}")
-        ok = img.save(str(filename))
-        if ok:
-            logger.info(f"Saved {key} to cache")
-        else:
-            logger.warning(f"Could not save {key} to cache")
+        _maybe_save(img)
 
         _cache[key] = img
 
         return img
 
+    logger.warning(f"No match found for {key}")
+    return __error()
 
-# =============================================================================
+
+# -----------------------------------------------------------------------------
 # Internals
 
 
@@ -334,24 +512,8 @@ def __generator__forbidden(lightness: float, size: int):
     return img
 
 
-# =============================================================================
-# Public API
-
-
-def builtins():
-    """List of all programmatically drawn signs"""
-    return list(_factories().keys())
-
-
-def __extract_names():
-    nlist = []
-    cdict = {}
-    for f in custom_resources_path().glob(f"*.{resources_format()}"):
-        nlist.append(f.stem)
-        cdict[f.stem] = f
-    nlist.extend(builtins())
-    return nlist, cdict
-
+# -----------------------------------------------------------------------------
+# Global variables (must be last, will introspect above code)
 
 _names, _custom_paths = __extract_names()
 _cache: dict[DataKey, QImage] = {}
@@ -362,71 +524,3 @@ cached_resources_path().mkdir(parents=True, exist_ok=True)
 # pprint.pprint(_custom_paths)
 # print("[kgd-debug] =====")
 
-
-def names():
-    """List of all possible sign shapes, including both built-ins and those
-    found in :meth:`~resources_path`"""
-    return _names
-
-
-def image(sign: Sign, size: int) -> QImage:
-    """Return the image associated with given sign in the requested size"""
-    key = (sign.name, sign.value, size)
-    return _get_image(key)
-
-
-def qt_images(signs: Signs, resolution: int) -> List[List[QImage]]:
-    """Returns images *in Qt format* (QImage) for all provided signs, with the
-    requested resolution"""
-    images = []
-    for sign in signs:
-        img: QImage = image(sign, resolution)
-        w, h = img.width(), img.height()
-        tgt_w, tgt_h = resolution if w == h else resolution, 4 * resolution
-        if w != tgt_w and h != tgt_h:
-            img = img.scaled(tgt_w, tgt_h, Qt.KeepAspectRatio, Qt.SmoothTransformation)
-
-        img_list = []
-        if w == h:
-            img_list.append(img)
-            for a in [90, 180, 270]:
-                img_list.append(img.transformed(QTransform().rotate(a)))
-        else:
-            assert 4 * w == h
-            for i in range(4):
-                img_list.append(img.copy(0, i * resolution, resolution, resolution))
-        images.append(img_list)
-    return images
-
-
-def np_images(signs: Signs, resolution: int, rgb_fill: int = 0) -> List[List[np.ndarray]]:
-    """Returns images *in numpy format* (array) for all provided signs, with
-    the requested resolution"""
-
-    def _scale(x):
-        return x / 255.0
-
-    _v_scale = np.vectorize(_scale)
-    _images = qt_images(signs, resolution)
-    arrays = []
-    for p_list in _images:
-        subarray = []
-        for p in p_list:
-            img = QImage(p.size(), QImage.Format_Grayscale8)
-            img.fill(QColor.fromRgb(rgb_fill))
-            painter = QPainter(img)
-            painter.drawImage(img.rect(), p, p.rect())
-            painter.end()
-            subarray.append(copy.deepcopy(_v_scale(np.flipud(qimage_to_numpy(img)))))
-        arrays.append(subarray)
-
-    return arrays
-
-
-def qimage_to_numpy(img: QImage) -> np.ndarray:
-    """Converts a QImage into a numpy array"""
-    w, h, d = img.width(), img.height(), img.depth() // 8
-    b = img.constBits().asstring(img.byteCount())
-    bw = img.bytesPerLine() // d
-    shape = (h, bw) if d == 1 else (h, bw, d)
-    return np.ndarray(shape=shape, buffer=b, dtype=np.uint8)[:, :w]

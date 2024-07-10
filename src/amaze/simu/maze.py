@@ -14,7 +14,7 @@ from typing import Annotated, Tuple, Optional, List, Dict
 
 import numpy as np
 
-from amaze.misc.resources import Sign, SignType
+from ..misc.resources import Sign, SignType
 from ._build_data import BaseBuildData
 from .types import StartLocation, classproperty
 

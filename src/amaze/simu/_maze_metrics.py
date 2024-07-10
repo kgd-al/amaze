@@ -220,9 +220,8 @@ def __inseparability(maze: Maze):
     entropy = 0
     for r in ranges:
         p = r.u - r.l
-        assert p > 0
-        # print(r, p, log(p))
-        entropy += -p * log(p)
+        if p > 0:  # pragma: no branch
+            entropy += -p * log(p)
     #
     # print(f"{entropy=}")
     # print("=====")

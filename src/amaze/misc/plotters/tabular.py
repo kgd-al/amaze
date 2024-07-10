@@ -1,5 +1,7 @@
 import logging
 import math
+from pathlib import Path
+from typing import Union
 
 from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QImage, QPainter
@@ -12,7 +14,7 @@ from amaze.visu.widgets.labels import InputsLabel, ValuesLabel
 logger = logging.getLogger(__name__)
 
 
-def plot_inputs_values(policy: TabularController, path):
+def plot_inputs_values(policy: TabularController, path: Union[Path, str]):
     """
     Saves a summary of the state/action pairs stored in the provided
     controller
@@ -55,5 +57,5 @@ def plot_inputs_values(policy: TabularController, path):
 
     painter.end()
 
-    if img.save(path):
+    if img.save(str(path)):  # pragma: no branch
         logger.debug(f"Wrote to {path}")

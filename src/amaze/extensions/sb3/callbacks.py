@@ -22,7 +22,7 @@ from stable_baselines3.common.logger import (
 )
 from stable_baselines3.common.vec_env.base_vec_env import tile_images
 
-from amaze.extensions.sb3.maze_env import env_method, env_attr
+from .maze_env import env_method, env_attr
 
 logger = logging.getLogger(__name__)
 

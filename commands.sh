@@ -67,8 +67,7 @@ cmd_pytest(){  # Perform the test suite (small scale)
   coverage_config_tmp=$(basename $coverage_config)
 
   coverage_args="--rcfile=$coverage_config_tmp"
-  rm $coverage_config_tmp
-  touch $coverage_config_tmp
+  cat .coveragerc > $coverage_config_tmp
 
   rm -rf $out
   mkdir -p $cout
@@ -77,17 +76,18 @@ cmd_pytest(){  # Perform the test suite (small scale)
   do
     if [ "$arg" == "--small-scale" ]
     then
-      (
-        echo "[report]"
-        echo "exclude_also ="
-        echo "    @pytest.mark.slow"
-      ) >> $coverage_config_tmp
+      awk '
+        {print}
+        /exclude_also/{print "    @pytest.mark.slow"}' .coveragerc > $coverage_config_tmp
+      break
     fi
   done
 
-  coverage run --branch --data-file=$coverage_tmp \
-    --omit "setup.py,tests/conftest.py,examples/*.py,tests/test_examples.py" \
-    -m \
+#  printf "\n[run]\nsource =\n    src/amaze/visu\n" >> $coverage_config_tmp
+#  printf "\033[31mTruncated converage report\033[0m\n"
+
+  coverage run --branch --data-file=$coverage_tmp --rcfile=$coverage_config_tmp \
+    --omit "setup.py,tests/conftest.py,examples/*.py,tests/test_examples.py" -m \
     pytest --durations=10 --basetemp=$out -x -ra "$@" || exit 2
 
   echo
@@ -96,19 +96,19 @@ cmd_pytest(){  # Perform the test suite (small scale)
   coverage report --data-file=$coverage $coverage_args > $coverage_txt
   coverage html  --data-file=$coverage $coverage_args -d $cout/html
 
-  echo
-  echo "===="
-  ls src
-  echo "===="
-  ls src/amaze
-  echo "===="
-  ls src/amaze/simu
-  echo "===="
+#  echo
+#  echo "===="
+#  ls src
+#  echo "===="
+#  ls src/amaze
+#  echo "===="
+#  ls src/amaze/simu
+#  echo "===="
   echo "Simulation coverage:"
-  set -x
+#  set -x
   coverage report --data-file=$coverage $coverage_args \
-    --skip-covered --include="src/amaze/simu/*" --fail-under=100
-  set +x
+    --skip-covered --fail-under=100
+#  set +x
 
   coverage_tool=~/work/utils/coverage_tree.py
   if [ -f "$coverage_tool" ]

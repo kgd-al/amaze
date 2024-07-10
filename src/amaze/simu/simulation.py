@@ -6,15 +6,15 @@ from typing import Union, TypeVar, Optional, Tuple
 import numpy as np
 import pandas as pd
 
-from amaze.misc.resources import SignType
-from amaze.simu.maze import Maze
-from amaze.simu.pos import Pos
-from amaze.simu.robot import Robot
-from amaze.simu.types import InputType, OutputType, Action, State
 from ._inputs_evaluation import inputs_evaluation as _inputs_evaluation
 from ._maze_metrics import metrics as _maze_metrics, MazeMetrics
 from .controllers.base import BaseController
+from .maze import Maze
+from .pos import Pos
+from .robot import Robot
+from .types import InputType, OutputType, Action, State
 from ..misc import resources
+from ..misc.resources import SignType
 
 logger = getLogger(__name__)
 

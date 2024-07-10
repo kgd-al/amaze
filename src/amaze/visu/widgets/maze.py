@@ -7,8 +7,8 @@ from PyQt5.QtCore import Qt, QPointF, QRectF, QSize
 from PyQt5.QtGui import QPainter, QColor, QPainterPath, QImage
 from PyQt5.QtWidgets import QLabel
 
-from amaze.misc.resources import SignType, qimage_to_numpy, qt_images
-from amaze.misc.utils import has_qt_application, qt_application
+from ...misc.resources import SignType, qimage_to_numpy, qt_images
+from ...misc.utils import has_qt_application, qt_application
 from ._trajectory_plotter import plot_trajectory
 from ..maze import MazePainter, Color, logger
 from ...simu.maze import Maze
@@ -30,8 +30,8 @@ class QtPainter(MazePainter):
             c2 = Qt.green
             c3 = Qt.blue
         self.colors = {
-            Color.FOREGROUND: Qt.white if dark else Qt.black,
-            Color.BACKGROUND: Qt.black if dark else Qt.white,
+            Color.FOREGROUND: config["foreground"],
+            Color.BACKGROUND: config["background"],
             Color.START: c1,
             Color.FINISH: c2,
             Color.PATH: c3,
@@ -55,12 +55,12 @@ class QtPainter(MazePainter):
         alpha: float = 1,
     ):
         r = QRectF(x, y, w, h)
-        if fill:
+        if fill:  # pragma: no branch
             fc = QColor(self.colors[fill])
             if alpha < 1:
                 fc.setAlphaF(alpha)
             self.painter.fillRect(r, fc)
-        if draw:
+        if draw:  # pragma: no branch
             self.painter.setPen(self.colors[draw])
             self.painter.drawRect(r)
 
@@ -99,11 +99,9 @@ class MazeWidget(QLabel):
 
     def __init__(
         self,
-        maze: Optional[Union[Maze, Maze.BuildData, str]] = None,
-        robot: Optional[Robot] = None,
+        maze: Union[Maze, Maze.BuildData, str],
+        robot: Robot,
         config: Optional[Dict[str, Any]] = None,
-        resolution: Optional[int] = 15,
-        input_type: Optional[InputType] = InputType.DISCRETE,
         is_reset=False,
     ):
 
@@ -111,31 +109,17 @@ class MazeWidget(QLabel):
         if not is_reset:
             super().__init__()
 
-        if maze is None:
-            maze = ""
-
         self._maze = self.__to_maze(maze)
 
+        assert isinstance(robot, Robot)
         self._robot = robot
 
-        if robot is not None:
-            self._inputs = robot.data.inputs
-        else:
-            self._inputs = input_type
-
         self._clues, self._lures, self._traps = None, None, None
-        if self._inputs is InputType.CONTINUOUS:
-            if robot is not None:
-                self._vision = robot.data.vision
-            else:
-                self._vision = resolution
-        else:
-            self._vision = None
 
-        r = self._vision
-        if self._inputs is InputType.DISCRETE or r is None:
+        r = self.vision
+        if self.inputs is InputType.DISCRETE or r is None:
             m = self._maze
-            r = min(self.width(), self.height()) // min(m.width, m.height)
+            r = max(3, min(self.width(), self.height()) // min(m.width, m.height))
         else:
             r -= 2
 
@@ -166,8 +150,6 @@ class MazeWidget(QLabel):
             maze=maze,
             robot=self._robot,
             config=self._config,
-            resolution=self._vision,
-            input_type=self._inputs,
             is_reset=True,
         )
         self.update()
@@ -181,6 +163,12 @@ class MazeWidget(QLabel):
         elif not isinstance(maze, Maze):
             raise ValueError("Invalid maze argument." " Expecting Maze, Maze.BuildData or str")
         return maze
+
+    @property
+    def inputs(self): return self._robot.data.inputs
+
+    @property
+    def vision(self): return self._robot.data.vision
 
     @staticmethod
     def __qt_images(size, maze):
@@ -232,10 +220,6 @@ class MazeWidget(QLabel):
 
     def paintEvent(self, e):
         maze = self._maze
-        if maze is None:
-            super().paintEvent(e)
-            return
-
         painter = QPainter(self)
 
         sw = maze.width * self._scale + 2
@@ -251,20 +235,17 @@ class MazeWidget(QLabel):
     def render_to_file(self, path, width: Optional[int] = None):
         """Render this widget to a file"""
         img, painter = self._image_drawer(width=width)
-        self.render_onto(painter)
+        self.render_onto(painter, width=width)
         return self._save_image(path, img, painter)
 
     def pretty_render(self, width: Optional[int] = None):
         img, painter = self._image_drawer(width=width)
-        self.render_onto(painter, width=width - 2)
+        self.render_onto(painter, width=width)
         painter.end()
         return img
 
-    def numpy_render(self, width: Optional[int] = None):
-        return qimage_to_numpy(self.pretty_render(width))
-
     @classmethod
-    def static_render_to_file(cls, maze, path, size=None, **kwargs):
+    def static_render_to_file(cls, maze: Maze, path: Path, size=None, **kwargs):
         """Render the provided maze to a file (in png format).
 
         Additional arguments refer to the rendering configuration, see
@@ -273,13 +254,16 @@ class MazeWidget(QLabel):
         width, height = cls.__compute_size(maze, size or maze.width * 15)
         scale = width / maze.width
         config = cls.default_config()
+        dark = kwargs.get("dark", True)
         config.update(
             dict(
                 scale=scale,
                 outputs=OutputType.DISCRETE,
                 solution=True,
                 robot=None,
-                dark=True,
+                dark=dark,
+                foreground=cls.__foreground_color(dark),
+                background=cls.__background_color(dark),
             )
         )
         config.update(kwargs)
@@ -298,13 +282,10 @@ class MazeWidget(QLabel):
         QtPainter(painter, config).render(maze, config)
 
     def render_onto(self, painter: QPainter, width: Optional[int] = None):
-        outputs, robot = None, None
-        if self._robot is not None:
-            outputs = self._robot.data.outputs
-            if self._config["robot"]:
-                robot = self._robot.to_dict()
-            else:
-                robot = None
+        if self._config["robot"]:
+            robot = self._robot.to_dict()
+        else:
+            robot = None
 
         config = dict(self._config)
         config.update(
@@ -313,9 +294,11 @@ class MazeWidget(QLabel):
                 clues=self._clues,
                 lures=self._lures,
                 traps=self._traps,
-                outputs=outputs,
+                outputs=self._robot.data.outputs,
                 solution=bool(self._config["solution"]),
                 robot=robot,
+                foreground=self._foreground_color(),
+                background=self._background_color(),
             )
         )
 
@@ -355,18 +338,18 @@ class MazeWidget(QLabel):
 
     def _image_drawer(
         self,
-        fill: Optional[QColor] = None,
         width: Optional[int] = None,
         img_format: QImage.Format = QImage.Format_RGB32,
     ) -> Tuple[QImage, QPainter]:
-        if fill is None:
-            fill = self._background_color()
+
+        fill = self._background_color()
 
         if width is None:
             width = self._scale * self._maze.width + 2
             height = self._scale * self._maze.height + 2
         else:
-            scale = (width - 2) / self._maze.width
+            scale = width / self._maze.width
+            width += 2
             height = round(self._maze.height * scale) + 2
 
         return self.__static_image_drawer(width, height, fill, img_format)
@@ -381,7 +364,7 @@ class MazeWidget(QLabel):
         ok = img.save(str(path))
         if ok:
             logger.debug(f"Wrote to {path}")
-        else:
+        else:  # pragma: no cover
             logger.error(f"Error writing to {path}")
         return ok
 
@@ -415,8 +398,6 @@ class MazeWidget(QLabel):
         _ = qt_application()
 
         funcs = dict(
-            background=cls.__background_color,
-            foreground=cls.__foreground_color,
             size=cls.__compute_size,
             image_painter=cls.__static_image_drawer,
             qt_images=cls.__qt_images,
@@ -432,6 +413,10 @@ class MazeWidget(QLabel):
         _config["robot"] = False
         if config is not None:
             _config.update(config)
+
+        dark = _config.get("dark", True)
+        _config["foreground"] = cls.__foreground_color(dark)
+        _config["background"] = cls.__background_color(dark)
 
         return plot_trajectory(
             simulation=simulation,

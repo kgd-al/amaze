@@ -2,9 +2,9 @@ import math
 from random import Random
 from typing import List
 
-from amaze.simu.controllers.base import BaseController
-from amaze.simu.types import Action
 from ..robot import Robot, InputType, OutputType
+from ..controllers.base import BaseController
+from ..types import Action
 
 
 class RandomController(BaseController):

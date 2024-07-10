@@ -1,8 +1,8 @@
 """Root package for the AMaze benchmark generator
 """
 
-from amaze.misc.resources import Sign
-from amaze.misc.utils import qt_application
+from .misc.resources import Sign
+from .misc.utils import qt_application
 from .bin.main import main as amaze_main
 from .simu import (
     Maze,

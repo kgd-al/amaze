@@ -15,14 +15,12 @@ from pathlib import Path
 from typing import Optional, Sequence
 
 from ..misc.utils import qt_application, qt_offscreen
-from ..simu.controllers.control import load
+from ..simu.controllers.control import load, builtin_controllers, controller_factory
 from ..simu.maze import Maze
 from ..simu.robot import Robot
 from ..simu.simulation import Simulation
 from ..visu.viewer import MainWindow
 from ..visu.widgets.maze import MazeWidget
-
-logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -91,13 +89,13 @@ class Options:
     render: Optional[Path] = None
     """ Where to render the maze """
 
-    plot: Optional[Path] = None
+    trajectory: Optional[Path] = None
     """ Where to render the agent's trajectory """
 
-    width: int = 256
+    width: Optional[int] = None
     """ Width of images / videos """
 
-    cell_width: int = None
+    cell_width: Optional[int] = None
     """ Width of a maze cell, to ensure readable graphics """
 
     # =====================
@@ -111,6 +109,11 @@ class Options:
     # =====================
 
     extensions: list[str] = field(default_factory=list)
+
+    # =====================
+
+    verbose: int = 0
+    """ Verbosity level of the program """
 
     # =====================
 
@@ -218,16 +221,16 @@ class Options:
             "--movie",
             dest="movie",
             type=Path,
-            help="Render a video of the robot's strategy " "to requested file (gif)",
+            help="Render a video of the robot's strategy to requested file (gif)",
         )
 
         parser.add_argument(
             "--trajectory",
-            dest="plot",
+            dest="trajectory",
             type=Path,
             nargs="?",
             const="trajectory.png",
-            help="Plot trajectory of provided agent to" " provided path",
+            help="Plot trajectory of provided agent to provided path",
         )
 
         parser.add_argument(
@@ -239,7 +242,7 @@ class Options:
         parser.add_argument(
             "--cell-width",
             type=int,
-            help="Offscreen rendering target width of a" " single cell",
+            help="Offscreen rendering target width of a single cell",
         )
 
         parser.add_argument(
@@ -257,25 +260,38 @@ class Options:
             "--extension",
             action="append",
             dest="extensions",
-            help="Request extension specific controllers to be" "made available",
+            help="Request extension specific controllers to be made available",
+        )
+
+        parser.add_argument(
+            "-v", "--verbose",
+            action="count",
+            dest="verbose",
+            help="Verbosity level of the program",
         )
 
 
 def __make_simulation(args, trajectory=False):
     maze = __make_maze(args)
+    robot = __make_robot(args)
 
     if args.cell_width is not None:
         args.width = args.cell_width * maze.width
 
+    simulation = Simulation(maze, robot, save_trajectory=trajectory)
+    controller = __make_controller(args, robot, simulation=simulation)
+
+    return simulation, controller
+
+
+def __make_robot(args):
     if args.robot:
         robot = Robot.BuildData.from_string(args.robot).override_with(
             Robot.BuildData.from_argparse(args, set_defaults=False)
         )
     else:
         robot = Robot.BuildData.from_argparse(args, set_defaults=True)
-    controller = __make_controller(args, robot)
-
-    return Simulation(maze, robot, save_trajectory=trajectory), controller
+    return robot
 
 
 def __make_maze(args):
@@ -289,9 +305,18 @@ def __make_maze(args):
     return Maze.generate(maze_bd)
 
 
-def __make_controller(args, robot: Optional[Robot.BuildData] = None):
-    controller = None
-    if args.controller:
+def __make_controller(args, robot: Optional[Robot.BuildData] = None,
+                      simulation: Optional[Simulation] = None):
+    if not args.controller:
+        return None
+
+    _robot = robot or Robot.BuildData.from_argparse(args, set_defaults=True)
+
+    if args.controller in builtin_controllers():
+        controller = controller_factory(args.controller,
+                                        dict(robot_data=_robot,
+                                             simulation=simulation))
+    else:
         controller = load(args.controller)
         if robot:
             robot.override_with(Robot.BuildData.from_controller(controller))
@@ -306,21 +331,24 @@ def main(sys_args: Optional[Sequence[str] | str] = None):
 
     if isinstance(sys_args, str):
         sys_args = sys_args.split()
+    elif sys_args is not None:
+        sys_args = [str(arg) for arg in sys_args]
 
     args = Options()
     parser = argparse.ArgumentParser(description="2D Maze environment")
     Options.populate(parser)
     parser.parse_args(args=sys_args, namespace=args)
 
+    if args.verbose > 0:
+        print("Executing with:", sys_args)
+
     if args.eval and not args.controller:
-        print("Cannot evaluate without a controller")
-        exit(1)
+        raise ValueError("Cannot evaluate without a controller")
 
-    if args.plot and not args.controller and not args.is_robot:
-        print("Cannot plot trajectory without a controller")
-        exit(1)
+    if args.trajectory and not args.controller and not args.is_robot:
+        raise ValueError("Cannot plot trajectory without a controller")
 
-    if args.extensions:
+    if args.extensions:  # pragma: no cover
         for m in args.extensions:
             import_module("amaze.extensions." + m)
 
@@ -335,30 +363,41 @@ def main(sys_args: Optional[Sequence[str] | str] = None):
 
     if args.movie:
         args.autostart = True
+        args.autoquit = True
+        args.dt = 0
 
     if args.eval:
         if args.render and len(args.render.parts) == 1:
             args.render = args.eval.joinpath(args.render)
-        if args.plot and len(args.plot.parts) == 1:
-            args.plot = args.eval.joinpath(args.plot)
+        if args.trajectory and len(args.trajectory.parts) == 1:
+            args.trajectory = args.eval.joinpath(args.trajectory)
         args.eval.mkdir(parents=True, exist_ok=True)
 
     if args.eval_inputs:
         args.eval_inputs.mkdir(parents=True, exist_ok=True)
 
-    simulate = args.eval or (args.plot and not args.is_robot)
+    simulate = bool(args.eval or (args.trajectory and not args.is_robot))
     window = not (args.render or args.eval_inputs or simulate)
     if not window:
         qt_offscreen()
 
-    app = qt_application()
+    app = qt_application(start_offscreen=not window or args.movie)
 
     logging.basicConfig(level=logging.DEBUG)
 
-    if args.eval_inputs and (controller := __make_controller(args)):
+    if args.eval_inputs:
+        controller = __make_controller(args)
+        if controller is None:
+            raise ValueError("Cannot evaluate inputs without a controller")
         res = Simulation.inputs_evaluation(args.eval_inputs, controller, __make_maze(args).signs)
-
         pprint.pprint(res)
+
+    if args.render:
+        maze = __make_maze(args)
+        if MazeWidget.static_render_to_file(
+            maze, args.render, width=args.width
+        ):
+            print(f"Saved {maze.to_string()}" f" to {args.render}")
 
     if not window:
         simulation, controller = __make_simulation(args)
@@ -374,7 +413,7 @@ def main(sys_args: Optional[Sequence[str] | str] = None):
                 ),
             )
             if widget.render_to_file(args.render, width=args.width):
-                logger.info(f"Saved {simulation.maze.to_string()}" f" to {args.render}")
+                print(f"Saved {simulation.maze.to_string()}" f" to {args.render}")
 
         if simulate:
             simulation.reset(save_trajectory=True)
@@ -382,16 +421,16 @@ def main(sys_args: Optional[Sequence[str] | str] = None):
                 simulation.step(controller(simulation.observations))
             reward = simulation.robot.reward
             print(f"Cumulative reward: {reward} " f"{simulation.infos()['pretty_reward']}")
-            if args.plot:
+            if args.trajectory:
                 MazeWidget.plot_trajectory(
                     simulation=simulation,
-                    size=args.width,
-                    path=args.plot,
+                    size=args.width or 256,
+                    path=args.trajectory,
                 )
                 print(
                     f"Plotted {args.controller}"
                     f" in {simulation.maze.to_string()}"
-                    f" to {args.plot}"
+                    f" to {args.trajectory}"
                 )
 
     else:
@@ -403,10 +442,11 @@ def main(sys_args: Optional[Sequence[str] | str] = None):
         if args.autostart:
             window.start()
 
-        return app.exec()
+        r = app.exec()
+        return r
 
     return 0
 
 
-if __name__ == "__main__":
+if __name__ == "__main__":  # pragma: no cover
     main()

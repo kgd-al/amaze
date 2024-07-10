@@ -47,7 +47,7 @@ class CollapsibleBox(QWidget):
     def setEnabled(self, enabled: bool, child_only: bool = True):
         if child_only:
             self.content_area.setEnabled(enabled)
-        else:
+        else:  # pragma: no cover
             super().setEnabled(enabled)
 
     def _set_layout(self, layout):

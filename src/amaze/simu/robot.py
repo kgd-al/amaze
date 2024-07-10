@@ -39,10 +39,11 @@ class Robot:
             if self.vision is not None:
                 assert_ok("vision")
 
-            if self.inputs is not InputType.CONTINUOUS:
-                self.vision = None
-            elif self.vision is None:
-                self.vision = self.__class__.vision
+            if not isinstance(self.vision, self.Unset):
+                if self.inputs is not InputType.CONTINUOUS:
+                    self.vision = None
+                elif self.vision is None:
+                    self.vision = self.__class__.vision
 
         @classmethod
         def from_string(cls, robot: str, overrides: Optional["Robot.BuildData"] = None):

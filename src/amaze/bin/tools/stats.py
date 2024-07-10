@@ -7,9 +7,9 @@ from typing import Optional, List, Sequence
 
 import pandas as pd
 
-from amaze.simu.maze import Maze
-from amaze.simu.simulation import Simulation
-from amaze.simu.types import InputType
+from ...simu.maze import Maze
+from ...simu.simulation import Simulation
+from ...simu.types import InputType
 
 
 @dataclass

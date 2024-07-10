@@ -6,11 +6,11 @@ import pprint
 from dataclasses import dataclass
 from pathlib import Path
 
-from amaze.misc.resources import Sign
-from amaze.simu.maze import Maze
-from amaze.simu.simulation import Simulation
-from amaze.simu.types import InputType
-from amaze.visu.widgets.maze import MazeWidget
+from ...misc.resources import Sign
+from ...simu.maze import Maze
+from ...simu.simulation import Simulation
+from ...simu.types import InputType
+from ...visu.widgets.maze import MazeWidget
 
 
 @dataclass

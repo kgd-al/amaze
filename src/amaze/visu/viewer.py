@@ -9,10 +9,11 @@ from typing import Optional, Union
 
 try:
     import PIL
+    from PIL import Image as PILImage
 
     logging.getLogger("PIL.PngImagePlugin").propagate = False
     HAS_PIL = True
-except ImportError:
+except ImportError:  # pragma: no cover
     HAS_PIL = False
 
 from PyQt5.QtCore import (
@@ -47,7 +48,7 @@ from PyQt5.QtWidgets import (
     QMessageBox,
 )
 
-from amaze.misc.resources import SignType
+from ..misc.resources import SignType
 from ..visu.widgets.collapsible import CollapsibleBox
 from ..visu.widgets.labels import (
     InputsLabel,
@@ -93,6 +94,7 @@ class MainWindow(QWidget):
 
     def __init__(self, args: Optional = None, runnable=True):
         super().__init__()
+        self.setMaximumWidth(500)
         self.args = args
 
         # holder = QWidget()
@@ -104,7 +106,9 @@ class MainWindow(QWidget):
             self.playing = False
             self.speed = 1
 
-            self.timer_dt = args.dt if args and args.dt else 0.1
+            self.timer_dt = (args.dt
+                             if args and args.dt is not None and args.dt >= 0
+                             else 0.1)
 
             self.timer = QTimer()
 
@@ -132,7 +136,7 @@ class MainWindow(QWidget):
         self.simulation = Simulation(
             maze=self._generate_maze(),
             robot=self._robot_data(),
-            save_trajectory=args and args.plot,
+            save_trajectory=args and (args.trajectory or args.is_robot),
         )
 
         self.maze_w = MazeWidget.from_simulation(self.simulation)
@@ -150,10 +154,10 @@ class MainWindow(QWidget):
         if self.robot_mode:  # Prepare robot mode variables
             self._layout_holder = QWidget()
             self._trajectory_plotter = lambda: self.plot_current_trajectory(
-                args.width,
+                args.width or 256,
                 Path(
                     f"tmp/trajectories/human"
-                    f"_{Maze.to_string()}"
+                    f"_{self.simulation.maze.to_string()}"
                     f"_{time().strftime('%Y-%m-%d_%H-%M-%S')}"
                     f".png"
                 ),
@@ -214,7 +218,7 @@ class MainWindow(QWidget):
             simulation=self.simulation, size=width, path=path, config=config
         )
 
-        if symlink:
+        if symlink:  # pragma: no branch
             symlink_path = path.parent.joinpath("last.png")
             symlink_path.unlink(missing_ok=True)
             symlink_path.symlink_to(path.name)
@@ -288,14 +292,15 @@ class MainWindow(QWidget):
         else:
             self.playing = play
 
-        if self.playing:
-            icon = QStyle.SP_MediaPause
-            self.timer.start(round(1000 * self.timer_dt))
-        else:
-            icon = QStyle.SP_MediaPlay
-            self.timer.stop()
+        if self.runnable:
+            if self.playing:
+                icon = QStyle.SP_MediaPause
+                self.timer.start(round(1000 * self.timer_dt))
+            else:
+                icon = QStyle.SP_MediaPlay
+                self.timer.stop()
 
-        self.buttons["play"].setIcon(self.style().standardIcon(icon))
+            self.buttons["play"].setIcon(self.style().standardIcon(icon))
 
     def _think(self):
         return self.controller(self.simulation.observations)
@@ -333,7 +338,7 @@ class MainWindow(QWidget):
 
         if not self.robot_mode:
             print(f"reward = {reward}. Infos:\n{pprint.pformat(infos)}")
-        if not self.args.autoquit:
+        if not self.args.autoquit:  # pragma: no cover
             QMessageBox.information(
                 self,
                 "Failed" if infos["failure"] else "Success",
@@ -353,7 +358,7 @@ class MainWindow(QWidget):
         if self.args.autoquit:
             self.close()
 
-        else:
+        else:  # pragma: no cover
             if self.robot_mode:
                 self.start()
 
@@ -381,7 +386,7 @@ class MainWindow(QWidget):
             f"{self.simulation.last_reward:+g}" f" ({self.simulation.robot.reward:g})",
         )
 
-        if self.simulation.data is not None:
+        if self.simulation.data is not None:  # pragma: no branch
 
             def lbl(k):
                 return self.visu["img_" + k]
@@ -415,20 +420,11 @@ class MainWindow(QWidget):
         return enum[self._combobox_value(name)]
 
     def maze_data(self):
-        def _sbv(name):
-            return self.config[name].value()
-
-        def _cbv(name):
-            return self._combobox_value(name)
-
-        def _cbb(name):
-            return self.config[name].isChecked()
-
-        def _sign(name):
-            return self.config[name].signs()
-
-        def _on(name):
-            return _cbb("with_" + name + "s")
+        def _sbv(name): return self.config[name].value()
+        def _cbv(name): return self._combobox_value(name)
+        def _cbb(name): return self.config[name].isChecked()
+        def _sign(name): return self.config[name].signs()
+        def _on(name): return _cbb("with_" + name + "s")
 
         return Maze.BuildData(
             width=_sbv("width"),
@@ -445,14 +441,8 @@ class MainWindow(QWidget):
         )
 
     def _robot_data(self):
-        def _sbv(name):
-            return self.config[name].value()
-
-        def _cbv(name):
-            return self._combobox_value(name)
-
-        def _ecbv(name, enum):
-            return self._enum_value(name, enum)
+        def _sbv(name): return self.config[name].value()
+        def _ecbv(name, enum): return self._enum_value(name, enum)
 
         return Robot.BuildData(
             vision=_sbv("vision"),
@@ -460,7 +450,7 @@ class MainWindow(QWidget):
             outputs=_ecbv("outputs", OutputType),
         )
 
-    def _generate_controller(self, new_value=None, open_dialog=False):
+    def _generate_controller(self, new_value=None, open_dialog=False):  # pragma: no cover
         c: BaseController = getattr(self, "controller", None)
         if c and new_value is None and not open_dialog:
             return
@@ -474,7 +464,7 @@ class MainWindow(QWidget):
             path, _ = QFileDialog.getOpenFileName(
                 parent=self,
                 caption="Open controller",
-                directory=old_path,
+                directory=str(old_path),
                 filter="Controllers (*.ctrl)",
             )
             if not path:
@@ -784,11 +774,11 @@ class MainWindow(QWidget):
         return layout
 
     @classmethod
-    def section_header(cls, name):
+    def section_header(cls, name):  # pragma: no cover
         return cls._section(name)
 
     @staticmethod
-    def _section(name_):
+    def _section(_name):
         def frame():
             f = QFrame()
             f.setFrameStyle(QFrame.HLine | QFrame.Raised)
@@ -798,8 +788,8 @@ class MainWindow(QWidget):
         layout = QHBoxLayout()
         layout.addWidget(frame())
         layout.setContentsMargins(0, 0, 0, 0)
-        if name_:
-            layout.addWidget(QLabel(name_))
+        if _name:  # pragma: no branch
+            layout.addWidget(QLabel(_name))
             layout.addWidget(frame())
             for i, s in enumerate([1, 0, 1]):
                 layout.setStretch(i, s)
@@ -856,7 +846,9 @@ class MainWindow(QWidget):
         save: QAbstractButton = self.buttons["save"]
         save.clicked.connect(self.save)
 
-        connect("c_load", lambda: self._generate_controller("", open_dialog=True))
+        connect("c_load",
+                lambda: self._generate_controller("", open_dialog=True))  # pragma: no cover
+
 
     # =========================================================================
     # == Persistent storage
@@ -881,7 +873,7 @@ class MainWindow(QWidget):
             _try("pos", lambda p: self.move(p))
             _try("size", lambda s: self.resize(s))
 
-        if (w := args.width) is not None:
+        if (w := args.width) is not None or (w := self.width()) < 500:
             w_, h_ = self.width(), self.height()
             self.resize(w, w * h_ // w_)
 
@@ -915,11 +907,11 @@ class MainWindow(QWidget):
                 viewer_options[k] = b
 
             self._init_from_robot_build_data(
-                args_robot.override_with(Robot.BuildData(**_try("robot", default={})))
+                Robot.BuildData(**_try("robot", default={})).override_with(args_robot)
             )
 
             self._init_from_maze_build_data(
-                args_maze.override_with(Maze.BuildData(**_try("maze", default={})))
+                Maze.BuildData(**_try("maze", default={})).override_with(args_maze)
             )
 
             config.beginGroup("sections")
@@ -959,16 +951,16 @@ class MainWindow(QWidget):
 
         config.sync()
 
-    def closeEvent(self, _):
+    def closeEvent(self, e):
         self._save_settings()
+        super().closeEvent(e)
 
     # =========================================================================
     # == Argv/Storage parsing
     # =========================================================================
 
     def _init_from_maze_build_data(self, data: Maze.BuildData):
-        def val(k):
-            return getattr(data, k)
+        def val(k): return getattr(data, k)
 
         def _set(f, *args, **kwargs):
             assert isinstance(f.__self__, QObject)
@@ -1073,8 +1065,8 @@ class _MovieRecorder:
         v_img.save(self._path("vision"))
         img.save(path)
 
-        if HAS_PIL:
-            self.frames.append(PIL.Image.open(path))
+        if HAS_PIL:  # pragma: no branch
+            self.frames.append(PILImage.open(path))
 
     def save(self):
         if HAS_PIL:
@@ -1088,8 +1080,9 @@ class _MovieRecorder:
                 duration=duration,
                 loop=0,
             )
-            print("Done!")
-        else:
+            print("Saved movie to", self.path)
+
+        else:  # pragma: no cover
             print(
                 "PIL module not installed. Generate gif manually using" " files under",
                 self.folder,

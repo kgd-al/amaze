@@ -2,7 +2,7 @@ from enum import Enum
 
 import numpy as np
 
-from amaze.simu.pos import Vec
+from .pos import Vec
 
 
 class InputType(Enum):

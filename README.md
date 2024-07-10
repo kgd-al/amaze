@@ -1,5 +1,7 @@
 # AMaze
 
+[![JOSS](https://joss.theoj.org/papers/bc6892f6873808ced10bc8c4c222e635/status.svg)](https://joss.theoj.org/papers/bc6892f6873808ced10bc8c4c222e635)
+
 ### Stable branch (main)
 ![main:status](https://github.com/kgd-al/amaze/actions/workflows/test_and_deploy.yml/badge.svg?branch=main)
 [![PyPI version](https://badge.fury.io/py/amaze-benchmarker.svg)](https://badge.fury.io/py/amaze-benchmarker)

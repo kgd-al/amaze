@@ -5,6 +5,8 @@ import os
 
 from PyQt5.QtCore import QLibraryInfo
 
+from ...misc.utils import QT_PLATFORM_PLUGIN_KEY, QT_PLATFORM_OFFSCREEN_PLUGIN
+
 
 class CV2QTGuard:
     """Acts as a guard allowing both PyQt5 and opencv-python to use the
@@ -16,7 +18,7 @@ class CV2QTGuard:
     """
 
     QPA_PATH_NAME = "QT_QPA_PLATFORM_PLUGIN_PATH"
-    QPA_PLATFORM_NAME = "QT_QPA_PLATFORM"
+    QPA_PLATFORM_NAME = QT_PLATFORM_PLUGIN_KEY
 
     def __init__(self, platform=True, path=True):
         self._qta_platform, self._qta_path = platform, path
@@ -30,7 +32,8 @@ class CV2QTGuard:
 
     def __enter__(self):
         if self._qta_platform:
-            self.qta_platform = self._save_and_replace(self.QPA_PLATFORM_NAME, "offscreen")
+            self.qta_platform = self._save_and_replace(self.QPA_PLATFORM_NAME,
+                                                       QT_PLATFORM_OFFSCREEN_PLUGIN)
         if self._qta_path:
             self.qta_path = self._save_and_replace(
                 self.QPA_PATH_NAME,

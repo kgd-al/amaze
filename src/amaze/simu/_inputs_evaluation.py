@@ -9,7 +9,7 @@ import pandas as pd
 from PyQt5.QtCore import Qt, QRectF, QPointF
 from PyQt5.QtGui import QColor, QPainter, QImage
 
-from amaze.misc.resources import SignType, arrow_path, Sign, np_images, Signs
+from ..misc.resources import SignType, arrow_path, Sign, np_images, Signs
 from .controllers.base import BaseController
 from .maze import Maze
 from .types import Action

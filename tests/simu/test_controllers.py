@@ -20,6 +20,7 @@ from amaze.simu.controllers import (
 from amaze.simu.controllers.control import save
 from amaze.simu.pos import Vec
 from amaze.simu.types import OutputType
+from amaze.misc.plotters.tabular import plot_inputs_values
 
 TABULAR_ARGS = dict(actions=TabularController.discrete_actions, epsilon=0.1, seed=0)
 
@@ -119,7 +120,7 @@ def test_controllers_fast(maze_str, robot, c_type: Type[BaseController], c_args:
     "c_type, c_args, robot",
     [param for param in CONTROLLERS if not param.values[0].savable],
 )
-def test_controller_not_implemented(c_type, c_args, robot, tmp_path):
+def test_controllers_not_implemented(c_type, c_args, robot, tmp_path):
     robot = Robot.BuildData.from_string(robot)
     c_args = dict(**c_args)
     if c_type.cheats:
@@ -128,6 +129,10 @@ def test_controller_not_implemented(c_type, c_args, robot, tmp_path):
     controller = c_type(**c_args)
 
     _unsavable(controller, tmp_path)
+
+
+def test_controllers_error():
+    pytest.raises(ValueError, RandomController, None)
 
 
 def test_controller_cheater():
@@ -182,6 +187,9 @@ def test_controller_tabular(maze_str, learner, tmp_path):
     controller_roundabout = TabularController.load(path)
 
     TabularController.assert_equal(controller, controller_roundabout)
+
+    app = qt_application()
+    plot_inputs_values(controller, tmp_path.joinpath("input_values.png"))
 
 
 @pytest.mark.parametrize("robot", "DHC")

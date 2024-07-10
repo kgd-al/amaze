@@ -11,15 +11,15 @@ from gymnasium import spaces, Env
 from stable_baselines3.common.env_checker import check_env as _check_env
 from stable_baselines3.common.env_util import make_vec_env
 
-from amaze import qt_application
-from amaze.extensions.sb3 import CV2QTGuard
-from amaze.extensions.sb3.utils import IOMapper
-from amaze.misc.resources import qimage_to_numpy
-from amaze.simu.maze import Maze
-from amaze.simu.robot import Robot
-from amaze.simu.simulation import Simulation
-from amaze.simu.types import InputType, OutputType
-from amaze.visu.widgets.maze import MazeWidget
+from ...misc.utils import qt_application
+from .guard import CV2QTGuard
+from .utils import IOMapper
+from ...misc.resources import qimage_to_numpy
+from ...simu.maze import Maze
+from ...simu.robot import Robot
+from ...simu.simulation import Simulation
+from ...simu.types import InputType, OutputType
+from ...visu.widgets.maze import MazeWidget
 
 logger = logging.getLogger(__name__)
 

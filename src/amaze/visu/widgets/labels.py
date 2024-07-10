@@ -1,3 +1,4 @@
+from abc import abstractmethod
 from logging import getLogger
 
 import numpy as np
@@ -16,6 +17,7 @@ class TinyLabel(QLabel):
     def hasHeightForWidth(self) -> bool:
         return True
 
+    @abstractmethod
     def heightForWidth(self, w: int) -> int:
         return 0
 
@@ -93,6 +95,9 @@ class OutputsLabel(TinyLabel):
         self.update()
 
     def paintEvent(self, _):
+        if self.action is None:
+            return
+
         painter = QPainter(self)
         w, h = self.width(), self.height()
         s = min(w, h)
@@ -113,8 +118,7 @@ class OutputsLabel(TinyLabel):
                 (0, -1): (1, 2),
                 (0, 0): (1, 1),
             }
-            if self.action:
-                painter.fillRect(QRectF(*p[self.action], 1, 1), Qt.white)
+            painter.fillRect(QRectF(*p[self.action], 1, 1), Qt.white)
         else:
             painter.translate(0.5 * w, 0.5 * h)
             painter.scale(0.5 * s, -0.5 * s)
@@ -122,8 +126,7 @@ class OutputsLabel(TinyLabel):
             painter.drawLine(0, -1, 0, 1)
             pen.setColor(Qt.red)
             painter.setPen(pen)
-            if self.action:
-                painter.drawLine(QPointF(0, 0), QPointF(*self.action))
+            painter.drawLine(QPointF(0, 0), QPointF(*self.action))
 
 
 class ValuesLabel(TinyLabel):
@@ -173,16 +176,11 @@ class ValuesLabel(TinyLabel):
 
 
 class ElidedLabel(QLabel):
-    def __init__(self, mode=Qt.ElideNone, *args, **kwargs):
+    def __init__(self, *args, mode=Qt.ElideNone, **kwargs):
         super().__init__(*args, **kwargs)
         self._elide_mode = mode
         self._cachedText = ""
         self._cachedElidedText = ""
-
-    def set_elide_mode(self, mode: Qt.TextElideMode):
-        self._elide_mode = mode
-        self._cachedText = ""
-        self.update()
 
     def resizeEvent(self, e: QtGui.QResizeEvent):
         super().resizeEvent(e)
