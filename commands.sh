@@ -88,7 +88,7 @@ cmd_pytest(){  # Perform the test suite (small scale)
 
   coverage run --branch --data-file=$coverage_tmp --rcfile=$coverage_config_tmp \
     --omit "setup.py,tests/conftest.py,examples/*.py,tests/test_examples.py" -m \
-    pytest --durations=10 --basetemp=$out -x -ra "$@" || exit 2
+    pytest --durations=10 --basetemp=$out "$@" || exit 2
 
   echo
   mkdir -p $cout # pytest will have cleared everything. Build it back
