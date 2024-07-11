@@ -28,7 +28,8 @@ class Options:
         )
         parser.add_argument(
             "--file",
-            help="Read provided panda dataframe and outputs" " with added stats columns",
+            help="Read provided panda dataframe and outputs"
+            " with added stats columns",
         )
         parser.add_argument("--out", help="Store formatted table into target file")
 

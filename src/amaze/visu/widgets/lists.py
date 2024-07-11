@@ -1,10 +1,9 @@
 from typing import Optional
 
-from PyQt5.QtCore import Qt, QSize, pyqtSignal
+from PyQt5.QtCore import pyqtSignal
 from PyQt5.QtGui import QIcon
 from PyQt5.QtWidgets import (
     QSizePolicy,
-    QListWidget,
     QWidget,
     QVBoxLayout,
     QHBoxLayout,
@@ -14,10 +13,9 @@ from PyQt5.QtWidgets import (
     QLayout,
 )
 
+from .combobox import ZoomingComboBox
 from ...misc import resources
 from ...misc.resources import Sign, Signs
-
-from .combobox import ZoomingComboBox
 
 
 class SignList(QWidget):

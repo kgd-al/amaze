@@ -32,8 +32,9 @@ class CV2QTGuard:
 
     def __enter__(self):
         if self._qta_platform:
-            self.qta_platform = self._save_and_replace(self.QPA_PLATFORM_NAME,
-                                                       QT_PLATFORM_OFFSCREEN_PLUGIN)
+            self.qta_platform = self._save_and_replace(
+                self.QPA_PLATFORM_NAME, QT_PLATFORM_OFFSCREEN_PLUGIN
+            )
         if self._qta_path:
             self.qta_path = self._save_and_replace(
                 self.QPA_PATH_NAME,

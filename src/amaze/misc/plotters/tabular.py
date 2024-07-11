@@ -7,9 +7,9 @@ from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QImage, QPainter
 from PyQt5.QtWidgets import QWidget, QHBoxLayout
 
-from amaze.simu.controllers.tabular import TabularController
-from amaze.simu.types import InputType
-from amaze.visu.widgets.labels import InputsLabel, ValuesLabel
+from ...simu.controllers.tabular import TabularController
+from ...simu.types import InputType
+from ...visu.widgets.labels import InputsLabel, ValuesLabel
 
 logger = logging.getLogger(__name__)
 

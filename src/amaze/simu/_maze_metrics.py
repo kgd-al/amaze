@@ -163,7 +163,12 @@ def __mutual_information(maze: Maze):
     TRUTH = {s.value: v for signs, v in [(c, True), (t, False)] for s in signs}
     X = set(TRUTH.keys())
     Y = set(TRUTH.values())
-    P_XY = {(x.value, y): y == v for signs, v in [(c, True), (t, False)] for x in signs for y in Y}
+    P_XY = {
+        (x.value, y): y == v
+        for signs, v in [(c, True), (t, False)]
+        for x in signs
+        for y in Y
+    }
     P_X = 1 / len(X)
     P_Y = {y: 0 for y in Y}
 

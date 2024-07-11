@@ -106,7 +106,9 @@ def main():
             path = base_path.joinpath(f"{train}_{i:0{m_id_digits}d}_{name}.png")
             MazeWidget.static_render_to_file(maze, path, size=256)
 
-            complexity = Simulation.compute_complexity(maze, InputType.DISCRETE, 15)["entropy"]
+            complexity = Simulation.compute_complexity(maze, InputType.DISCRETE, 15)[
+                "entropy"
+            ]
             complexity = " ".join(f"{c:.2}" for c in complexity.values())
             line = f"{train} {i} {maze.to_string()} {complexity}"
             print(line)

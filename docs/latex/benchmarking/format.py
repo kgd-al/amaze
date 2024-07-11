@@ -45,9 +45,10 @@ else:
     group_keys = "Family"
     sort_keys = ("Time", "median")
 gb = df.groupby(group_keys)
-table = gb.agg({"Time": ['min', 'max', 'median', 'mean', 'std'], "Args": ["max"]})
+table = gb.agg({"Time": ['min', 'max', 'median', 'mean', 'std']})
 table["N"] = gb.count()["Time"]
 table.insert(0, "N", table.pop("N"))
+print(table)
 table.sort_values(sort_keys, axis="rows", inplace=True)
 print(table)
 
@@ -65,7 +66,7 @@ if detailed:
         _key("AMaze", "Discrete"): ["Discrete", "Discrete", "Extensive"],
         _key("AMaze", "Hybrid"): ["Image", "Discrete", "Extensive"],
         _key("AMaze", "Continuous"): ["Continuous", "Continuous", "Extensive"],
-        _key("Procgen", "Procgen"): ["Image", "Discrete", "Modes"],
+        _key("ProcGen", "ProcGen"): ["Image", "Discrete", "Modes"],
     })
 else:
     manual_data.update({

@@ -73,6 +73,10 @@ docs = [
   "furo"                      # Style
 ]
 
+dev = [
+  "amaze-benchmarker[full,tests,docs]"
+]
+
 [tool.pytest.ini_options]
 minversion = "6.0"
 addopts = ["-ra", "--showlocals", "--strict-markers", "--strict-config"]

@@ -8,7 +8,6 @@ from pathlib import Path
 from typing import Optional, Union
 
 try:
-    import PIL
     from PIL import Image as PILImage
 
     logging.getLogger("PIL.PngImagePlugin").propagate = False
@@ -106,9 +105,9 @@ class MainWindow(QWidget):
             self.playing = False
             self.speed = 1
 
-            self.timer_dt = (args.dt
-                             if args and args.dt is not None and args.dt >= 0
-                             else 0.1)
+            self.timer_dt = (
+                args.dt if args and args.dt is not None and args.dt >= 0 else 0.1
+            )
 
             self.timer = QTimer()
 
@@ -204,7 +203,11 @@ class MainWindow(QWidget):
 
         self.maze_w.render_to_file(str(folder.joinpath("maze.png")))
         self.visu["img_inputs"].grab().save(
-            str(folder.joinpath(f"inputs_{self.simulation.data.inputs.name.lower()}.png"))
+            str(
+                folder.joinpath(
+                    f"inputs_{self.simulation.data.inputs.name.lower()}.png"
+                )
+            )
         )
 
     def plot_current_trajectory(
@@ -263,7 +266,9 @@ class MainWindow(QWidget):
             self.simulation.data.inputs,
             self.simulation.data.vision,
         )
-        s_str = ", ".join([f"{v:.2g}" for v in maze_metrics[MazeMetrics.SURPRISINGNESS].values()])
+        s_str = ", ".join(
+            [f"{v:.2g}" for v in maze_metrics[MazeMetrics.SURPRISINGNESS].values()]
+        )
         d_str = f"{maze_metrics[MazeMetrics.DECEPTIVENESS]}"
         for m, v in [
             (MazeMetrics.SURPRISINGNESS, f"{{{s_str}}}"),
@@ -391,9 +396,13 @@ class MainWindow(QWidget):
             def lbl(k):
                 return self.visu["img_" + k]
 
-            lbl("inputs").set_inputs(self.simulation.observations, self.simulation.data.inputs)
+            lbl("inputs").set_inputs(
+                self.simulation.observations, self.simulation.data.inputs
+            )
             if self.controller is not None:
-                lbl("outputs").set_outputs(self.next_action, self.simulation.data.outputs)
+                lbl("outputs").set_outputs(
+                    self.next_action, self.simulation.data.outputs
+                )
             lbl("values").set_values(self.controller, self.simulation.observations)
 
     # =========================================================================
@@ -403,7 +412,9 @@ class MainWindow(QWidget):
     def _generate_maze(self):
         maze = Maze.generate(self.maze_data())
         stats = maze.stats()
-        self.stats["m_size"].setText(f"{stats['size']} ({maze.width * maze.height} cells)")
+        self.stats["m_size"].setText(
+            f"{stats['size']} ({maze.width * maze.height} cells)"
+        )
         self.stats["m_path"].setText(str(stats["path"]))
         self.stats["m_intersections"].setText(str(stats["intersections"]))
         for t in [SignType.LURE, SignType.TRAP]:
@@ -420,11 +431,20 @@ class MainWindow(QWidget):
         return enum[self._combobox_value(name)]
 
     def maze_data(self):
-        def _sbv(name): return self.config[name].value()
-        def _cbv(name): return self._combobox_value(name)
-        def _cbb(name): return self.config[name].isChecked()
-        def _sign(name): return self.config[name].signs()
-        def _on(name): return _cbb("with_" + name + "s")
+        def _sbv(name):
+            return self.config[name].value()
+
+        def _cbv(name):
+            return self._combobox_value(name)
+
+        def _cbb(name):
+            return self.config[name].isChecked()
+
+        def _sign(name):
+            return self.config[name].signs()
+
+        def _on(name):
+            return _cbb("with_" + name + "s")
 
         return Maze.BuildData(
             width=_sbv("width"),
@@ -441,8 +461,11 @@ class MainWindow(QWidget):
         )
 
     def _robot_data(self):
-        def _sbv(name): return self.config[name].value()
-        def _ecbv(name, enum): return self._enum_value(name, enum)
+        def _sbv(name):
+            return self.config[name].value()
+
+        def _ecbv(name, enum):
+            return self._enum_value(name, enum)
 
         return Robot.BuildData(
             vision=_sbv("vision"),
@@ -450,7 +473,9 @@ class MainWindow(QWidget):
             outputs=_ecbv("outputs", OutputType),
         )
 
-    def _generate_controller(self, new_value=None, open_dialog=False):  # pragma: no cover
+    def _generate_controller(
+        self, new_value=None, open_dialog=False
+    ):  # pragma: no cover
         c: BaseController = getattr(self, "controller", None)
         if c and new_value is None and not open_dialog:
             return
@@ -714,7 +739,9 @@ class MainWindow(QWidget):
         row("Outputs", cb)
 
         cb = widget(QComboBox, "control")
-        cb.addItems([v.lower() for v in ["Cheater", "Random", "Keyboard", "Autonomous"]])
+        cb.addItems(
+            [v.lower() for v in ["Cheater", "Random", "Keyboard", "Autonomous"]]
+        )
         row("Control", cb)
 
         return layout
@@ -846,9 +873,9 @@ class MainWindow(QWidget):
         save: QAbstractButton = self.buttons["save"]
         save.clicked.connect(self.save)
 
-        connect("c_load",
-                lambda: self._generate_controller("", open_dialog=True))  # pragma: no cover
-
+        connect(
+            "c_load", lambda: self._generate_controller("", open_dialog=True)
+        )  # pragma: no cover
 
     # =========================================================================
     # == Persistent storage
@@ -916,7 +943,9 @@ class MainWindow(QWidget):
 
             config.beginGroup("sections")
             for k in self.sections:
-                self.sections[k].set_collapsed(bool(int(config.value(k.value.lower(), False))))
+                self.sections[k].set_collapsed(
+                    bool(int(config.value(k.value.lower(), False)))
+                )
             config.endGroup()
 
         else:
@@ -960,7 +989,8 @@ class MainWindow(QWidget):
     # =========================================================================
 
     def _init_from_maze_build_data(self, data: Maze.BuildData):
-        def val(k): return getattr(data, k)
+        def val(k):
+            return getattr(data, k)
 
         def _set(f, *args, **kwargs):
             assert isinstance(f.__self__, QObject)

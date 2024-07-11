@@ -69,14 +69,20 @@ class Robot:
             bd = cls()
 
             if robot[0] not in ["D", "C", "H"]:
-                raise TypeError(f"Invalid token[0]: {robot[0]} should be 'D'," f" 'C' or 'H'")
+                raise TypeError(
+                    f"Invalid token[0]: {robot[0]} should be 'D'," f" 'C' or 'H'"
+                )
 
             if len(robot) > 1 and robot[1].isalpha() and robot[1] not in ["D", "C"]:
-                raise TypeError(f"Invalid token[1]: {robot[1]} should be 'D'" f" or 'C'")
+                raise TypeError(
+                    f"Invalid token[1]: {robot[1]} should be 'D'" f" or 'C'"
+                )
 
             ix = 1 + (len(robot) > 1 and robot[1].isalpha())
             if any(not c.isdigit() for c in robot[ix:]):
-                raise TypeError(f"Invalid token[ix:]: {robot[ix:]} should be" f" a digit")
+                raise TypeError(
+                    f"Invalid token[ix:]: {robot[ix:]} should be" f" a digit"
+                )
 
             io = robot[0:ix]
             if len(io) == 1:
@@ -88,7 +94,10 @@ class Robot:
             else:
                 bd.inputs = cls.__string_to_input[io[0]]
                 bd.outputs = cls.__string_to_output[io[1]]
-                if bd.inputs == InputType.DISCRETE and bd.outputs == OutputType.CONTINUOUS:
+                if (
+                    bd.inputs == InputType.DISCRETE
+                    and bd.outputs == OutputType.CONTINUOUS
+                ):
                     raise ValueError(
                         "Incompatible hybrid mode. Agent cannot"
                         " have discrete inputs and continuous"
@@ -109,7 +118,9 @@ class Robot:
                 return bd
 
         @classmethod
-        def from_controller(cls, controller: "BaseController") -> "Robot.BuildData":  # noqa: F821
+        def from_controller(
+            cls, controller: "BaseController"  # noqa: F821
+        ) -> "Robot.BuildData":
             """Create a robot build data from an existing controller"""
 
             bd = cls()
@@ -127,7 +138,10 @@ class Robot:
         def to_string(self):
             """Generates a string for the input/output types and, if relevant,
             vision size"""
-            s = self.__inputs_to_string[self.inputs] + self.__outputs_to_string[self.outputs]
+            s = (
+                self.__inputs_to_string[self.inputs]
+                + self.__outputs_to_string[self.outputs]
+            )
             if self.inputs is InputType.CONTINUOUS:
                 s += str(self.vision)
             return s

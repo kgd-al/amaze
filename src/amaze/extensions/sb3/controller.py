@@ -53,7 +53,11 @@ def wrapped_sb3_model(model_type: Type[BaseAlgorithm]):
             # print("[kgd-debug] SB3 model setup")
             input_type = _i_types_mapping[len(self.observation_space.shape)]
             output_type = _o_types_mapping[self.action_space.__class__]
-            vision = None if input_type is InputType.DISCRETE else self.observation_space.shape[1]
+            vision = (
+                None
+                if input_type is InputType.DISCRETE
+                else self.observation_space.shape[1]
+            )
             deduced_robot_data = Robot.BuildData(input_type, output_type, vision)
             if self.robot_data != deduced_robot_data:
                 raise ValueError(
@@ -74,7 +78,9 @@ def wrapped_sb3_model(model_type: Type[BaseAlgorithm]):
 
         def __call__(self, inputs: State) -> Vec:
             return self._mapper.map_action(
-                self.policy.predict(self._mapper.map_observation(inputs), deterministic=True)[0]
+                self.policy.predict(
+                    self._mapper.map_observation(inputs), deterministic=True
+                )[0]
             )
 
         def predict(
@@ -126,7 +132,9 @@ def wrapped_sb3_model(model_type: Type[BaseAlgorithm]):
             return True
 
         @classmethod
-        def _load_from_archive(cls, archive: ZipFile, robot: Robot.BuildData, *_args, **_kwargs):
+        def _load_from_archive(
+            cls, archive: ZipFile, robot: Robot.BuildData, *_args, **_kwargs
+        ):
             """Loads the SB3 specific contents from the archive"""
             buffer = io.BytesIO(archive.read("sb3.zip"))
             loaded_model = cls._model_type.load(buffer, *_args, **_kwargs)

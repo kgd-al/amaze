@@ -57,7 +57,8 @@ from ...simu.simulation import Simulation
 #
 #     dark = config.get("dark", False)
 #     fill = functions["background"](dark)
-#     img, painter = functions["image_painter"](width + 2, height + 2, fill, img_format=img_format)
+#     img, painter = functions["image_painter"](width + 2, height + 2, fill,
+#                                               img_format=img_format)
 #
 #     if duplicates:
 #         # Reserve 1/5 of the width
@@ -300,9 +301,10 @@ def _plot_trajectory_value(
     # cb_height = int(cb_r * self.height())
     cb_margin = 0.1 * cb_width
 
-    dark = config.get("dark", False)
     fill = config["background"]
-    img, painter = functions["image_painter"](width + 2, height + 2, fill, img_format=img_format)
+    img, painter = functions["image_painter"](
+        width + 2, height + 2, fill, img_format=img_format
+    )
 
     x_offset = 0
     if needs_overlay:
@@ -313,7 +315,8 @@ def _plot_trajectory_value(
         y_offset = 0.5 * (height / (1 - cb_r) - height)
         painter.translate(x_offset, y_offset)
 
-    if square and maze.width != maze.height:
+    force_square = square and maze.width != maze.height
+    if force_square:
         painter.save()
         m_x_offset, m_y_offset = 0, 0
         if maze.start[0] == 0 and (dx := maze.height - maze.width) > 0:
@@ -363,7 +366,9 @@ def _plot_trajectory_value(
             return Qt.green
 
     assert not cycle or len(values) == cycle, f"{len(values)} != {cycle}"
-    assert cycle or len(values) == len(trajectory), f"{len(values)} != {len(trajectory)}"
+    assert cycle or len(values) == len(
+        trajectory
+    ), f"{len(values)} != {len(trajectory)}"
 
     _trajectory = []
     for (x, y, i, j, _), cr in zip(trajectory.itertuples(index=False), values):
@@ -399,7 +404,7 @@ def _plot_trajectory_value(
         painter.fillRect(QRectF(0.4 * s, -0.5 * s + 1, 0.1 * s, s - 2), Qt.red)
         painter.restore()
 
-        if square and maze.width != maze.height:
+        if force_square:
             painter.restore()
 
         painter.restore()  # to before the space saved for the color bar
@@ -421,6 +426,9 @@ def _plot_trajectory_value(
                 Qt.AlignCenter,
                 f"First cycle" f" ({100 * cycle / len(trajectory):.2g}%)",
             )
+
+    elif force_square:
+        painter.restore()
 
     if needs_color_bar:
         # w, h = maze.width, maze.height

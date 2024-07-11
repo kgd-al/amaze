@@ -15,13 +15,19 @@ ROBOT = Robot.BuildData(inputs=InputType.DISCRETE, outputs=OutputType.DISCRETE)
 def train():
     start_time = time.time()
 
-    maze_data = Maze.BuildData(width=20, height=20, seed=16, unicursive=True, p_lure=0, p_trap=0)
+    maze_data = Maze.BuildData(
+        width=20, height=20, seed=16, unicursive=True, p_lure=0, p_trap=0
+    )
     print("Training with maze:", maze_data.to_string())
-    train_mazes = [Maze.generate(maze_data.where(start=start)) for start in StartLocation]
+    train_mazes = [
+        Maze.generate(maze_data.where(start=start)) for start in StartLocation
+    ]
 
     maze_data = maze_data.where(seed=14)
     print("Evaluating with maze:", maze_data.to_string())
-    eval_mazes = [Maze.generate(maze_data.where(start=start)) for start in StartLocation]
+    eval_mazes = [
+        Maze.generate(maze_data.where(start=start)) for start in StartLocation
+    ]
 
     policy = TabularController(robot_data=ROBOT, epsilon=0.1, seed=0)
     simulation = Simulation(train_mazes[0], ROBOT)
@@ -31,7 +37,8 @@ def train():
     n = 150
     _w = math.ceil(math.log10(n))
     _log_format = (
-        f"\r[{{:6.2f}}%] Episode {{:{_w}d}}; train: {{:.2f}};" f" eval: {{:.2f}}; optimal: {{:.2f}}"
+        f"\r[{{:6.2f}}%] Episode {{:{_w}d}}; train: {{:.2f}};"
+        f" eval: {{:.2f}}; optimal: {{:.2f}}"
     )
 
     print()
@@ -86,7 +93,9 @@ def q_train(simulation, policy):
         reward = simulation.step(action)
         state_ = simulation.observations.copy()
         action_ = policy(state)
-        policy.q_learning(state, action, reward, state_, action_, alpha=ALPHA, gamma=GAMMA)
+        policy.q_learning(
+            state, action, reward, state_, action_, alpha=ALPHA, gamma=GAMMA
+        )
         state, action = state_, action_
 
     return simulation.robot.reward
@@ -154,7 +163,9 @@ def main(is_test=False):
 
     policy = train()
 
-    policy_file = policy.save(FOLDER.joinpath("policy"), dict(comment="Can solve unicursive mazes"))
+    policy_file = policy.save(
+        FOLDER.joinpath("policy"), dict(comment="Can solve unicursive mazes")
+    )
     print("Saved optimized policy to", policy_file)
 
     evaluate_generalization(policy)

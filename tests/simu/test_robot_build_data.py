@@ -83,8 +83,16 @@ def test_robot_build_data_from_string(s):
     _test_build_data(bd)
 
     override = Robot.BuildData(
-        (InputType.DISCRETE if bd.inputs is InputType.CONTINUOUS else InputType.CONTINUOUS),
-        (OutputType.DISCRETE if bd.outputs is OutputType.CONTINUOUS else OutputType.CONTINUOUS),
+        (
+            InputType.DISCRETE
+            if bd.inputs is InputType.CONTINUOUS
+            else InputType.CONTINUOUS
+        ),
+        (
+            OutputType.DISCRETE
+            if bd.outputs is OutputType.CONTINUOUS
+            else OutputType.CONTINUOUS
+        ),
         None if bd.vision is not None else 11,
     )
     assert Robot.BuildData.from_string(s, override) == override

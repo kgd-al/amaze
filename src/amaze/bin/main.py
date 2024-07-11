@@ -119,13 +119,19 @@ class Options:
 
     @staticmethod
     def populate(parser: argparse.ArgumentParser):
-        group = parser.add_argument_group("Maze", "Initial settings for maze generation")
+        group = parser.add_argument_group(
+            "Maze", "Initial settings for maze generation"
+        )
         Maze.BuildData.populate_argparser(group)
 
-        group = parser.add_argument_group("Robot", "Initial settings for robot configuration")
+        group = parser.add_argument_group(
+            "Robot", "Initial settings for robot configuration"
+        )
         Robot.BuildData.populate_argparser(group)
 
-        parser.add_argument("--maze", dest="maze", help="Use provided string-format maze")
+        parser.add_argument(
+            "--maze", dest="maze", help="Use provided string-format maze"
+        )
 
         parser.add_argument(
             "--robot",
@@ -264,7 +270,8 @@ class Options:
         )
 
         parser.add_argument(
-            "-v", "--verbose",
+            "-v",
+            "--verbose",
             action="count",
             dest="verbose",
             help="Verbosity level of the program",
@@ -305,17 +312,20 @@ def __make_maze(args):
     return Maze.generate(maze_bd)
 
 
-def __make_controller(args, robot: Optional[Robot.BuildData] = None,
-                      simulation: Optional[Simulation] = None):
+def __make_controller(
+    args,
+    robot: Optional[Robot.BuildData] = None,
+    simulation: Optional[Simulation] = None,
+):
     if not args.controller:
         return None
 
     _robot = robot or Robot.BuildData.from_argparse(args, set_defaults=True)
 
     if args.controller in builtin_controllers():
-        controller = controller_factory(args.controller,
-                                        dict(robot_data=_robot,
-                                             simulation=simulation))
+        controller = controller_factory(
+            args.controller, dict(robot_data=_robot, simulation=simulation)
+        )
     else:
         controller = load(args.controller)
         if robot:
@@ -389,14 +399,14 @@ def main(sys_args: Optional[Sequence[str] | str] = None):
         controller = __make_controller(args)
         if controller is None:
             raise ValueError("Cannot evaluate inputs without a controller")
-        res = Simulation.inputs_evaluation(args.eval_inputs, controller, __make_maze(args).signs)
+        res = Simulation.inputs_evaluation(
+            args.eval_inputs, controller, __make_maze(args).signs
+        )
         pprint.pprint(res)
 
     if args.render:
         maze = __make_maze(args)
-        if MazeWidget.static_render_to_file(
-            maze, args.render, width=args.width
-        ):
+        if MazeWidget.static_render_to_file(maze, args.render, width=args.width):
             print(f"Saved {maze.to_string()}" f" to {args.render}")
 
     if not window:
@@ -420,7 +430,9 @@ def main(sys_args: Optional[Sequence[str] | str] = None):
             while not simulation.done():
                 simulation.step(controller(simulation.observations))
             reward = simulation.robot.reward
-            print(f"Cumulative reward: {reward} " f"{simulation.infos()['pretty_reward']}")
+            print(
+                f"Cumulative reward: {reward} " f"{simulation.infos()['pretty_reward']}"
+            )
             if args.trajectory:
                 MazeWidget.plot_trajectory(
                     simulation=simulation,

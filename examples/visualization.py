@@ -45,7 +45,9 @@ MazeWidget.plot_trajectory(
     size=WIDTH,
     path=trajectory_img,
 )
-print(f"Plotted {agent_path}" f" in {simulation.maze.to_string()}" f" to {trajectory_img}")
+print(
+    f"Plotted {agent_path}" f" in {simulation.maze.to_string()}" f" to {trajectory_img}"
+)
 
 # Invoke the main from python (with arguments)
 amaze_main(

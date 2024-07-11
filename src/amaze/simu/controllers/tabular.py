@@ -141,7 +141,9 @@ class TabularController(BaseController):
                 return float(v)
 
         def parse_tuple(s):
-            return tuple([parse_val(v) for v in s.replace("(", "").replace(")", "").split(",")])
+            return tuple(
+                [parse_val(v) for v in s.replace("(", "").replace(")", "").split(",")]
+            )
 
         def parse_dict(d):
             return {parse_tuple(k): list(v.values()) for k, v in d.items()}
@@ -185,7 +187,9 @@ class TabularController(BaseController):
 
     @staticmethod
     def assert_equal(lhs: "TabularController", rhs: "TabularController"):
-        for (lhs_k, lhs_v), (rhs_k, rhs_v) in zip(lhs.__dict__.items(), rhs.__dict__.items()):
+        for (lhs_k, lhs_v), (rhs_k, rhs_v) in zip(
+            lhs.__dict__.items(), rhs.__dict__.items()
+        ):
             assert lhs_k == rhs_k
             if lhs_k == "_rng":
                 continue

@@ -1,30 +1,55 @@
-import pprint
+import sys
 from typing import Union
 
 import pytest
 from PyQt5.QtCore import QEvent, Qt, QTimer, QPoint
 from PyQt5.QtGui import QKeyEvent, QHelpEvent
 from PyQt5.QtTest import QTest
-from PyQt5.QtWidgets import QCheckBox, QComboBox, QDoubleSpinBox, QSpinBox, QGroupBox, QLabel
+from PyQt5.QtWidgets import (
+    QCheckBox,
+    QComboBox,
+    QDoubleSpinBox,
+    QSpinBox,
+    QGroupBox,
+    QLabel,
+)
 
-from amaze import qt_application, Maze, StartLocation, MazeWidget, Robot, Simulation, Sign, InputType, OutputType
+from amaze import (
+    qt_application,
+    Maze,
+    MazeWidget,
+    Robot,
+    Simulation,
+    Sign,
+    InputType,
+    OutputType,
+)
 from amaze.bin.main import Options
 from amaze.misc.utils import QtOffscreen, qt_offscreen
-from amaze.simu.controllers import CheaterController, TabularController, RandomController
+from amaze.simu.controllers import (
+    CheaterController,
+    RandomController,
+)
 from amaze.simu.pos import Pos, Vec
 from amaze.simu.types import State
 from amaze.visu import MainWindow
 from amaze.visu.widgets.combobox import ZoomingComboBox
-from amaze.visu.widgets.labels import InputsLabel, OutputsLabel, ValuesLabel, ElidedLabel
+from amaze.visu.widgets.labels import (
+    InputsLabel,
+    OutputsLabel,
+    ValuesLabel,
+    ElidedLabel,
+)
 from amaze.visu.widgets.lists import SignList
 
 QT_ACTIONS = [Qt.Key_Right, Qt.Key_Up, Qt.Key_Left, Qt.Key_Down]
 
 
 class TimedOffscreenApplication:
-    def __init__(self, duration=1):
+    def __init__(self, capfd, duration=1):
         self.app, self.timer = None, None
         self.duration = round(1000 * duration)
+        self.capfd = capfd
         self.error = False
 
     def __enter__(self):
@@ -35,7 +60,20 @@ class TimedOffscreenApplication:
     def __exit__(self, type, value, traceback):
         qt_offscreen(False)
         if self.error:
-            raise self.TimeOutException(f"Application did not finish in {self.duration / 1000:g} seconds")
+            raise self.TimeOutException(
+                f"Application did not finish in {self.duration / 1000:g} seconds"
+            )
+
+        oe = self.capfd.readouterr()
+        err = oe.err
+        err = "\n".join(
+            f">  {e}"
+            for e in err.split("\n")
+            if not e.startswith("This plugin does not support") and e
+        )
+        if len(err) > 0:
+            print(oe.out)
+            raise AssertionError(f"Error output is not empty:\n{err}")
 
     class TimeOutException(Exception):
         pass
@@ -49,28 +87,37 @@ def _post_key_press(app, obj, key):
     app.postEvent(obj, QKeyEvent(QEvent.KeyPress, key, Qt.NoModifier))
 
 
-def test_timed_offscreen():
+def test_timed_offscreen(capfd):
     def _test():
-        with TimedOffscreenApplication(1) as app:
+        with TimedOffscreenApplication(capfd, 1) as app:
             app.exec()
+
     pytest.raises(TimedOffscreenApplication.TimeOutException, _test)
+
+    def _test():
+        with TimedOffscreenApplication(capfd, 1) as app:
+            print("Error message", file=sys.stderr)
+            QTimer.singleShot(100, app.quit)
+            app.exec()
+
+    pytest.raises(AssertionError, _test)
 
 
 def test_interface_create():
-    with QtOffscreen() as app:
+    with QtOffscreen():
         w = MainWindow(runnable=False)
         w.stop()
 
 
 def test_interface_default():
-    with QtOffscreen() as app:
+    with QtOffscreen():
         w = MainWindow()
         w.show()
         w.close()
 
 
 def test_interface_step():
-    with QtOffscreen() as app:
+    with QtOffscreen():
         args = Options()
         args.controller = "cheater"
         args.restore_config = False
@@ -86,8 +133,10 @@ def test_interface_step():
         MainWindow(args)
 
 
-def test_interface_robot_mode(tmp_path):
-    with TimedOffscreenApplication() as app:
+def test_interface_robot_mode(capfd, tmp_path):
+    with TimedOffscreenApplication(
+        capfd,
+    ) as app:
         args = Options()
         args.is_robot = True
         args.autoquit = True
@@ -101,12 +150,9 @@ def test_interface_robot_mode(tmp_path):
         assert 0 == app.exec()
 
 
-@pytest.mark.parametrize("maze", [
-    "M4_4x4_U",
-    "M0_C1_t.5_T.5"
-])
-def test_interface_run(maze, tmp_path):
-    with TimedOffscreenApplication(5) as app:
+@pytest.mark.parametrize("maze", ["M4_4x4_U", "M0_C1_t.5_T.5"])
+def test_interface_run(maze, capfd, tmp_path):
+    with TimedOffscreenApplication(capfd, 5) as app:
         args = Options()
         args.autoquit = True
         args.dt = 0
@@ -124,8 +170,8 @@ def test_interface_run(maze, tmp_path):
         w.save()
 
 
-def test_interface_buttons():
-    with TimedOffscreenApplication(5) as app:
+def test_interface_buttons(capfd):
+    with TimedOffscreenApplication(capfd, 5) as app:
         w = MainWindow()
         w.show()
 
@@ -133,14 +179,13 @@ def test_interface_buttons():
             cb.setCurrentIndex((cb.currentIndex() + 1) % cb.count())
 
         def _sb_next(sb: Union[QSpinBox, QDoubleSpinBox]):
-            value = sb.value() + .1 * (sb.maximum() - sb.minimum())
+            value = sb.value() + 0.1 * (sb.maximum() - sb.minimum())
             if isinstance(sb, QSpinBox):
                 value = round(value)
             sb.setValue(value % sb.maximum() + sb.minimum())
 
         def _gb_next(gb: QGroupBox):
-            QTest.mouseClick(gb, Qt.LeftButton, Qt.NoModifier,
-                             QPoint(10, 10))
+            QTest.mouseClick(gb, Qt.LeftButton, Qt.NoModifier, QPoint(10, 10))
 
         actions = {
             QCheckBox: "click",
@@ -165,7 +210,11 @@ def test_interface_buttons():
             print(key, widget)
             if key == "c_load":
                 QTimer.singleShot(
-                    100, lambda: QTest.keyEvent(QTest.Click, app.focusWidget(), Qt.Key_Escape))
+                    100,
+                    lambda: QTest.keyEvent(
+                        QTest.Click, app.focusWidget(), Qt.Key_Escape
+                    ),
+                )
             widget.click()
 
         print("== Sections ==")
@@ -178,8 +227,8 @@ def test_interface_buttons():
         assert 0 == app.exec()
 
 
-def test_interface_render(tmp_path):
-    with TimedOffscreenApplication() as app:
+def test_interface_render(capfd, tmp_path):
+    with TimedOffscreenApplication(capfd):
         args = Options()
         args.maze = Maze.BuildData(width=10, height=10, seed=10).to_string()
 
@@ -193,8 +242,8 @@ def test_interface_render(tmp_path):
 
 @pytest.mark.parametrize("maze_t", [str, Maze.BuildData, Maze])
 @pytest.mark.parametrize("robot", ["D", "H"])
-def test_maze_widget(maze_t, robot, tmp_path):
-    with TimedOffscreenApplication() as app:
+def test_maze_widget(maze_t, robot, capfd, tmp_path):
+    with TimedOffscreenApplication(capfd):
         robot = Robot(Robot.BuildData.from_string(robot))
 
         bd = Maze.BuildData(width=7, height=7, seed=7, unicursive=True)
@@ -210,26 +259,28 @@ def test_maze_widget(maze_t, robot, tmp_path):
         mw.set_maze(maze)
         print(mw.minimumSize())
 
-        robot.reset(Pos(.5, .5))
+        robot.reset(Pos(0.5, 0.5))
         mw.render_to_file(tmp_path.joinpath("maze.png"))
         mw.update_config(robot=False)
         mw.pretty_render().save(str(tmp_path.joinpath("maze_no_robot.png")))
 
 
-@pytest.mark.parametrize("maze", [
-    "M4_4x4_U", "M10_10x10_U", "M10_10x10", "M10_5x10", "M10_10x5"
-])
-def test_maze_widget_plot(maze, tmp_path):
-    with TimedOffscreenApplication(10) as app:
+@pytest.mark.parametrize(
+    "maze", ["M4_4x4_U", "M10_10x10_U", "M10_10x10", "M10_5x10", "M10_10x5"]
+)
+def test_maze_widget_plot(maze, capfd, tmp_path):
+    with TimedOffscreenApplication(capfd, 10):
         maze = Maze.generate(Maze.BuildData.from_string(maze))
         robot = Robot.BuildData.from_string("D")
 
         MazeWidget.static_render_to_file(maze, tmp_path.joinpath("maze.png"))
 
         simulation = Simulation(maze=maze, robot=robot, save_trajectory=True)
-        for c_type, arg in [(CheaterController, simulation),
-                             (RandomController, 0),
-                             (RandomController, 1)]:
+        for c_type, arg in [
+            (CheaterController, simulation),
+            (RandomController, 0),
+            (RandomController, 1),
+        ]:
             controller = c_type(robot, arg)
 
             # 0: 70
@@ -239,22 +290,25 @@ def test_maze_widget_plot(maze, tmp_path):
             simulation.reset()
             simulation.run(controller)
 
-            for name, args in [("base", dict()),
-                               ("square", dict(square=True)),
-                               ("lside", dict(side=-1)),
-                               ("rside", dict(side=+1)),
-                               ("verbose", dict(verbose=2)),
-                               ("traj", dict(trajectory=simulation.trajectory)),
-                               ]:
+            for name, args in [
+                ("base", dict()),
+                ("square", dict(square=True)),
+                ("lside", dict(side=-1)),
+                ("rside", dict(side=+1)),
+                ("verbose", dict(verbose=2)),
+                ("traj", dict(trajectory=simulation.trajectory)),
+            ]:
                 MazeWidget.plot_trajectory(
-                    simulation, 256,
+                    simulation,
+                    256,
                     path=tmp_path.joinpath(f"trajectory_{c_type.name}_{name}.png"),
-                    **args)
+                    **args,
+                )
 
 
 @pytest.mark.parametrize("controls", [True, False])
-def test_sign_list(controls):
-    with TimedOffscreenApplication() as app:
+def test_sign_list(controls, capfd):
+    with TimedOffscreenApplication(capfd) as app:
         sl = SignList(dict(foo=QLabel("bar")) if controls else None)
 
         n = sl.count()
@@ -262,7 +316,7 @@ def test_sign_list(controls):
         sl.button_add.click()
         assert sl.count() == n + 1
 
-        signs = [Sign(value=1), Sign(name="point", value=.5)]
+        signs = [Sign(value=1), Sign(name="point", value=0.5)]
         sl.set_signs(signs)
         assert signs == sl.signs()
 
@@ -282,8 +336,8 @@ def test_sign_list(controls):
         assert 0 == app.exec()
 
 
-def test_inputs_label():
-    with TimedOffscreenApplication(5) as app:
+def test_inputs_label(capfd):
+    with TimedOffscreenApplication(capfd, 5) as app:
         il = InputsLabel()
         il.show()
         print("InputsLabel at create, pixmap =", il.pixmap())
@@ -299,8 +353,8 @@ def test_inputs_label():
         assert 0 == app.exec()
 
 
-def test_outputs_label():
-    with TimedOffscreenApplication(5) as app:
+def test_outputs_label(capfd):
+    with TimedOffscreenApplication(capfd, 5) as app:
         ol = OutputsLabel()
         ol.show()
 
@@ -313,15 +367,14 @@ def test_outputs_label():
         assert 0 == app.exec()
 
 
-@pytest.mark.parametrize("values", [
-    [0, 0, 0, 0], [1, 0, 0, 0]
-])
-def test_values_label(values):
-    with TimedOffscreenApplication(5) as app:
+@pytest.mark.parametrize("values", [[0, 0, 0, 0], [1, 0, 0, 0]])
+def test_values_label(values, capfd):
+    with TimedOffscreenApplication(capfd, 5) as app:
         vl = ValuesLabel()
 
         class Decoy:
-            def values(self, *_): return values
+            def values(self, *_):
+                return values
 
         vl.set_values(Decoy(), State([0]))
 
@@ -331,8 +384,8 @@ def test_values_label(values):
 
 
 @pytest.mark.parametrize("elide", [Qt.ElideNone, Qt.ElideLeft])
-def test_elided_label(elide):
-    with TimedOffscreenApplication(5) as app:
+def test_elided_label(elide, capfd):
+    with TimedOffscreenApplication(capfd, 5) as app:
         el = ElidedLabel("Text", mode=elide)
         el.show()
 
@@ -346,8 +399,8 @@ def test_elided_label(elide):
         assert 0 == app.exec()
 
 
-def test_zooming_combobox():
-    with TimedOffscreenApplication(5) as app:
+def test_zooming_combobox(capfd):
+    with TimedOffscreenApplication(capfd, 5) as app:
         cb = ZoomingComboBox(value_getter=lambda: 1)
         cb.addItem("arrow")
 

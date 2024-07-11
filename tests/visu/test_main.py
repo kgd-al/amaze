@@ -5,8 +5,16 @@ from PyQt5.QtGui import QImage
 
 from _common import EventObserver
 from amaze import amaze_main as main, Maze
-from amaze.misc.utils import qt_offscreen, qt_application, has_qt_application, NoQtApplicationException, \
-    is_qt_offscreen, QT_PLATFORM_OFFSCREEN_PLUGIN, QtOffscreen
+from amaze.misc.utils import (
+    qt_offscreen,
+    qt_application,
+    has_qt_application,
+    NoQtApplicationException,
+    is_qt_offscreen,
+    QT_PLATFORM_OFFSCREEN_PLUGIN,
+    QtOffscreen,
+)
+from amaze.visu.viewer import HAS_PIL
 
 BUILTIN_CONTROLLER = "cheater"
 CONTROLLER_FILE = "examples/agents/unicursive_tabular.zip"
@@ -46,10 +54,9 @@ def test_app():
     assert app.platformName() == QT_PLATFORM_OFFSCREEN_PLUGIN
     del app
 
-    with QtOffscreen() as app:
+    with QtOffscreen():
         assert is_qt_offscreen()
     assert not is_qt_offscreen()
-    del app
 
 
 def test_main_help():  # argparse help exits instead of returning
@@ -60,13 +67,13 @@ def test_main_help():  # argparse help exits instead of returning
 
 def test_main_no_args():
     with QtOffscreen() as app:
-        eo = EventObserver(app)
+        _ = EventObserver(app)
         assert main([]) == 0
 
 
 def test_main_no_sys_args():
     with QtOffscreen() as app:
-        eo = EventObserver(app)
+        _ = EventObserver(app)
         argv = sys.argv
         sys.argv = ["Highjacked sys.argv"]
         assert main() == 0
@@ -75,7 +82,7 @@ def test_main_no_sys_args():
 
 def test_main_verbose(capfd):
     with QtOffscreen() as app:
-        eo = EventObserver(app)
+        _ = EventObserver(app)
         assert main(["-v"]) == 0
         assert "Executing with" in capfd.readouterr().out
 
@@ -95,7 +102,7 @@ def _test_render_file(path, count=1):
 def test_main_render(tmp_path):
     maze = tmp_path.joinpath("maze.png")
     assert 0 == _main(["--render", tmp_path])  # Fails
-    assert 0 == _main(["--render", maze])      # Succeeds
+    assert 0 == _main(["--render", maze])  # Succeeds
 
 
 def _test_trajectory_file(path, count=1):
@@ -126,9 +133,11 @@ def test_main_eval_inputs(tmp_path):
     _test_eval_inputs_files(tmp_path)
 
 
-def _test_movie_files(path, count=2):
+def _test_movie_files(path, count=1):
+    if HAS_PIL:  # pragma: no cover
+        count += 1
     assert len(list(path.parent.glob("*"))) == count
-    assert path.exists()
+    assert path.exists() == HAS_PIL
     i_folder = path.with_suffix("")
     assert i_folder.exists()
 
@@ -143,28 +152,44 @@ def _test_all(args, flags, tmp_path):
     maze_file = "maze.png"
     traj_file = "trajectory.png"
     files = 4
-    assert 0 == _main([
-            "--evaluate-inputs", tmp_path,
-            "--evaluate", tmp_path,
-            "--render", maze_file,
-            "--trajectory", traj_file,
-            "--dark"
-        ] + args,
-        file_controller=True, **flags)
+    assert 0 == _main(
+        [
+            "--evaluate-inputs",
+            tmp_path,
+            "--evaluate",
+            tmp_path,
+            "--render",
+            maze_file,
+            "--trajectory",
+            traj_file,
+            "--dark",
+        ]
+        + args,
+        file_controller=True,
+        **flags,
+    )
     _test_render_file(tmp_path.joinpath(maze_file), files)
     _test_trajectory_file(tmp_path.joinpath(traj_file), files)
     _test_eval_inputs_files(tmp_path, files)
 
 
-@pytest.mark.parametrize("args, flags", [
-    pytest.param([], dict(), id="base"),
-    pytest.param(["--maze", "M9_9x9_t1_T1"], dict(maze=False), id="maze"),
-    pytest.param(["--maze-seed", "9", "--maze-width", "10", "--maze-height", "11"],
-                 dict(maze=False), id="maze_argv"),
-    pytest.param(["--robot", "H"], dict(), id="robot"),
-    pytest.param(["--controller", "random"], dict(controller=False), id="controller"),
-    pytest.param(["--cell-width", "10"], dict(), id="cell-width"),
-])
+@pytest.mark.parametrize(
+    "args, flags",
+    [
+        pytest.param([], dict(), id="base"),
+        pytest.param(["--maze", "M9_9x9_t1_T1"], dict(maze=False), id="maze"),
+        pytest.param(
+            ["--maze-seed", "9", "--maze-width", "10", "--maze-height", "11"],
+            dict(maze=False),
+            id="maze_argv",
+        ),
+        pytest.param(["--robot", "H"], dict(), id="robot"),
+        pytest.param(
+            ["--controller", "random"], dict(controller=False), id="controller"
+        ),
+        pytest.param(["--cell-width", "10"], dict(), id="cell-width"),
+    ],
+)
 def test_main_eval_all(args, flags, tmp_path):
     _test_all(args, flags, tmp_path)
 

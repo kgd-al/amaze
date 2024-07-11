@@ -41,7 +41,9 @@ def generate_large_maze_data_sample(size: TestSize):
     )
 
     count = math.prod(len(d) for d in data.values())
-    counts = str(count) + " = " + " * ".join(f"{len(d):{len(k)}}" for k, d in data.items())
+    counts = (
+        str(count) + " = " + " * ".join(f"{len(d):{len(k)}}" for k, d in data.items())
+    )
     print()
     print("-" * len(counts))
     print(size.name, "scale mazes:", len(data), "fields")

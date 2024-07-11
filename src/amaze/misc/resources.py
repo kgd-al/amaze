@@ -40,7 +40,7 @@ NO_FILE_CACHE = "KGD_AMAZE_NOCACHE"
 
 
 def no_file_cache() -> bool:
-    """Returns whether resources file caching is disabled """
+    """Returns whether resources file caching is disabled"""
     return os.getenv(NO_FILE_CACHE, "False").lower() not in ["false"]
 
 
@@ -200,8 +200,10 @@ def clear_cache(verbose=False, files=True):
     if files:
         no_cache = no_file_cache()
         if no_cache:
-            logging.warning(f"File cache clearing requested but it is disabled by the"
-                            f" environment: {NO_FILE_CACHE}={no_cache}")
+            logging.warning(
+                f"File cache clearing requested but it is disabled by the"
+                f" environment: {NO_FILE_CACHE}={no_cache}"
+            )
         for k in _cache:
             file = _key_to_path(k)
             if file.exists():
@@ -285,7 +287,9 @@ def qt_images(signs: Signs, resolution: int) -> List[List[QImage]]:
     return images
 
 
-def np_images(signs: Signs, resolution: int, rgb_fill: int = 0) -> List[List[np.ndarray]]:
+def np_images(
+    signs: Signs, resolution: int, rgb_fill: int = 0
+) -> List[List[np.ndarray]]:
     """Returns images *in numpy format* (array) for all provided signs, with
     the requested resolution"""
 
@@ -327,7 +331,8 @@ def qimage_to_numpy(img: QImage) -> np.ndarray:
 
 def _key_to_path(key: DataKey) -> Path:
     return cached_resources_path().joinpath(
-        f"{key[0]}_{key[1]:.2}_{key[2]}.{resources_format()}")
+        f"{key[0]}_{key[1]:.2}_{key[2]}.{resources_format()}"
+    )
 
 
 def _key(sign: Sign, size: int):
@@ -420,7 +425,9 @@ def _process_custom_image(img: QImage, lightness: float, size: int):
     )
 
     if lightness != _DEFAULT_LIGHTNESS:
-        logging.warning("Specifying lightness for custom images is not yet" " supported.")
+        logging.warning(
+            "Specifying lightness for custom images is not yet" " supported."
+        )
     # depth = 4
     # for j in range(img.height()):
     #     scan = img.scanLine(j)
@@ -487,7 +494,9 @@ def __generator__point(lightness: float, size: int):
 
 def __generator__warning(lightness: float, size: int):
     img, painter = _image(size, lightness)
-    painter.drawPolygon(QPolygonF([QPointF(0.05, 0.05), QPointF(0.95, 0.5), QPointF(0.05, 0.95)]))
+    painter.drawPolygon(
+        QPolygonF([QPointF(0.05, 0.05), QPointF(0.95, 0.5), QPointF(0.05, 0.95)])
+    )
     painter.fillRect(QRectF(0.3, 0.45, 0.4, 0.1), __pen_color(lightness))
     path = QPainterPath()
     path.addEllipse(QRectF(0.15, 0.45, 0.1, 0.1))
@@ -523,4 +532,3 @@ cached_resources_path().mkdir(parents=True, exist_ok=True)
 # pprint.pprint(_names)
 # pprint.pprint(_custom_paths)
 # print("[kgd-debug] =====")
-

@@ -9,7 +9,9 @@ class CheaterController(BaseController):
 
     def __init__(self, robot_data: Robot.BuildData, simulation):
         if simulation is None and not hasattr(self, "simulation"):
-            raise ValueError("Cheater controller missing required 'simulation'" " parameter")
+            raise ValueError(
+                "Cheater controller missing required 'simulation'" " parameter"
+            )
         elif simulation is not None:
             self.simulation = simulation
 

@@ -9,11 +9,6 @@ import seaborn as sns
 
 from pathlib import Path
 
-from procgen.gym_registration import make_env as make_procgen_env, ENV_NAMES as PROCGEN_ENV_NAMES
-
-import amaze
-#from amaze.extensions.sb3.maze_env import MazeEnv
-
 from common import line
 
 
@@ -61,16 +56,19 @@ for worker in workers_list:
         worker.process(df, detailed)
     except Exception as e:
         print("Failed:", e)
-        raise e
+        #raise e
         errors += 1
 
 # ================================================================================================
 # == Write up
 # ================================================================================================
 
+line()
+print("==", "Dataframe:")
+
 df.to_csv(datafile)
 print(df)
-exit(42)
+#exit(42)
 
 if errors > 0:
     exit(1)

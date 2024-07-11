@@ -111,7 +111,11 @@ def __draw_image_input(details: InputDetails, visual: np.ndarray, action: Action
 
     w, h = visual.shape
     img = QImage(
-        (visual * 255).astype(np.uint8).repeat(scale, axis=0).repeat(scale, axis=1).data,
+        (visual * 255)
+        .astype(np.uint8)
+        .repeat(scale, axis=0)
+        .repeat(scale, axis=1)
+        .data,
         scale * w,
         scale * h,
         scale * w,
@@ -137,7 +141,9 @@ def __draw_inputs(
     summary_file: bool,
     summary_file_ratio,
 ):
-    i_type_list = {t: i for i, t in enumerate([None, SignType.LURE, SignType.CLUE, SignType.TRAP])}
+    i_type_list = {
+        t: i for i, t in enumerate([None, SignType.LURE, SignType.CLUE, SignType.TRAP])
+    }
 
     def sign_type(_i):
         return _s[1] if (_s := _i[3]) is not None else None
@@ -166,7 +172,9 @@ def __draw_inputs(
 
     margin = 4
     if summary_file:
-        big_image = QImage(cols * (size + margin), rows * (size + margin), QImage.Format_ARGB32)
+        big_image = QImage(
+            cols * (size + margin), rows * (size + margin), QImage.Format_ARGB32
+        )
         big_image.fill(Qt.transparent)
         painter = QPainter(big_image)
 
@@ -319,7 +327,10 @@ def inputs_evaluation(
     with_visuals = len(observations.shape) > 1
     if with_visuals:
         all_signs = sum(signs.values(), [])
-        images = {k: v for k, v in zip(all_signs, np_images(all_signs, observations.shape[0] - 2))}
+        images = {
+            k: v
+            for k, v in zip(all_signs, np_images(all_signs, observations.shape[0] - 2))
+        }
 
     def _maybe_enum(_v):
         return _v.name if _v else NO_VALUE

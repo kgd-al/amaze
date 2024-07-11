@@ -36,7 +36,9 @@ def test_vec_null():
     assert Pos.null().aligned() == Vec.null()
 
 
-@pytest.mark.parametrize("coords", [(x, y) for x, y in itertools.product(COORDS, COORDS)])
+@pytest.mark.parametrize(
+    "coords", [(x, y) for x, y in itertools.product(COORDS, COORDS)]
+)
 def test_vec(coords):
     p0 = Vec(*coords)
     print(p0)

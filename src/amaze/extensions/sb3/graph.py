@@ -126,7 +126,9 @@ def to_dot(policy):
         node_attr={"shape": "box"},
     )
 
-    pytorch_total_params = sum(p.numel() for p in policy.parameters() if p.requires_grad)
+    pytorch_total_params = sum(
+        p.numel() for p in policy.parameters() if p.requires_grad
+    )
 
     graph.node("obs", str(policy.observation_space))
 
@@ -151,14 +153,22 @@ def to_dot(policy):
                 __edge(graph, fe_g, v_g)
 
         else:
-            pi_fe_g = __to_dot(policy.pi_features_extractor, graph, "pi_features_extractor")
-            pi_mlp_g = __to_dot(policy.mlp_extractor.policy_net, graph, "pi_mlp_extractor")
+            pi_fe_g = __to_dot(
+                policy.pi_features_extractor, graph, "pi_features_extractor"
+            )
+            pi_mlp_g = __to_dot(
+                policy.mlp_extractor.policy_net, graph, "pi_mlp_extractor"
+            )
             __edge(graph, "obs", pi_fe_g)
             __edge(graph, pi_fe_g, pi_mlp_g)
             __edge(graph, pi_mlp_g, a_g)
 
-            vf_fe_g = __to_dot(policy.vf_features_extractor, graph, "vf_features_extractor")
-            vf_mlp_g = __to_dot(policy.mlp_extractor.value_net, graph, "vf_mlp_extractor")
+            vf_fe_g = __to_dot(
+                policy.vf_features_extractor, graph, "vf_features_extractor"
+            )
+            vf_mlp_g = __to_dot(
+                policy.mlp_extractor.value_net, graph, "vf_mlp_extractor"
+            )
             __edge(graph, "obs", vf_fe_g)
             __edge(graph, vf_fe_g, vf_mlp_g)
             __edge(graph, vf_mlp_g, v_g)
@@ -167,7 +177,8 @@ def to_dot(policy):
 
     graph.attr(
         "graph",
-        label=f"{policy.__class__.__name__}" f" ({pytorch_total_params} parameters)\n\n",
+        label=f"{policy.__class__.__name__}"
+        f" ({pytorch_total_params} parameters)\n\n",
         labelloc="t",
         labeljust="l",
     )

@@ -52,7 +52,9 @@ class BaseBuildData(ABC):
     def _is_legal_unset(cls, allow_unset, field):
         return allow_unset and isinstance(field, cls.Unset)
 
-    def _assert_field_type(self, field: str, allow_unset: bool, field_type=None, value_tester=None):
+    def _assert_field_type(
+        self, field: str, allow_unset: bool, field_type=None, value_tester=None
+    ):
         field_value = getattr(self, field)
         field_type = field_type or type(getattr(self.__class__, field, None))
 
@@ -77,7 +79,10 @@ class BaseBuildData(ABC):
         if value_tester is not None and isinstance(field_value, field_type):
             if not value_tester(field_value):
                 func = (
-                    inspect.getsource(value_tester).split("\n")[-2].replace("return ", "").lstrip()
+                    inspect.getsource(value_tester)
+                    .split("\n")[-2]
+                    .replace("return ", "")
+                    .lstrip()
                 )
                 raise ValueError(
                     f"Invalid value for {field}: x={field_value}" f" should pass {func}"
@@ -110,7 +115,9 @@ class BaseBuildData(ABC):
             if not str_type:
                 str_type = f_type
 
-            assert str_type, f"Invalid user type {str_type} " f"(from {a_type=} {f_type=}"
+            assert str_type, (
+                f"Invalid user type {str_type} " f"(from {a_type=} {f_type=}"
+            )
 
             help_msg = (
                 f"{'.'.join(field.type.__metadata__)}"

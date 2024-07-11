@@ -50,7 +50,9 @@ def test_simulation(maze_str, robot, save):
     time, reward = simulation.time(), simulation.cumulative_reward()
 
     maze = simulation.maze
-    metrics = Simulation.compute_metrics(maze, simulation.data.inputs, simulation.data.vision)
+    metrics = Simulation.compute_metrics(
+        maze, simulation.data.inputs, simulation.data.vision
+    )
     pprint.pprint(metrics)
     assert 0 < metrics["n_inputs"]["all"] <= maze.width * maze.height * 3
     assert 0 < metrics["n_inputs"]["path"] <= len(maze.solution)
@@ -148,4 +150,6 @@ def test_error_inputs_evaluation(tmp_path):
     with pytest.raises(ValueError):
         robot = Robot.BuildData.from_string("C")
         controller = RandomController(seed=0, robot_data=robot)
-        Simulation.inputs_evaluation(tmp_path, controller, Maze.generate(Maze.BuildData()))
+        Simulation.inputs_evaluation(
+            tmp_path, controller, Maze.generate(Maze.BuildData())
+        )

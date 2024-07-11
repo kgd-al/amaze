@@ -13,7 +13,11 @@ class ZoomingComboBox(QComboBox):
     def event(self, e: QEvent):
         if e.type() == QEvent.ToolTip and (name := self.currentText()):
             value = self.value_getter()
-            color = "white" if (value < .5 or name not in resources.builtins()) else "black"
+            color = (
+                "white"
+                if (value < 0.5 or name not in resources.builtins())
+                else "black"
+            )
             i = resources.image(Sign(name, value), 128)
             e: QHelpEvent
 
@@ -22,7 +26,10 @@ class ZoomingComboBox(QComboBox):
             buffer.open(QIODevice.WriteOnly)
             p.save(buffer, "png")
             image = bytes(buffer.data().toBase64()).decode()
-            html = f'<img src="data:image/png;base64,{image}" style="background-color:{color};">'
+            html = (
+                f'<img src="data:image/png;base64,{image}"'
+                f' style="background-color:{color};">'
+            )
             QToolTip.showText(e.globalPos(), html)
             return True
 

@@ -7,10 +7,10 @@ from PyQt5.QtCore import Qt, QPointF, QRectF, QSize
 from PyQt5.QtGui import QPainter, QColor, QPainterPath, QImage
 from PyQt5.QtWidgets import QLabel
 
-from ...misc.resources import SignType, qimage_to_numpy, qt_images
-from ...misc.utils import has_qt_application, qt_application
 from ._trajectory_plotter import plot_trajectory
 from ..maze import MazePainter, Color, logger
+from ...misc.resources import SignType, qt_images
+from ...misc.utils import has_qt_application, qt_application
 from ...simu.maze import Maze
 from ...simu.robot import Robot
 from ...simu.simulation import Simulation
@@ -20,7 +20,6 @@ from ...simu.types import InputType, OutputType
 class QtPainter(MazePainter):
     def __init__(self, p: QPainter, config: dict):
         self.painter = p
-        dark = config["dark"]
         if config["colorblind"]:
             c1 = QColor("#de8f05")
             c2 = QColor("#0173b2")
@@ -161,18 +160,25 @@ class MazeWidget(QLabel):
         elif isinstance(maze, str):
             maze = Maze.from_string(maze)
         elif not isinstance(maze, Maze):
-            raise ValueError("Invalid maze argument." " Expecting Maze, Maze.BuildData or str")
+            raise ValueError(
+                "Invalid maze argument." " Expecting Maze, Maze.BuildData or str"
+            )
         return maze
 
     @property
-    def inputs(self): return self._robot.data.inputs
+    def inputs(self):
+        return self._robot.data.inputs
 
     @property
-    def vision(self): return self._robot.data.vision
+    def vision(self):
+        return self._robot.data.vision
 
     @staticmethod
     def __qt_images(size, maze):
-        return (qt_images(v, size) if (v := maze.signs[t]) is not None else None for t in SignType)
+        return (
+            qt_images(v, size) if (v := maze.signs[t]) is not None else None
+            for t in SignType
+        )
 
     def update_config(self, **kwargs):
         self._config.update(kwargs)
@@ -355,7 +361,9 @@ class MazeWidget(QLabel):
         return self.__static_image_drawer(width, height, fill, img_format)
 
     @staticmethod
-    def _save_image(path: Union[str, Path], img: QImage, painter: Optional[QPainter] = None):
+    def _save_image(
+        path: Union[str, Path], img: QImage, painter: Optional[QPainter] = None
+    ):
         if painter:
             painter.end()
 

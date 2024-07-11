@@ -29,8 +29,10 @@ class BaseController(ABC):
     def __init__(self, robot_data: Robot.BuildData):
         self._robot_data = robot_data
         if not isinstance(robot_data, Robot.BuildData):
-            raise ValueError(f"Wrong argument type. Robot.BuildData expected, got"
-                             f"{type(robot_data)}")
+            raise ValueError(
+                f"Wrong argument type. Robot.BuildData expected, got"
+                f"{type(robot_data)}"
+            )
 
         def test(name, field_type, field_types):
             if field_type not in field_types:
@@ -84,7 +86,9 @@ class BaseController(ABC):
 
     @property
     def robot_data(self) -> Robot.BuildData:
-        return Robot.BuildData(inputs=self.input_type, outputs=self.output_type, vision=self.vision)
+        return Robot.BuildData(
+            inputs=self.input_type, outputs=self.output_type, vision=self.vision
+        )
 
     @abstractmethod
     def __call__(self, inputs: State) -> Vec:
@@ -135,7 +139,9 @@ class BaseController(ABC):
         """Specifies the set of discrete actions that can be taken by an agent"""
         return cls._discrete_actions
 
-    def _save_to_archive(self, archive: ZipFile, *args, **kwargs) -> bool:  # pragma: no cover
+    def _save_to_archive(
+        self, archive: ZipFile, *args, **kwargs
+    ) -> bool:  # pragma: no cover
         """Re-implement to save derived-specific content to the archive
 
         :meta public:

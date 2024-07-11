@@ -100,7 +100,9 @@ class TensorboardCallback(BaseCallback):
         )
 
         writer = self.tb_formatter.writer
-        io_types = set(i.name[0] + o.name[0] for i, o in env_method(self.training_env, "io_types"))
+        io_types = set(
+            i.name[0] + o.name[0] for i, o in env_method(self.training_env, "io_types")
+        )
         assert len(io_types) == 1, "Non-uniform I/O types"
 
         if self.multi_env:
@@ -142,7 +144,9 @@ class TensorboardCallback(BaseCallback):
         with open(folder.joinpath("policy.str"), "w") as f:
             f.write(str(policy) + "\n")
 
-        writer.add_text("policy", str(policy).replace("\n", "<br/>").replace(" ", "&nbsp;"))
+        writer.add_text(
+            "policy", str(policy).replace("\n", "<br/>").replace(" ", "&nbsp;")
+        )
 
         # dummy_inputs = \
         #     policy.obs_to_tensor(policy.observation_space.sample())[0]
@@ -162,7 +166,9 @@ class TensorboardCallback(BaseCallback):
         return True
 
     def _print_trajectory(self, env, key, name):
-        images = env_method(env, "plot_trajectory", verbose=True, cb_side=0, square=True)
+        images = env_method(
+            env, "plot_trajectory", verbose=True, cb_side=0, square=True
+        )
 
         big_image = tile_images(images)
 
@@ -189,7 +195,8 @@ class TensorboardCallback(BaseCallback):
             self.logger.record_mean(key, value)
 
         print_trajectory = final or (
-            self.log_trajectory_every > 0 and (self.n_calls % self.log_trajectory_every) == 0
+            self.log_trajectory_every > 0
+            and (self.n_calls % self.log_trajectory_every) == 0
         )
 
         if print_trajectory:

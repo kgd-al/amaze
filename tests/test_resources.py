@@ -2,16 +2,33 @@ import filecmp
 import itertools
 import os
 import re
-from pathlib import Path
 
 import numpy as np
 import pytest
 from PyQt5.QtGui import QImage
 from numpy.testing import assert_array_equal
 
-from amaze.misc.resources import default_builtin, default_lightness, default_size, Sign, names, image, clear_cache, \
-    image_cached_path, qt_images, np_images, qimage_to_numpy, NO_FILE_CACHE, cached_resources_path, no_file_cache, \
-    error_builtin, _get_image, custom_resources_path, resources_format, rebuild_signs_database
+from amaze.misc.resources import (
+    default_builtin,
+    default_lightness,
+    default_size,
+    Sign,
+    names,
+    image,
+    clear_cache,
+    image_cached_path,
+    qt_images,
+    np_images,
+    qimage_to_numpy,
+    NO_FILE_CACHE,
+    cached_resources_path,
+    no_file_cache,
+    error_builtin,
+    _get_image,
+    custom_resources_path,
+    resources_format,
+    rebuild_signs_database,
+)
 
 
 def test_globals():
@@ -49,7 +66,7 @@ def test_sign():
 
 
 @pytest.mark.parametrize("name", ["arrow", "ARROW", "ArRoW", "aRrOw"])
-@pytest.mark.parametrize("value", [.1, .5, 1])
+@pytest.mark.parametrize("value", [0.1, 0.5, 1])
 def test_signs(name, value):
     _assert_valid(Sign(name, value))
 
@@ -62,29 +79,36 @@ def test_error_sign():
     pytest.raises(ValueError, Sign, default_builtin(), 10)
 
 
-@pytest.mark.parametrize("s_str", [
-    "arrow", "arrow-1", "1", "point"
-])
+@pytest.mark.parametrize("s_str", ["arrow", "arrow-1", "1", "point"])
 def test_signs_from_string(s_str):
     sign = Sign.from_string(s_str)
     _assert_valid(sign)
     assert sign == Sign.from_string(sign.to_string())
 
 
-@pytest.mark.parametrize("s_str", [
-    "", "unknown_name", "arrow-foo", "foo-bar-baz",
-    "arrow-0", "arrow-10", "arrow--10"
-])
+@pytest.mark.parametrize(
+    "s_str",
+    [
+        "",
+        "unknown_name",
+        "arrow-foo",
+        "foo-bar-baz",
+        "arrow-0",
+        "arrow-10",
+        "arrow--10",
+    ],
+)
 def test_error_signs_from_string(s_str):
     pytest.raises(ValueError, Sign.from_string, s_str)
 
 
-IMAGES = ("name, value, size", [
-    pytest.param(name, value, size)
-    for name, value, size in itertools.product(
-        names(), [.25, .5, 1.], [10, 15]
-    )
-])
+IMAGES = (
+    "name, value, size",
+    [
+        pytest.param(name, value, size)
+        for name, value, size in itertools.product(names(), [0.25, 0.5, 1.0], [10, 15])
+    ],
+)
 
 
 @pytest.mark.parametrize(*IMAGES)
@@ -110,8 +134,8 @@ def test_qt_np_images(name, value, size):
     clear_cache()
 
     sign = Sign(name, value)
-    qt_imgs = qt_images([sign], size*2)[0]
-    np_imgs = np_images([sign], size*2)[0]
+    qt_imgs = qt_images([sign], size * 2)[0]
+    np_imgs = np_images([sign], size * 2)[0]
 
     assert len(qt_imgs) == len(np_imgs)
     for qt_img, np_img in zip(qt_imgs, np_imgs):
@@ -197,14 +221,18 @@ def test_error_cache(caplog):
     image(*key)
 
     clear_cache()
-    bad_custom_path = custom_resources_path().joinpath(key[0].name + f".{resources_format()}")
+    bad_custom_path = custom_resources_path().joinpath(
+        key[0].name + f".{resources_format()}"
+    )
     bad_cache_path = image_cached_path(*key)
     print(bad_custom_path)
     try:
         print("Saving bad image")
-        ok = QImage(10, 20, QImage.Format_ARGB32).save(str(bad_custom_path))
+        bad_image = QImage(10, 20, QImage.Format_ARGB32)
+        assert not bad_image.isNull()
+        ok = bad_image.save(str(bad_custom_path))
         print("Saved bad image", ok)
-        assert bad_custom_path.exists()
+        assert ok and bad_custom_path.exists()
         rebuild_signs_database()
         print("Loading it")
         image(*key)

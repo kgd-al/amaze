@@ -79,7 +79,9 @@ class Simulation:
 
         self.observations = self._observations(self.data.inputs, self.data.vision)
 
-        self.visuals = self.generate_visuals_map(self.maze, self.data.inputs, self.data.vision)
+        self.visuals = self.generate_visuals_map(
+            self.maze, self.data.inputs, self.data.vision
+        )
 
         self.trajectory, self.errors = None, None
         if save_trajectory:
@@ -155,7 +157,11 @@ class Simulation:
 
             v = vision - 2
             images = {
-                t: (resources.np_images(signs, v) if (signs := maze.signs[t]) is not None else None)
+                t: (
+                    resources.np_images(signs, v)
+                    if (signs := maze.signs[t]) is not None
+                    else None
+                )
                 for t in SignType
             }
 
@@ -333,10 +339,14 @@ class Simulation:
         walls = self.maze.walls[cell[0], cell[1]]
         visual = self.visuals[cell]
         if io == (InputType.DISCRETE, OutputType.DISCRETE):
-            self._fill_discrete_visual_buffer(obs, walls, self._discrete_visual(visual), prev_dir)
+            self._fill_discrete_visual_buffer(
+                obs, walls, self._discrete_visual(visual), prev_dir
+            )
 
         elif io == (InputType.CONTINUOUS, OutputType.DISCRETE):
-            self._fill_continuous_visual_buffer(obs, walls, self._image_visual(visual), prev_dir)
+            self._fill_continuous_visual_buffer(
+                obs, walls, self._image_visual(visual), prev_dir
+            )
 
         elif io == (InputType.CONTINUOUS, OutputType.CONTINUOUS):
             v = self.data.vision
@@ -354,7 +364,10 @@ class Simulation:
                 buffer = np.zeros((3 * v, 3 * v))
                 for di, dj in [(i - 1, j - 1) for i, j in np.ndindex(3, 3)]:
                     cx, cy = cell[0] + di, cell[1] + dj
-                    if not 0 <= cx <= self.maze.width - 1 or not 0 <= cy <= self.maze.height - 1:
+                    if (
+                        not 0 <= cx <= self.maze.width - 1
+                        or not 0 <= cy <= self.maze.height - 1
+                    ):
                         continue
                     self._fill_continuous_visual_buffer(
                         buffer[
@@ -383,7 +396,9 @@ class Simulation:
             raise ValueError(f"Invalid InputType: {input_type=}")
 
     @staticmethod
-    def _discrete_visual(visual: Union[DiscreteVisual, float]) -> Optional[DiscreteVisual]:
+    def _discrete_visual(
+        visual: Union[DiscreteVisual, float]
+    ) -> Optional[DiscreteVisual]:
         return visual if not isinstance(visual, float) or not np.isnan(visual) else None
 
     @staticmethod
@@ -454,7 +469,9 @@ class Simulation:
         cls, maze: Maze, inputs: InputType, vision: int
     ) -> dict[Union[MazeMetrics, str]]:
         inputs = InputType.DISCRETE  # Not implemented for continuous case
-        return _maze_metrics(maze, cls.generate_visuals_map(maze, inputs, vision), inputs)
+        return _maze_metrics(
+            maze, cls.generate_visuals_map(maze, inputs, vision), inputs
+        )
 
     @classmethod
     def inputs_evaluation(

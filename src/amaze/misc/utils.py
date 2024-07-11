@@ -63,14 +63,15 @@ def is_qt_offscreen():
     try:
         app = qt_application(allow_create=False)
         return app.platformName() == QT_PLATFORM_OFFSCREEN_PLUGIN
-    finally:
+    except Exception:
         return False
 
 
 class QtOffscreen:
     def __enter__(self):
         qt_offscreen(True)
-        return qt_application()
+        self.app = qt_application()
+        return self.app
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         qt_offscreen(False)

@@ -59,7 +59,9 @@ def env_attr(env, attr: str):
 class MazeEnv(Env):
     """AMaze wrapper for the stable baselines 3 library"""
 
-    metadata = dict(render_modes=["human", "rgb_array"], render_fps=30, min_resolution=256)
+    metadata = dict(
+        render_modes=["human", "rgb_array"], render_fps=30, min_resolution=256
+    )
 
     def __init__(
         self,
@@ -77,7 +79,9 @@ class MazeEnv(Env):
 
         self.name = maze.to_string()
 
-        self._simulation = Simulation(Maze.generate(maze), robot, save_trajectory=log_trajectory)
+        self._simulation = Simulation(
+            Maze.generate(maze), robot, save_trajectory=log_trajectory
+        )
         _pretty_rewards = ", ".join(
             f"{k}: {v:.2g}" for k, v in self._simulation.rewards.__dict__.items()
         )
@@ -92,7 +96,9 @@ class MazeEnv(Env):
 
         self.observation_type = robot.inputs
         if robot.inputs is InputType.DISCRETE:
-            self.observation_space = spaces.Box(low=-1, high=1, shape=(8,), dtype=np.float32)
+            self.observation_space = spaces.Box(
+                low=-1, high=1, shape=(8,), dtype=np.float32
+            )
         else:
             self.observation_space = spaces.Box(
                 low=0,
@@ -104,7 +110,9 @@ class MazeEnv(Env):
         self.action_type = robot.outputs
         self.action_space = {
             OutputType.DISCRETE: spaces.Discrete(4),
-            OutputType.CONTINUOUS: spaces.Box(low=-1, high=1, shape=(2,), dtype=np.float32),
+            OutputType.CONTINUOUS: spaces.Box(
+                low=-1, high=1, shape=(2,), dtype=np.float32
+            ),
         }[robot.outputs]
 
         self.mapper = IOMapper(

@@ -55,18 +55,30 @@ class Maze:
 
         Signs = List[Sign]
         custom_classes = {
-            Signs: SimpleNamespace(type_parser=str, type_name=str, default=[], action="append")
+            Signs: SimpleNamespace(
+                type_parser=str, type_name=str, default=[], action="append"
+            )
         }
 
-        clue: Annotated[Signs, "image name for (helpful) clues"] = field(default_factory=list)
+        clue: Annotated[Signs, "image name for (helpful) clues"] = field(
+            default_factory=list
+        )
 
-        lure: Annotated[Signs, "image name for (unhelpful) lures"] = field(default_factory=list)
+        lure: Annotated[Signs, "image name for (unhelpful) lures"] = field(
+            default_factory=list
+        )
 
-        p_lure: Annotated[Optional[float], "probability of generating a lure (per-cell)"] = None
+        p_lure: Annotated[
+            Optional[float], "probability of generating a lure (per-cell)"
+        ] = None
 
-        trap: Annotated[Signs, "image name for (harmful) traps"] = field(default_factory=list)
+        trap: Annotated[Signs, "image name for (harmful) traps"] = field(
+            default_factory=list
+        )
 
-        p_trap: Annotated[Optional[float], "probability of generating a trap (per-cell)"] = None
+        p_trap: Annotated[
+            Optional[float], "probability of generating a trap (per-cell)"
+        ] = None
 
         def __post_init__(self):
             self._post_init(allow_unset=False)
@@ -135,7 +147,10 @@ class Maze:
                     setattr(
                         self,
                         k,
-                        [Sign.from_string(s) if isinstance(s, str) else s for s in attr],
+                        [
+                            Sign.from_string(s) if isinstance(s, str) else s
+                            for s in attr
+                        ],
                     )
                 assert_ok(k, field_type=list, value_tester=self._valid_signs)
 
@@ -163,7 +178,9 @@ class Maze:
             return sep.join(tokens)
 
         @classmethod
-        def from_string(cls, s, overrides: Optional["Maze.BuildData"] = None) -> "Maze.BuildData":
+        def from_string(
+            cls, s, overrides: Optional["Maze.BuildData"] = None
+        ) -> "Maze.BuildData":
             """
             Parses a string to create a BuildData object.
 
@@ -287,7 +304,9 @@ class Maze:
 
     __private_key = object()
 
-    PlacedSign = namedtuple("PlacedSign", ["visual_index", "solution_index", "direction", "truth"])
+    PlacedSign = namedtuple(
+        "PlacedSign", ["visual_index", "solution_index", "direction", "truth"]
+    )
     """ A physically instantiated sign with a position, ..."""
 
     def __init__(self, data: "Maze.BuildData", key=None):
@@ -313,7 +332,9 @@ class Maze:
         }
         self.p_lure: float = data.p_lure
         self.p_trap: float = data.p_trap
-        self.signs_data: Dict[SignType, List[Maze.PlacedSign]] = {t: [] for t in SignType}
+        self.signs_data: Dict[SignType, List[Maze.PlacedSign]] = {
+            t: [] for t in SignType
+        }
 
     def __repr__(self):
         return self.to_string()
@@ -503,7 +524,9 @@ class Maze:
         lures = maze.signs[SignType.LURE]
         if maze.p_lure and lures:
             rng = _reset_rng()
-            candidates = set(range(len(maze.solution) - 1)) - {i[0] for i in intersections}
+            candidates = set(range(len(maze.solution) - 1)) - {
+                i[0] for i in intersections
+            }
             nl = round(data.p_lure * len(candidates))
             lure_indices = rng_indices(lures, nl)
             lures_data = maze.signs_data[SignType.LURE]
@@ -531,7 +554,10 @@ class Maze:
                 vix, six, sign_dir, true_dir = clues_data.pop(i)
                 pos = maze.solution[six]
                 prev_dir = maze._offsets_inv[
-                    tuple(a - b for a, b in zip(maze.solution[six - 1], maze.solution[six]))
+                    tuple(
+                        a - b
+                        for a, b in zip(maze.solution[six - 1], maze.solution[six])
+                    )
                 ]
                 candidate_dirs = (
                     set(Maze.Direction)
@@ -546,7 +572,9 @@ class Maze:
             maze.signs_data[SignType.CLUE] = []
 
         if not data.unicursive and not clues:
-            logger.warning("Mazes with intersections and no clues are" " practically unsolvable")
+            logger.warning(
+                "Mazes with intersections and no clues are" " practically unsolvable"
+            )
 
         return maze
 

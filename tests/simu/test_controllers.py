@@ -188,7 +188,7 @@ def test_controller_tabular(maze_str, learner, tmp_path):
 
     TabularController.assert_equal(controller, controller_roundabout)
 
-    app = qt_application()
+    _ = qt_application()
     plot_inputs_values(controller, tmp_path.joinpath("input_values.png"))
 
 
@@ -238,7 +238,9 @@ def test_controller_keyboard(maze_str, robot, tmp_path):
     test_ignored_event(QKeyEvent, QKeyEvent.KeyPress, Qt.Key_Down, Qt.ControlModifier)
     if controller.output_type is OutputType.DISCRETE:
         test_ignored_event(QKeyEvent, QKeyEvent.KeyRelease, Qt.Key_Up, Qt.NoModifier)
-    test_ignored_event(QKeyEvent, QKeyEvent.ShortcutOverride, Qt.Key_Down, Qt.NoModifier)
+    test_ignored_event(
+        QKeyEvent, QKeyEvent.ShortcutOverride, Qt.Key_Down, Qt.NoModifier
+    )
     test_ignored_event(QKeyEvent, QKeyEvent.KeyPress, Qt.Key_Enter, Qt.NoModifier)
 
     controller.reset()

@@ -73,8 +73,8 @@ deploy(){
     date > $_log
     log Copied
 
-    python -mvirtualenv .venv
-    source .venv/bin/activate
+    python -mvirtualenv _venv
+    source _venv/bin/activate
     log "Created virtual environment"
 
     install pip setuptools
