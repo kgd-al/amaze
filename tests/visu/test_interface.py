@@ -75,6 +75,8 @@ class TimedOffscreenApplication:
             print(oe.out)
             raise AssertionError(f"Error output is not empty:\n{err}")
 
+        del self.app
+
     class TimeOutException(Exception):
         pass
 
@@ -134,9 +136,7 @@ def test_interface_step():
 
 
 def test_interface_robot_mode(capfd, tmp_path):
-    with TimedOffscreenApplication(
-        capfd,
-    ) as app:
+    with TimedOffscreenApplication(capfd, 2) as app:
         args = Options()
         args.is_robot = True
         args.autoquit = True

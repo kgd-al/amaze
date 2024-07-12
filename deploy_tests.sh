@@ -31,11 +31,12 @@ black src tests examples
 flake8 src tests examples
 
 wd=$(pwd)
-download_cache=$(realpath $wd/../__amaze_deploy_test_download_cache__)
+base=../__amaze_deploy_test__/
+download_cache=$(realpath $$base/download_cache)
 mkdir -pv $download_cache
 log "$(date)"
 log 35 "working directory: $wd"
-log 35 "download cache = download_cache"
+log 35 "download cache = $download_cache"
 
 deploy(){
     type=$1
@@ -50,7 +51,7 @@ deploy(){
 
     line
 
-    folder=../__amaze_deploy_test__/$type_name
+    folder=$base/$type_name
 
     rm -rf $folder
     mkdir -pv $folder
@@ -73,7 +74,7 @@ deploy(){
     date > $_log
     log Copied
 
-    python -mvirtualenv _venv
+    python -m venv _venv
     source _venv/bin/activate
     log "Created virtual environment"
 
@@ -100,7 +101,7 @@ deploy(){
         python -m sphinx -T -W --keep-going -b html -d _build/doctrees -D language=en . html | short_output
         log "Documentation built"
         cd -
-    elif [ "$type" == "tests" ]
+    elif [[ "$type" =~ "tests" ]]
     then
         pytest --small-scale --test-examples --test-extension sb3
     fi
@@ -110,7 +111,7 @@ deploy(){
     line
 }
 
-for type in '' 'full' 'tests' 'docs'
+for type in 'tests,dev' #'' 'full' 'docs' 'tests,dev'
 #for type in 'tests'
 do
     deploy "$type"

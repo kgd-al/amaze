@@ -25,6 +25,7 @@ class MainWindow(QWidget):
         self.maze_widget = amaze.MazeWidget(
             self._maze_data(0, 5, 0, True, amaze.StartLocation.SOUTH_WEST),
             amaze.Robot(amaze.Robot.BuildData.from_string("D")),
+            dict(robot=False),
         )
         layout.addWidget(self.maze_widget)
 

@@ -164,6 +164,7 @@ class MazePainter(ABC):
             f(i * scale, j * scale, scale, scale, c)
 
         if r := options.get("robot"):
+            print(r)
             i, j = r["pos"]
             if options["outputs"] is OutputType.DISCRETE:
                 self.fill_rect(
