@@ -25,6 +25,7 @@ def evaluate(df, library, family, name, fn, **kwargs):
 
         except Exception as e:
             print(f"[ERROR] Processing {name}:\n{e}")
+            return False
 
 
 class Progress(RichProgress):

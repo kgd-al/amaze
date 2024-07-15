@@ -1096,7 +1096,9 @@ class _MovieRecorder:
         img.save(path)
 
         if HAS_PIL:  # pragma: no branch
-            self.frames.append(PILImage.open(path))
+            with PILImage.open(path) as pil_img:
+                pil_img.load()
+                self.frames.append(pil_img)
 
     def save(self):
         if HAS_PIL:

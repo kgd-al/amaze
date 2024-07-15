@@ -2,6 +2,10 @@
 
 [![JOSS](https://joss.theoj.org/papers/bc6892f6873808ced10bc8c4c222e635/status.svg)](https://joss.theoj.org/papers/bc6892f6873808ced10bc8c4c222e635)
 
+A lightweight maze navigation task generator for sighted AI agents.
+
+## Badges
+
 ### Stable branch (main)
 ![main:status](https://github.com/kgd-al/amaze/actions/workflows/test_and_deploy.yml/badge.svg?branch=main)
 [![PyPI version](https://badge.fury.io/py/amaze-benchmarker.svg)](https://badge.fury.io/py/amaze-benchmarker)
@@ -13,8 +17,6 @@
 ### Development (dev)
 ![dev:test](https://github.com/kgd-al/amaze/actions/workflows/extensive_testing.yml/badge.svg?branch=dev)
 
-
-A lightweight maze navigation task generator for sighted AI agents.
 
 ## Mazes
 

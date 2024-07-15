@@ -2,12 +2,13 @@ import functools
 import itertools
 import math
 from enum import IntFlag
+from typing import Tuple, Callable
 
-from PyQt5.QtCore import QEvent, QObject
+from PyQt5.QtCore import QEvent, QTimer
 from PyQt5.QtWidgets import QApplication
+from pytestqt.qtbot import QtBot
 
 from amaze import StartLocation, Sign
-from amaze.visu import MainWindow
 
 
 class TestSize(IntFlag):
@@ -85,16 +86,54 @@ class EventTypes:  # pragma: no cover
             return f"UnknownEvent:{event}"
 
 
-class EventObserver(QObject):
-    def __init__(self, app: QApplication):
-        super().__init__()
-        self._app = app
-        self._app.installEventFilter(self)
+def schedule(fn: Callable, delay: int = 100):
+    QTimer.singleShot(delay, fn)
 
-    def eventFilter(self, obj, event):
-        # print(EventTypes.as_string(event.type()), obj, event)
-        if event.type() == QEvent.WindowActivate and isinstance(obj, MainWindow):
-            obj.close()
-            return False
-        else:
-            return super().eventFilter(obj, event)
+
+def schedule_quit(app: QApplication, delay: int = 100):
+    schedule(app.quit, delay)
+
+
+class KGDQtWrapper:
+    def __init__(self, qtbot, app, capfd):
+        self.bot = qtbot
+        self.app = app
+        self.capfd = capfd
+
+
+class TimedOffscreenApplication:
+    def __init__(self, wrapper: KGDQtWrapper, duration=1):
+        self.wrapper = wrapper
+        self.duration = round(1000 * duration)
+        self.error = False
+
+    def __enter__(self) -> Tuple[QApplication, QtBot]:
+        # print("[kgd-debug]", f"{self.__class__.__name__}.__enter__")
+        QTimer.singleShot(self.duration, self.__failure)
+        return self.wrapper.app, self.wrapper.bot
+
+    def __exit__(self, type, value, traceback):
+        # print("[kgd-debug]", f"{self.__class__.__name__}.__enter__")
+        if self.error:
+            raise self.TimeOutException(
+                f"Application did not finish in {self.duration / 1000:g} seconds"
+            )
+
+        oe = self.wrapper.capfd.readouterr()
+        err = oe.err
+        err = "\n".join(
+            f">  {e}"
+            for e in err.split("\n")
+            if not e.startswith("This plugin does not support") and e
+        )
+        if len(err) > 0:
+            print(oe.out)
+            raise AssertionError(f"Error output is not empty:\n{err}")
+
+    class TimeOutException(Exception):
+        pass
+
+    def __failure(self, *_):
+        # print("[kgd-debug]", "Failure!")
+        self.wrapper.app.quit()
+        self.error = True

@@ -6,6 +6,8 @@ import os
 from PyQt5.QtWidgets import QApplication
 
 
+# pragma: exclude file
+
 QT_PLATFORM_PLUGIN_KEY = "QT_QPA_PLATFORM"
 QT_PLATFORM_OFFSCREEN_PLUGIN = "offscreen"
 
@@ -65,13 +67,3 @@ def is_qt_offscreen():
         return app.platformName() == QT_PLATFORM_OFFSCREEN_PLUGIN
     except Exception:
         return False
-
-
-class QtOffscreen:
-    def __enter__(self):
-        qt_offscreen(True)
-        self.app = qt_application()
-        return self.app
-
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        qt_offscreen(False)

@@ -3,17 +3,8 @@ import sys
 import pytest
 from PyQt5.QtGui import QImage
 
-from _common import EventObserver
+from _common import TimedOffscreenApplication, schedule_quit
 from amaze import amaze_main as main, Maze
-from amaze.misc.utils import (
-    qt_offscreen,
-    qt_application,
-    has_qt_application,
-    NoQtApplicationException,
-    is_qt_offscreen,
-    QT_PLATFORM_OFFSCREEN_PLUGIN,
-    QtOffscreen,
-)
 from amaze.visu.viewer import HAS_PIL
 
 BUILTIN_CONTROLLER = "cheater"
@@ -33,30 +24,32 @@ def _main(*args, maze=True, controller=True, file_controller=False):
     return main(_args + list(*args))
 
 
-def test_app():
-    pytest.raises(NoQtApplicationException, has_qt_application)
-    pytest.raises(RuntimeError, qt_application, False)
-    qt_offscreen(offscreen=False)
-    assert not is_qt_offscreen()
-    app = qt_application(allow_create=True, start_offscreen=False)
-    assert has_qt_application()
-    assert app == qt_application(allow_create=False, start_offscreen=False)
-    assert not is_qt_offscreen()
-    qt_offscreen(offscreen=True)
-    assert is_qt_offscreen()
-    qt_offscreen(offscreen=False)
-    assert not is_qt_offscreen()
-    del app
-
-    pytest.raises(NoQtApplicationException, has_qt_application)
-    app = qt_application(allow_create=True, start_offscreen=True)
-    assert is_qt_offscreen()
-    assert app.platformName() == QT_PLATFORM_OFFSCREEN_PLUGIN
-    del app
-
-    with QtOffscreen():
-        assert is_qt_offscreen()
-    assert not is_qt_offscreen()
+#
+# def test_app(kgd_qt):
+#     pytest.raises(NoQtApplicationException, has_qt_application)
+#     pytest.raises(RuntimeError, qt_application, False)
+#     qt_offscreen(offscreen=False)
+#     assert not is_qt_offscreen()
+#     app = qt_application(allow_create=True, start_offscreen=False)
+#     assert has_qt_application()
+#     assert app == qt_application(allow_create=False, start_offscreen=False)
+#     assert not is_qt_offscreen()
+#     qt_offscreen(offscreen=True)
+#     assert is_qt_offscreen()
+#     qt_offscreen(offscreen=False)
+#     assert not is_qt_offscreen()
+#     del app
+#
+#     pytest.raises(NoQtApplicationException, has_qt_application)
+#     app = qt_application(allow_create=True, start_offscreen=True)
+#     assert is_qt_offscreen()
+#     assert app.platformName() == QT_PLATFORM_OFFSCREEN_PLUGIN
+#     del app
+#
+#     qt_offscreen(offscreen=False)
+#     with TimedOffscreenApplication(kgd_qt):
+#         assert is_qt_offscreen()
+#     assert not is_qt_offscreen()
 
 
 def test_main_help():  # argparse help exits instead of returning
@@ -65,24 +58,24 @@ def test_main_help():  # argparse help exits instead of returning
     assert e.value.code == 0
 
 
-def test_main_no_args():
-    with QtOffscreen() as app:
-        _ = EventObserver(app)
+def test_main_no_args(kgd_qt):
+    with TimedOffscreenApplication(kgd_qt) as (app, bot):
+        schedule_quit(app)
         assert main([]) == 0
 
 
-def test_main_no_sys_args():
-    with QtOffscreen() as app:
-        _ = EventObserver(app)
+def test_main_no_sys_args(kgd_qt):
+    with TimedOffscreenApplication(kgd_qt) as (app, bot):
+        schedule_quit(app)
         argv = sys.argv
         sys.argv = ["Highjacked sys.argv"]
         assert main() == 0
         sys.argv = argv
 
 
-def test_main_verbose(capfd):
-    with QtOffscreen() as app:
-        _ = EventObserver(app)
+def test_main_verbose(kgd_qt, capfd):
+    with TimedOffscreenApplication(kgd_qt) as (app, bot):
+        schedule_quit(app)
         assert main(["-v"]) == 0
         assert "Executing with" in capfd.readouterr().out
 

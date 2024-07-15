@@ -2,10 +2,7 @@
 
 import sys
 import importlib
-import pprint
 import pandas as pd
-import matplotlib.pyplot as plt
-import seaborn as sns
 
 from pathlib import Path
 
@@ -14,24 +11,23 @@ from common import line
 
 pd.options.display.float_format = '{:.3f}'.format
 
-detailed = (len(sys.argv) > 1)
+worker = sys.argv[1]
+detailed = (len(sys.argv) > 2)
 fname = "table" + ("-detailed" if detailed else "")
 
-import workers.amaze_worker, workers.gymnasium_worker
-workers_list = [workers.amaze_worker, workers.gymnasium_worker]
-if detailed:
-    import workers.procgen_worker
-    workers_list.extend([workers.procgen_worker])
-
+print(sys.argv)
+print(worker)
+print(detailed)
+print(fname)
 
 # ================================================================================================
 # == Record reading/creation
 # ================================================================================================
 
-line()
+#line()
 folder=Path(__file__).parent
 datafile=folder.joinpath(f"{fname}.csv")
-print("Datafile:", datafile)
+#print("Datafile:", datafile)
 
 try:
     df = pd.read_csv(datafile, index_col="Name")
@@ -49,21 +45,25 @@ except FileNotFoundError:
 # ================================================================================================
 
 errors = 0
-for worker in workers_list:
-    line()
-    #print(worker, worker.process)
-    try:
-        worker.process(df, detailed)
-    except Exception as e:
-        print("Failed:", e)
-        #raise e
-        errors += 1
+line("-")
+#print(worker, worker.process)
+try:
+    file = Path(__file__).parent.joinpath("workers").joinpath(f"{worker}_worker.py")
+    spec = importlib.util.spec_from_file_location(file.stem, file)
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[file.stem] = module
+    spec.loader.exec_module(module)
+    module.process(df, detailed)
+except Exception as e:
+    print("Failed:", e)
+    #raise e
+    errors += 1
 
 # ================================================================================================
 # == Write up
 # ================================================================================================
 
-line()
+line("-")
 print("==", "Dataframe:")
 
 df.to_csv(datafile)

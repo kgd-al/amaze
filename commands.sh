@@ -133,23 +133,23 @@ cmd_pytest(){  # Perform the test suite (small scale)
 #          print"\n";}') | column -t
 }
 
-do_doc_prepare() {
+do_docs_prepare() {
   out=docs/_build
   rm -r $out
   rm -fr docs/src/_*
   mkdir -p $out
 }
 
-cmd_doc(){  # Generate the documentation
+cmd_docs(){  # Generate the documentation
 # also requires sphinx and sphinx-pyproject
-  do_doc_prepare
+  do_docs_prepare
   nitpick=-n
-  sphinx-build doc/src/ $out/html -b html $nitpick -W $@ 2>&1 \
+  sphinx-build docs/src/ $out/html -b html $nitpick -W --keep-going -v $@ 2>&1 \
   | tee $out/log
 }
 
 cmd_autodoc(){  # Generate the documentation continuously
-  do_doc_prepare
+  do_docs_prepare
 
   args="-Ea"
 
@@ -162,19 +162,7 @@ cmd_autodoc(){  # Generate the documentation continuously
 }
 
 cmd_before-deploy(){  # Run a lot of tests to ensure that the package is clean
-  ok=1
-  check(){
-    if [ $ok -ne 0 ]
-    then
-      printf "\033[31mPackage is not ready to deploy."
-      printf " See error(s) above.\033[0m\n"
-    else
-      printf "\033[32mPackage checks out.\033[0m\n"
-    fi
-  }
-  trap check exit
   $(dirname $0)/deploy_tests.sh
-  ok=0
 }
 
 help(){

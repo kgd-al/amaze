@@ -1,6 +1,12 @@
 import pytest
 
-from _common import TestSize, generate_large_maze_data_sample, MAZE_DATA_SAMPLE
+from _common import (
+    TestSize,
+    generate_large_maze_data_sample,
+    MAZE_DATA_SAMPLE,
+    KGDQtWrapper,
+)
+from amaze.misc.utils import qt_offscreen
 
 _DEBUG = 0
 
@@ -47,6 +53,7 @@ def pytest_addoption(parser):
 
 def pytest_configure(config):
     config.addinivalue_line("markers", "slow: mark test as slow to run")
+    qt_offscreen()
 
 
 def pytest_generate_tests(metafunc):
@@ -171,3 +178,8 @@ def pytest_collection_modifyitems(config, items):
 
         if "slow" in item.keywords and scale < TestSize.NORMAL:
             item.add_marker(skip_slow)
+
+
+@pytest.fixture
+def kgd_qt(qtbot, qapp, capfd):
+    yield KGDQtWrapper(qtbot, qapp, capfd)

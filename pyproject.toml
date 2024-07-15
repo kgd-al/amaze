@@ -56,7 +56,7 @@ full = [
 tests = [
   "amaze-benchmarker",
   "pytest",
-  "pytest-steps", "pytest-sugar",
+  "pytest-steps", "pytest-sugar", "pytest-qt",
   "coverage",
   "flake8", "flake8-bugbear", "flake8-pyproject",
   "black",
@@ -65,7 +65,7 @@ tests = [
 
 docs = [
   "amaze-benchmarker[full]",  # Document everything, *everything*
-  "sphinx",
+  "sphinx<7.4.0",
   "sphinx-pyproject",         # Auto-extract project version
   "sphinx-qt-documentation",  # Link with qt documentation
   "sphinx-copybutton",        # Easily copy code
@@ -83,6 +83,7 @@ addopts = ["-ra", "--showlocals", "--strict-markers", "--strict-config"]
 xfail_strict = true
 filterwarnings = ["error"]
 testpaths = ["tests"]
+#qt_log_level_fail = "WARNING"
 
 [tool.black]
 line-length = 88

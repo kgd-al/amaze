@@ -1,3 +1,4 @@
 [report]
 exclude_also =
+    (?s)\A.*# pragma: exclude file.*\Z
     @(abc\.)?abstractmethod

@@ -347,3 +347,25 @@ Procgen/starpilot-hard111,ProcGen,ProcGen,0.0228206469
 Procgen/starpilot-hard000,ProcGen,ProcGen,0.022083615
 Procgen/starpilot-extreme111,ProcGen,ProcGen,0.0219046385
 Procgen/starpilot-extreme000,ProcGen,ProcGen,0.0214994906
+CartPole-v1,Gymnasium,Classic Control,0.0074203845
+MountainCar-v0,Gymnasium,Classic Control,0.0123231003
+MountainCarContinuous-v0,Gymnasium,Classic Control,0.0275353218
+Pendulum-v1,Gymnasium,Classic Control,0.0402344873
+Blackjack-v1,Gymnasium,Toy Text,0.0449763295
+CliffWalking-v0,Gymnasium,Toy Text,0.0090593958
+FrozenLake-v1,Gymnasium,Toy Text,0.0084937995
+FrozenLake8x8-v1,Gymnasium,Toy Text,0.0091101769
+Taxi-v3,Gymnasium,Toy Text,0.0122707933
+BipedalWalker-v3,Gymnasium,Box2D,0.3809818218
+BipedalWalkerHardcore-v3,Gymnasium,Box2D,0.1512501738
+LunarLander-v2,Gymnasium,Box2D,0.0502515219
+Ant-v4,Gymnasium,Mujoco,0.2688332699
+HalfCheetah-v4,Gymnasium,Mujoco,0.0996323207
+Hopper-v4,Gymnasium,Mujoco,0.2415281933
+Humanoid-v4,Gymnasium,Mujoco,0.4936643677
+HumanoidStandup-v4,Gymnasium,Mujoco,0.6602764254
+InvertedDoublePendulum-v4,Gymnasium,Mujoco,0.143996068
+InvertedPendulum-v4,Gymnasium,Mujoco,0.0816557397
+Pusher-v4,Gymnasium,Mujoco,0.1560799119
+Reacher-v4,Gymnasium,Mujoco,0.1182857557
+Walker2d-v4,Gymnasium,Mujoco,0.2395302218
