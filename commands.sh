@@ -96,7 +96,8 @@ cmd_pytest(){  # Perform the test suite (small scale)
   coverage report --data-file=$coverage $coverage_args > $coverage_txt
   coverage html  --data-file=$coverage $coverage_args -d $cout/html
 
-  [ ! -z "$CI" ] && coverage json --data-file=$coverage $coverage_args
+  [ ! -z "$CI" ] && coverage json --data-file=$coverage $coverage_args \
+  -o coverage/coverage-summary.json
 
 #  echo
 #  echo "===="
