@@ -13,6 +13,7 @@ A lightweight maze navigation task generator for sighted AI agents.
 [![Downloads](https://static.pepy.tech/badge/amaze-benchmarker)](https://pepy.tech/project/amaze-benchmarker)
 
 ![main:test](https://github.com/kgd-al/amaze/actions/workflows/extensive_testing.yml/badge.svg?branch=main)
+[![cov](https://kgd-al.github.io/amaze/badges/coverage.svg)](https://github.com/kgd-al/amaze/actions)
 
 ### Development (dev)
 ![dev:test](https://github.com/kgd-al/amaze/actions/workflows/extensive_testing.yml/badge.svg?branch=dev)

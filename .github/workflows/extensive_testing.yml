@@ -35,6 +35,7 @@ jobs:
         shell: bash --noprofile --norc {0} # No automatic fail-fast
         run: |
           mkdir logs
+          
           log=logs/wheel.log
           pip install --upgrade pip
           pip install .[tests]
@@ -43,3 +44,9 @@ jobs:
           res=${PIPESTATUS[0]}
           echo "[kgd-build-status] $res" >> $log
           exit $res
+
+      - name: Update Coverage Badge
+        # GitHub actions: default branch variable
+        # https://stackoverflow.com/questions/64781462/github-actions-default-branch-variable
+        if: github.ref == format('refs/heads/{0}', github.event.repository.default_branch)
+        uses: we-cli/coverage-badge-action@main

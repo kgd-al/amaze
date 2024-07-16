@@ -96,6 +96,8 @@ cmd_pytest(){  # Perform the test suite (small scale)
   coverage report --data-file=$coverage $coverage_args > $coverage_txt
   coverage html  --data-file=$coverage $coverage_args -d $cout/html
 
+  [ ! -z "$CI" ] && coverage json --data-file=$coverage $coverage_args
+
 #  echo
 #  echo "===="
 #  ls src
@@ -103,7 +105,7 @@ cmd_pytest(){  # Perform the test suite (small scale)
 #  ls src/amaze
 #  echo "===="
 #  ls src/amaze/simu
-#  echo "===="
+  echo "===="
   echo "Simulation coverage:"
 #  set -x
   coverage report --data-file=$coverage $coverage_args \
