@@ -1,6 +1,6 @@
 import itertools
 
-from common import evaluate, Progress, STEPS
+from common import Progress, STEPS
 
 from procgen.gym_registration import make_env as make_procgen_env, ENV_NAMES as PROCGEN_ENV_NAMES
 
@@ -15,7 +15,7 @@ def _evaluate(env_name, **kwargs):
     env.close()
 
 
-def process(df, detailed):
+def process(df):
     procgen_args = []
     for name in PROCGEN_ENV_NAMES:
         difficulties = ["easy", "hard"]
@@ -31,8 +31,8 @@ def process(df, detailed):
     #pprint.pprint(procgen_args)
     #print(PROCGEN_ENV_NAMES, len(PROCGEN_ENV_NAMES))
 
-    with Progress("ProcGen") as progress:
-        task = progress.add_task(len(procgen_args))
+    with Progress(df, "misc") as progress:
+        progress.add_task(len(procgen_args))
 
         for args in procgen_args:
             name = args.pop("name")
@@ -42,7 +42,8 @@ def process(df, detailed):
                 + "".join(str(int(b)) for b in args.values() if isinstance(b, bool))
             )
 
-            progress.update(task, candidate)
-            evaluate(df, "ProcGen", "ProcGen", candidate, _evaluate, env_name=name, **args)
+            progress.evaluate("ProcGen", candidate, _evaluate, env_name=name, **args)
 
-        progress.update(task, None)
+        progress.close()
+
+    return progress.errors
