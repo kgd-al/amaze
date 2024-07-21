@@ -479,6 +479,7 @@ class Simulation:
         results_path: Union[Path, str],
         controller: BaseController,
         signs: dict[SignType, Maze.Signs],
+        empty_intersections: bool = False,
         draw_inputs: bool = False,
         draw_individual_files: bool = False,
         draw_summary_file: bool = True,
@@ -497,6 +498,8 @@ class Simulation:
         :param results_path: Folder under which to store the resulting files.
         :param controller: Controller to evaluate.
         :param signs: Dictionary of clues/lures/traps.
+        :param empty_intersections: Also evaluate agent on intersections without signs
+         (nasty, disabled by default)
         :param draw_inputs: Whether to draw inputs (without the actions)
         :param draw_individual_files: Whether to generate a separate file for
          every input/action
@@ -531,6 +534,7 @@ class Simulation:
             drawer=drawer,
             observations=cls._observations(i_type, controller.vision),
             controller=controller,
+            empty_intersections=empty_intersections,
             draw_inputs=draw_inputs,
             draw_individual_files=draw_individual_files,
             draw_summary_file=draw_summary_file,
