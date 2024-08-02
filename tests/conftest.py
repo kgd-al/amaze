@@ -146,7 +146,7 @@ def pytest_collection_modifyitems(config, items):
         if _DEBUG > 1:
             print(item.originalname)
 
-        # Specific case of extensions example
+        # Specific case of extensions examples
         if hasattr(item, "callspec"):
             if (f := item.callspec.params.get("file")) is not None:
                 if extension(f) and not testable_extension(f):
