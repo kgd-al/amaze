@@ -1,4 +1,4 @@
-Full exemple: Training
+Full example: Training
 ======================
 
 .. |FILE| replace:: examples/q_learning.py
