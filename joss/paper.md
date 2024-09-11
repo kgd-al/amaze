@@ -26,6 +26,8 @@ date: 21 June 2024
 bibliography: paper.bib
 ---
 
+<!-- Add lab2D and Maze explorer to the table. And some text to go along with it. Mention Lehman2011 and more (for benchmark-less mazes) -->
+
 # Summary
 
 The need to provide fair comparisons between agents, especially in the field of Reinforcement Learning, has led to a plethora of benchmarks.
