@@ -9,9 +9,6 @@
 ![main:status](https://github.com/kgd-al/amaze/actions/workflows/test_and_deploy.yml/badge.svg?branch=main)
 ![main:test](https://github.com/kgd-al/amaze/actions/workflows/extensive_testing.yml/badge.svg?branch=main)
 
-[//]: # ([![cov]&#40;https://kgd-al.github.io/amaze/badges/coverage.svg&#41;]&#40;https://github.com/kgd-al/amaze/actions&#41;)
-
-[//]: # (![dev:test]&#40;https://github.com/kgd-al/amaze/actions/workflows/extensive_testing.yml/badge.svg?branch=dev&#41;)
 
 A lightweight maze navigation task generator for sighted AI agents.
 
