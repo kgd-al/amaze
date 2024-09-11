@@ -22,6 +22,7 @@ trap check exit
 
 wd=$(pwd)
 base=../__amaze_deploy_test__/
+mkdir -pv $base
 download_cache=$(realpath $base/download_cache)
 mkdir -pv $download_cache
 

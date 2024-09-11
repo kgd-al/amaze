@@ -118,10 +118,22 @@ installation instruction (pip) and detailed examples.
 
 ## Contributing
 
-Contributions to the library aiming at increasing its ease of use in both the scientific and
-students communities are welcome.
+Contributions to the library increasing its ease of use in both the scientific and
+students communities are more than welcome.
 Any such contribution can be made via a pull request while bugs (in the code or the documentation)
 should be reported in the dedicated tracker.
+
+As a rule of thumb, you should attempt not to add any additional dependencies.
+Currently, the library uses:
+- `numpy` and `pandas` for data processing and formatting
+- `PyQt5` for the interface
+
+Continuous integration and deployment is handled by github directly through the `test_and_deploy.yml` workflow file.
+While not directly runnable, the commands used therein are encapsulated in the generalist script `commands.sh`.
+Call it with `-h` to get a list of available instructions.
+
+Before performing a pull request, make sure to run the deployment tests first either through `commands.sh before-deploy` or by calling the dedicated script (`deploy_tests.sh`) directly.
+It will install the package under a temporary folder in multiple configurations (user, test, ...) and check for formatting and pep8 compliance.
 
 ## Acknowledgement
 

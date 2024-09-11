@@ -33,14 +33,15 @@ df = pd.read_csv(datafile, index_col="Name")
 if detailed:
     df["Family"] += df["Class"].fillna("")
 else:
-    df = df[(df.Library == "AMaze") | (df.Library == "Gymnasium")]
+    df = df[(df.Library == "AMaze") | (df.Library == "Gymnasium")
+            | (df.Family == "MazeExplorer") | (df.Family == "Lab2D")]
 
 misc = "Miscellaneous"
 df.loc[(df.Library == "misc"), "Library"] = misc
 
 section("Raw data")
-for family in ["LabMaze", "ObstacleTower"]:
-    df.loc[f"{family.lower()}-placeholder",:] = [misc, family, "", float("nan")]
+# for family in ["LabMaze", "ObstacleTower"]:
+#     df.loc[f"{family.lower()}-placeholder",:] = [misc, family, "", float("nan")]
 print(df)
 
 section("Grouped data")
@@ -61,26 +62,27 @@ table.sort_values(sort_keys, axis="rows", inplace=True)
 print(table)
 
 section("Labeled data")
+no_control="None"
 def _key(library, family): return (library, family) if detailed else family
 manual_data = {
-    _key("Gymnasium", "Classic Control"): ["Continuous", "Both", "-"],
-    _key("Gymnasium", "Toy Text"): ["Discrete", "Discrete", "-"],
-    _key("Gymnasium", "Box2D"): ["Continuous", "Both", "-"],
-    _key("Gymnasium", "Mujoco"): ["Continuous", "Continuous", "-"],
+    _key("Gymnasium", "Classic Control"): ["Continuous", "Both", no_control],
+    _key("Gymnasium", "Toy Text"): ["Discrete", "Discrete", no_control],
+    _key("Gymnasium", "Box2D"): ["Continuous", "Both", no_control],
+    _key("Gymnasium", "Mujoco"): ["Continuous", "Continuous", no_control],
     _key("Gymnasium", "ALE"): ["Image", "Discrete", "Modes"],
+    _key("VizDoom", "MazeExplorer"): ["Image", "Discrete", "Extensive"],
+    _key(misc, "Lab2D"): ["Both", "Discrete", "Lua"],
 }
 if detailed:
     manual_data.update({
         _key("AMaze", "Discrete"): ["Discrete", "Discrete", "Extensive"],
         _key("AMaze", "Hybrid"): ["Image", "Discrete", "Extensive"],
         _key("AMaze", "Continuous"): ["Continuous", "Continuous", "Extensive"],
-        _key("VizDoom", "LevDoom"): ["Image", "Discrete", "-"],
-        _key("VizDoom", "MazeExplorer"): ["Image", "Discrete", "Extensive"],
-        _key(misc, "Lab2D"): ["Both", "Discrete", "Lua"],
-        _key(misc, "LabMaze"): ["Discrete", "Discrete", "Intermediate"],
-        _key(misc, "Metaworld"): ["Continuous", "Continuous", "-"],
+        _key("VizDoom", "LevDoom"): ["Image", "Discrete", no_control],
+        # _key(misc, "LabMaze"): ["Discrete", "Discrete", "Intermediate"],
+        _key(misc, "Metaworld"): ["Continuous", "Continuous", no_control],
         _key(misc, "ProcGen"): ["Image", "Discrete", "Modes"],
-        _key(misc, "ObstacleTower"): ["Image", "Discrete", "Extensive"],
+        # _key(misc, "ObstacleTower"): ["Image", "Discrete", "Extensive"],
     })
 else:
     manual_data.update({
@@ -118,16 +120,21 @@ if detailed:
     # print(hlines)
 
 else:
-    keys = df["Family"].unique()
+    keys = sorted(df["Family"].unique())
+    print(keys)
     lib_order = {}
     positions = [-md_table.index.get_loc(f) for f in keys]
+    print("__")
+    print(positions)
+    print("__")
 
 pprint.pprint(dict(zip(keys, positions)))
 
 df.boxplot(column="Time", by="Family", vert=False, positions=positions)
 plt.savefig(folder.joinpath(f"gym_{fname}.png"))
 
-ax = df.boxplot(column="Time", by=["Library", "Family"], vert=False, positions=positions, figsize=(3, .35*len(positions)),
+ax = df.boxplot(column="Time", by=group_keys, vert=False,
+                positions=positions, figsize=(3, .35*len(positions)),
                 flierprops=dict(markerfacecolor='black', markeredgecolor='gray', marker='.', markersize=2))
 plt.suptitle("")
 ax.set_title("")
@@ -155,7 +162,7 @@ else:
     for y in [1, 2]:
         ax.axhline(y=-1*y-.5, linestyle="dashed", linewidth=.5, color="red")
     for y, ay, dy, t, va in [(-1.5, -1.4, 2.0, "Faster &\nNo control", "bottom"),
-                             (-2.6, -2.6, -2.5, "Slower &\nLow control", "top")]:
+                             (-2.6, -2.6, -4.5, "Slower &\nLow control", "top")]:
         ax.text(5.5, y, t, ha="right", va=va, size="x-small", color="red")
         plt.arrow(7, ay, 0, dy, color="red", head_width=1, head_length=.5, length_includes_head=True, clip_on=False)
     ax.set_xlim(right=6)
@@ -165,12 +172,12 @@ for side in ['left', 'right', 'bottom']:
 plt.savefig(table_pdf, bbox_inches='tight', pad_inches=0.015)
 
 pretty_tex = folder.joinpath(f"gym_pretty_{fname}.tex")
-cols = 6 + detailed
+cols, overdraw = 6 + detailed, False
 with open(pretty_tex, "w") as f:
     lc = md_table.columns[-1]
     table_str = (md_table
                  .to_latex(float_format="%.3f")
-                 .replace(fr"\cline{{1-{cols}}}", fr"\cmidrule(r){{1-{cols}}}")
+                 .replace(fr"\cline{{1-{cols}}}", fr"\cmidrule(r){{1-{cols+overdraw}}}")
                  .replace("NaN", "-"))
     tr = table_str.split("\n")
     print("-"*80)
@@ -181,7 +188,7 @@ with open(pretty_tex, "w") as f:
     tr[2] = tr[2].replace(r"Time \\", r"\multicolumn{2}{c}{Time (s)} \\ ")
     tr.insert(3, fr"\cmidrule(lr){{{6+detailed}-{7+detailed}}}")
 
-    multirow = 7.77 if not detailed else 18.1
+    multirow = 9.77 if not detailed else 16.1
 
     tr[4] = "&".join(
         tr[5].split("&")[0:1+detailed]
@@ -198,11 +205,11 @@ with open(pretty_tex, "w") as f:
         #del tr[-2]
         tr[6] = " & ".join([r"\textbf{AMaze}"] + tr[6].split(" & ")[1:])
 
-        img_height = 17.75
+        img_height = 15.75
 
     else:
         tr[8] = " & ".join(r"\textbf{" + v + r"}" for v in tr[8].replace(r"\\", "").split(" & ")) + r"\\"
-        img_height = 7.2
+        img_height = 9.2
 
     print("-"*80)
     print("\n".join(tr))

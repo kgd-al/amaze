@@ -201,7 +201,9 @@ def __draw_inputs(
         big_image.save(str(path))
 
 
-def _all_inputs(signs: dict[SignType, Signs], empty_intersections: bool) -> List[InputDetails]:
+def _all_inputs(
+    signs: dict[SignType, Signs], empty_intersections: bool
+) -> List[InputDetails]:
     inputs: List[InputDetails] = []
 
     def array():
@@ -289,12 +291,14 @@ def _all_inputs(signs: dict[SignType, Signs], empty_intersections: bool) -> List
 
                 if empty_intersections:
                     a = a.copy()
-                    inputs.append((
-                        a,
-                        i_to_dir(i_sol),
-                        Direction(k),
-                        None,
-                    ))
+                    inputs.append(
+                        (
+                            a,
+                            i_to_dir(i_sol),
+                            Direction(k),
+                            None,
+                        )
+                    )
 
     return inputs
 
