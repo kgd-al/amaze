@@ -47,6 +47,6 @@ This means either :meth:`~amaze.simu.simulation.Simulation.success` (the agent h
 
 To conclude, we extract select pieces of information from the simulation (success, rewards) as well
 as the more exhaustive :meth:`~amaze.simu.simulation.Simulation.infos`.
-The full listing for the exemple is shown below
+The full listing for the example is shown below
 
 .. kgd-literal-include::

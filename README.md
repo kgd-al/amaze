@@ -2,22 +2,18 @@
 
 [![JOSS](https://joss.theoj.org/papers/bc6892f6873808ced10bc8c4c222e635/status.svg)](https://joss.theoj.org/papers/bc6892f6873808ced10bc8c4c222e635)
 
-A lightweight maze navigation task generator for sighted AI agents.
-
-## Badges
-
-### Stable branch (main)
-![main:status](https://github.com/kgd-al/amaze/actions/workflows/test_and_deploy.yml/badge.svg?branch=main)
 [![PyPI version](https://badge.fury.io/py/amaze-benchmarker.svg)](https://badge.fury.io/py/amaze-benchmarker)
 [![Documentation Status](https://readthedocs.org/projects/amaze/badge/?version=latest)](https://amaze.readthedocs.io/en/latest/?badge=latest)
 [![Downloads](https://static.pepy.tech/badge/amaze-benchmarker)](https://pepy.tech/project/amaze-benchmarker)
 
+![main:status](https://github.com/kgd-al/amaze/actions/workflows/test_and_deploy.yml/badge.svg?branch=main)
 ![main:test](https://github.com/kgd-al/amaze/actions/workflows/extensive_testing.yml/badge.svg?branch=main)
-[![cov](https://kgd-al.github.io/amaze/badges/coverage.svg)](https://github.com/kgd-al/amaze/actions)
 
-### Development (dev)
-![dev:test](https://github.com/kgd-al/amaze/actions/workflows/extensive_testing.yml/badge.svg?branch=dev)
+[//]: # ([![cov]&#40;https://kgd-al.github.io/amaze/badges/coverage.svg&#41;]&#40;https://github.com/kgd-al/amaze/actions&#41;)
 
+[//]: # (![dev:test]&#40;https://github.com/kgd-al/amaze/actions/workflows/extensive_testing.yml/badge.svg?branch=dev&#41;)
+
+A lightweight maze navigation task generator for sighted AI agents.
 
 ## Mazes
 

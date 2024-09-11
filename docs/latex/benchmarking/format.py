@@ -1,17 +1,15 @@
 #!/bin/env python3
 
 import os
+import pprint
 import sys
-import pandas as pd
-import matplotlib.pyplot as plt
-
-import amaze
-
 from pathlib import Path
 
-import pprint
+import matplotlib.pyplot as plt
+import pandas as pd
 
 detailed = (len(sys.argv) > 1)
+
 
 def line(msg=None, c='='):
     n = os.get_terminal_size()[0]
@@ -20,27 +18,37 @@ def line(msg=None, c='='):
         print(2*c, msg, end=' ')
     print(c*n)
 
+
 def section(name):
     print()
     line()
     line(name)
 
-folder=Path(__file__).parent
+
+folder = Path(__file__).parent
 fname = "table" + ("-detailed" if detailed else "")
-datafile = folder.joinpath(f"{fname}.csv")
+datafile = folder.joinpath(f"table.csv")
 
 df = pd.read_csv(datafile, index_col="Name")
+if detailed:
+    df["Family"] += df["Class"].fillna("")
+else:
+    df = df[(df.Library == "AMaze") | (df.Library == "Gymnasium")]
+
+misc = "Miscellaneous"
+df.loc[(df.Library == "misc"), "Library"] = misc
 
 section("Raw data")
+for family in ["LabMaze", "ObstacleTower"]:
+    df.loc[f"{family.lower()}-placeholder",:] = [misc, family, "", float("nan")]
 print(df)
-df.to_csv(datafile)
 
 section("Grouped data")
 if detailed:
     group_keys = ["Library", "Family"]
     sort_keys = ["Library", ("Time", "median")]
     for amaze_char, amaze_type in zip("DHC", ["Discrete", "Hybrid", "Continuous"]):
-        df.replace("AMaze-" + amaze_char, amaze_type, inplace=True)
+        df.replace("AMaze" + amaze_char, amaze_type, inplace=True)
 else:
     group_keys = "Family"
     sort_keys = ("Time", "median")
@@ -48,7 +56,7 @@ gb = df.groupby(group_keys)
 table = gb.agg({"Time": ['min', 'max', 'median', 'mean', 'std']})
 table["N"] = gb.count()["Time"]
 table.insert(0, "N", table.pop("N"))
-print(table)
+table["N"] = table["N"].astype("Int64")
 table.sort_values(sort_keys, axis="rows", inplace=True)
 print(table)
 
@@ -66,7 +74,13 @@ if detailed:
         _key("AMaze", "Discrete"): ["Discrete", "Discrete", "Extensive"],
         _key("AMaze", "Hybrid"): ["Image", "Discrete", "Extensive"],
         _key("AMaze", "Continuous"): ["Continuous", "Continuous", "Extensive"],
-        _key("ProcGen", "ProcGen"): ["Image", "Discrete", "Modes"],
+        _key("VizDoom", "LevDoom"): ["Image", "Discrete", "-"],
+        _key("VizDoom", "MazeExplorer"): ["Image", "Discrete", "Extensive"],
+        _key(misc, "Lab2D"): ["Both", "Discrete", "Lua"],
+        _key(misc, "LabMaze"): ["Discrete", "Discrete", "Intermediate"],
+        _key(misc, "Metaworld"): ["Continuous", "Continuous", "-"],
+        _key(misc, "ProcGen"): ["Image", "Discrete", "Modes"],
+        _key(misc, "ObstacleTower"): ["Image", "Discrete", "Extensive"],
     })
 else:
     manual_data.update({
@@ -74,7 +88,6 @@ else:
     })
 
 md_table = table[[("N", ""), ("Time", "median")]]
-#md_table.columns = ["N", "Median time (s)"]
 
 for c in ["Control", "Outputs", "Inputs"]:
     md_table.insert(1, c, ["?" for _ in range(len(md_table))])
@@ -85,28 +98,31 @@ for key, (inputs, outputs, control) in manual_data.items():
     md_table.loc[key, "Control"] = control
 
 print(md_table)
-md_table.to_markdown(folder.joinpath(f"gym_{fname}.md"), floatfmt=".3f", tablefmt="grid")
 md_table.to_latex(folder.joinpath(f"gym_{fname}.tex"), float_format="%.3f")
 
 table_pdf = folder.joinpath(f"gym_{fname}.pdf")
 
-keys = sorted(gb.groups.keys())
 hlines = []
 if detailed:
+    keys = gb.groups.keys()
     lib_order = {k: i for i, k in enumerate(sorted(set(t[0] for t in keys)))}
-    positions = [-md_table.index.get_loc(f)-.5*lib_order[f[0]] for f in keys]
 
-    hlines = [.25-sum(1 for _k in keys if _k[0] == k) - .75*i for i, k in enumerate(list(lib_order.keys())[:-1])]
-    hlines = [hlines[i] if i == 0 else hlines[i] + hlines[i-1] for i in range(len(hlines))]
-    #print(lib_order)
-    #print(hlines)
+    positions = [-md_table.index.get_loc(f) - .5 * lib_order.get(f[0], 0) for f in keys]
+
+    hlines = [.25-sum(1 for _k in keys if _k[0] == k) - .75*(i>0) for i, k in enumerate(list(lib_order.keys())[:-1])]
+    hlines = [sum(hlines[:i+1]) for i in range(len(hlines))]
+
+    scale = .8
+    positions = [scale * p for p in positions]
+    hlines = [scale * h for h in hlines]
+    # print(hlines)
 
 else:
+    keys = df["Family"].unique()
     lib_order = {}
     positions = [-md_table.index.get_loc(f) for f in keys]
 
-# Cancel this one to get something readable
-#df.loc["CarRacing-v2"] = float("nan")
+pprint.pprint(dict(zip(keys, positions)))
 
 df.boxplot(column="Time", by="Family", vert=False, positions=positions)
 plt.savefig(folder.joinpath(f"gym_{fname}.png"))
@@ -119,7 +135,7 @@ ax.set_title("")
 
 if True:
     ax.set_yticks([])
-    #ax.set_yticklabels([])
+    # ax.set_yticklabels([])
 
 ax.set_ylabel("")
 ax.set_xscale("log")
@@ -138,8 +154,8 @@ else:
     ax.set_ylim(top=.75)
     for y in [1, 2]:
         ax.axhline(y=-1*y-.5, linestyle="dashed", linewidth=.5, color="red")
-    for y, ay, dy, t, va in [(-1.5, -1.4, 1.5, "Faster &\nNo control", "bottom"),
-                            (-2.6, -2.6, -2.5, "Slower &\nLow control", "top")]:
+    for y, ay, dy, t, va in [(-1.5, -1.4, 2.0, "Faster &\nNo control", "bottom"),
+                             (-2.6, -2.6, -2.5, "Slower &\nLow control", "top")]:
         ax.text(5.5, y, t, ha="right", va=va, size="x-small", color="red")
         plt.arrow(7, ay, 0, dy, color="red", head_width=1, head_length=.5, length_includes_head=True, clip_on=False)
     ax.set_xlim(right=6)
@@ -149,9 +165,13 @@ for side in ['left', 'right', 'bottom']:
 plt.savefig(table_pdf, bbox_inches='tight', pad_inches=0.015)
 
 pretty_tex = folder.joinpath(f"gym_pretty_{fname}.tex")
+cols = 6 + detailed
 with open(pretty_tex, "w") as f:
     lc = md_table.columns[-1]
-    table_str = md_table.to_latex(float_format="%.3f")
+    table_str = (md_table
+                 .to_latex(float_format="%.3f")
+                 .replace(fr"\cline{{1-{cols}}}", fr"\cmidrule(r){{1-{cols}}}")
+                 .replace("NaN", "-"))
     tr = table_str.split("\n")
     print("-"*80)
     print("\n".join(tr))
@@ -161,28 +181,24 @@ with open(pretty_tex, "w") as f:
     tr[2] = tr[2].replace(r"Time \\", r"\multicolumn{2}{c}{Time (s)} \\ ")
     tr.insert(3, fr"\cmidrule(lr){{{6+detailed}-{7+detailed}}}")
 
-    multirow = 7.77 if not detailed else 11.6
+    multirow = 7.77 if not detailed else 18.1
 
     tr[4] = "&".join(
         tr[5].split("&")[0:1+detailed]
         + tr[4].split("&")[1+detailed:-1]
         + [
-            r" Median & \multirow{" + str(multirow) + "}{*}{"
+            " Median &\n" + r" \multirow{" + str(multirow) + "}{*}{"
             + r"\includegraphics[height=\img]{"
             + str(table_pdf) + r"}} \\"
         ])
     del tr[5]
-    tr[5] = fr"\cmidrule(r){{1-{6+detailed}}}"
-    #tr[5] = fr"\cmidrule(r){{1-{7+detailed}}}"
 
     if detailed:
-        for i in [9, 15]:
-            tr[i] = tr[i].replace("cline", "cmidrule(r)")
-        #tr[9] = r"\cmidrule(r){1-8}"
         del tr[-4]
         #del tr[-2]
         tr[6] = " & ".join([r"\textbf{AMaze}"] + tr[6].split(" & ")[1:])
-        img_height = 11.25
+
+        img_height = 17.75
 
     else:
         tr[8] = " & ".join(r"\textbf{" + v + r"}" for v in tr[8].replace(r"\\", "").split(" & ")) + r"\\"

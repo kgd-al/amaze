@@ -201,7 +201,7 @@ def __draw_inputs(
         big_image.save(str(path))
 
 
-def _all_inputs(signs: dict[SignType, Signs]) -> List[InputDetails]:
+def _all_inputs(signs: dict[SignType, Signs], empty_intersections: bool) -> List[InputDetails]:
     inputs: List[InputDetails] = []
 
     def array():
@@ -274,10 +274,10 @@ def _all_inputs(signs: dict[SignType, Signs]) -> List[InputDetails]:
                         )
                     )
 
+                i_sol = next(iter(set(range(4)) - {i, j, k}))
                 if j != k:
                     a = a.copy()
                     for trap in traps:
-                        i_sol = next(iter(set(range(4)) - {i, j, k}))
                         inputs.append(
                             (
                                 a,
@@ -286,6 +286,15 @@ def _all_inputs(signs: dict[SignType, Signs]) -> List[InputDetails]:
                                 (trap, SignType.TRAP, Direction(j)),
                             )
                         )
+
+                if empty_intersections:
+                    a = a.copy()
+                    inputs.append((
+                        a,
+                        i_to_dir(i_sol),
+                        Direction(k),
+                        None,
+                    ))
 
     return inputs
 
@@ -296,12 +305,13 @@ def inputs_evaluation(
     drawer: Callable,
     observations: np.ndarray,
     controller: BaseController,
+    empty_intersections: bool = False,
     draw_inputs: bool = False,
     draw_individual_files: bool = False,
     draw_summary_file: bool = True,
     summary_file_ratio: float = 16 / 9,
 ):
-    inputs = _all_inputs(signs)
+    inputs = _all_inputs(signs, empty_intersections)
 
     visuals, outputs = [], []
     df = pd.DataFrame(
