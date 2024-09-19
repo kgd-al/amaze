@@ -71,7 +71,7 @@ manual_data = {
     _key("Gymnasium", "Mujoco"): ["Continuous", "Continuous", no_control],
     _key("Gymnasium", "ALE"): ["Image", "Discrete", "Modes"],
     _key("VizDoom", "MazeExplorer"): ["Image", "Discrete", "Extensive"],
-    _key(misc, "Lab2D"): ["Both", "Discrete", "Lua"],
+    _key(misc, "Lab2D"): ["Both", "Discrete", "Script"],
 }
 if detailed:
     manual_data.update({
