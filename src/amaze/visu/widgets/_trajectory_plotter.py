@@ -208,6 +208,11 @@ def _plot_trajectory_value(
     img_format: QImage.Format = QImage.Format_RGB32,
 ) -> Optional[QImage]:
 
+    print("[kgd-debug] ==")
+    print(trajectory)
+    verbose = 1
+    print("[kgd-debug] --")
+
     # verbose = 0
     if verbose > 0:
         if verbose > 5:  # pragma: no cover
@@ -246,7 +251,9 @@ def _plot_trajectory_value(
 
         # Compute value
         c_reward += r
-        v = c_reward + rewards.finish
+        v = c_reward
+        if r < 0:
+            v += rewards.finish
 
         steps = 0
 
@@ -277,9 +284,15 @@ def _plot_trajectory_value(
 
         v += steps * rewards.timestep
         v /= len(maze.solution)
+        # print((px, py), (ax, ay), r, v, c_reward)
+        # print("v = ", c_reward, " + ", 0 if r > 0 else rewards.finish, " + ", steps * rewards.timestep,
+        #       " / ", len(maze.solution))
+        v = round(v, 3)
+        assert 0 <= v <= 1, v
         data.loc[len(data)] = [*cell, c_reward, steps, v]
         values.append(v)
-    if verbose > 1:
+    if verbose > 1 or True:
+        print("[kgd-debug]", "Augmented dataframe:")
         print(trajectory.merge(data, left_index=True, right_index=True))
 
     if verbose > 1 and cycle:
@@ -287,7 +300,7 @@ def _plot_trajectory_value(
 
     trivial_trajectory = len(set(values)) == 1
 
-    needs_color_bar = cycle and not trivial_trajectory
+    needs_color_bar = cycle or set(values) != {1}
     needs_overlay = cycle or needs_color_bar
     if verbose > 1:
         print(f"{trivial_trajectory=} {needs_color_bar=}")
@@ -341,24 +354,17 @@ def _plot_trajectory_value(
 
     min_v, max_v = np.quantile(values, [0, 1])
     diff_v = max_v - min_v
-    if verbose > 1:
+    if verbose > 1 or True:
+        print("[kgd-debug]", "--")
         print("Value range:", min_v, max_v, diff_v)
 
     rotations = {(1, 0): 0, (0, 1): 90, (-1, 0): 180, (0, -1): 270}
 
     if needs_overlay:
-        if trivial_trajectory:
-
-            def color(_):
-                return Qt.red
-
-        else:
-
-            def colormap(v_):
-                return QColor.fromHsvF(v_ / 6, 1, 1)
-
-            def color(v_):
-                return Qt.green if v_ == max_v else colormap((v_ - min_v) / diff_v)
+        def colormap(v_):
+            return QColor.fromHsvF(v_ / 6, 1, 1)
+        def color(v_):
+            return Qt.green if v_ == 1 else colormap(v_)
 
     else:
 
@@ -397,12 +403,13 @@ def _plot_trajectory_value(
         painter.restore()
 
     if needs_overlay:
-        (x_, y_), a, c = _trajectory[-1]
-        painter.save()
-        painter.translate(x_ * s, y_ * s)
-        painter.rotate(a)
-        painter.fillRect(QRectF(0.4 * s, -0.5 * s + 1, 0.1 * s, s - 2), Qt.red)
-        painter.restore()
+        if data["steps"].iloc[-1] > 0:
+            (x_, y_), a, c = _trajectory[-1]
+            painter.save()
+            painter.translate(x_ * s, y_ * s)
+            painter.rotate(a)
+            painter.fillRect(QRectF(0.4 * s, -0.5 * s + 1, 0.1 * s, s - 2), Qt.red)
+            painter.restore()
 
         if force_square:
             painter.restore()
@@ -416,6 +423,11 @@ def _plot_trajectory_value(
                 Qt.AlignCenter,
                 "Expected return",
             )
+            if cycle:
+                cycle_legend = f"First cycle" f" ({100 * cycle / len(trajectory):.2g}%)"
+            else:
+                cycle_legend = "No cycle"
+
             painter.drawText(
                 QRectF(
                     x_offset,
@@ -423,8 +435,7 @@ def _plot_trajectory_value(
                     width - cb_width,
                     0.5 * cb_width,
                 ),
-                Qt.AlignCenter,
-                f"First cycle" f" ({100 * cycle / len(trajectory):.2g}%)",
+                Qt.AlignCenter, cycle_legend
             )
 
     elif force_square:
@@ -444,9 +455,11 @@ def _plot_trajectory_value(
             painter.translate(cb_width, 0)
             painter.scale(-1, 1)
 
+        error_v = sorted(set(values))[-2 if not trivial_trajectory else -1]
+        print(error_v, sorted(set(values)))
         gradient = QLinearGradient(0, 0, 0, 1)
         gradient.setColorAt(0, Qt.green)
-        gradient.setColorAt((max_v - sorted(set(values))[-2]) / diff_v, colormap(1))
+        gradient.setColorAt(1-error_v, colormap(1))
         gradient.setColorAt(1, colormap(0))
         gradient.setCoordinateMode(QLinearGradient.ObjectMode)
         cb_box = QRectF(m, m, cb_w, cb_h)
@@ -465,9 +478,8 @@ def _plot_trajectory_value(
         )
 
         text_data = []
-        for i_ in range(cb_ticks):
-            u = i_ / (cb_ticks - 1)
-            cb_y = diff_v * u + min_v
+        for u in [_i / (cb_ticks - 1) for _i in range(cb_ticks)] + [error_v]:
+            cb_y = u# diff_v * u + min_v
             # cb_y = round(cb_y)
             text = f"{cb_y:.2g}"
             if verbose > 1:
