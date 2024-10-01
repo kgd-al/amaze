@@ -65,6 +65,13 @@ would receive the following inputs:
         src="https://raw.githubusercontent.com/kgd-al/amaze/master/docs/latex/agents/light-1.png">
 </picture>
 
+Data is provided in direct order. Input vectors for the example above translate to:
+- Start: [1 0 1 1 0 0 0 0] (3 walls at E W S and no sign)
+- Clue: [.5 0 1 0 0 1 0 0] (1 wall east, coming from the east, sign pointing upwards)
+- Lure: [.5 1 1 0 0 0 .25 1] (still coming from east, walls at N E and sign pointing east with magnitude .25)
+- Trap: [1 0 .5 0 0 0 0 .5] (coming from west, wall on east, sign pointing down with magnitude .5)
+- End: [1 1 .5 0 0 0 0 0] (coming from west, walls at E N)
+
 ### Continuous inputs
 
 <picture>
@@ -92,6 +99,10 @@ The sign, if any, is thus provided as a potentially complex image that the agent
 
 While the term continuous is a bit of stretch for coarse-grain grayscale images, it highlights the
 difference with the discrete case where every possible input is easily enumerable.
+
+In this case, the input buffer is filled first by columns starting in the upper left corner 
+(as depicted in the image). Thus console output of the input buffer is identical to what is displayed
+in the interface.
 
 ### Examples
 

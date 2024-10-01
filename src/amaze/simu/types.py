@@ -9,11 +9,25 @@ class InputType(Enum):
     """Describes the type of input provided to the maze-navigating agent"""
 
     DISCRETE = "DISCRETE"
-    """ Input is made of 8 pre-processed floats"""
+    """ Input is made of 8 pre-processed floats:
+        - First walls and previous direction in direct order 
+        (EAST, NORTH, WEST, SOUTH)
+        - Then signs (same order). Only one value will be above 0
+        
+        See the readme for examples    
+    """
 
     CONTINUOUS = "CONTINUOUS"
     """ Input is a raw image representing the current cell, at a given
-    resolution """
+    resolution:
+     
+        - Iteration order is 
+        ``` for y in range(v):
+                for x in range(v):
+        ```
+        
+        See the readme for examples
+     """
 
 
 class OutputType(Enum):
