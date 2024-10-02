@@ -205,12 +205,9 @@ def _plot_trajectory_value(
     verbose: int = 0,
     side: int = 0,
     square: bool = False,
+    force_overlay: bool = False,
     img_format: QImage.Format = QImage.Format_RGB32,
 ) -> Optional[QImage]:
-
-    print("[kgd-debug] ==")
-    verbose = 1
-    print("[kgd-debug] --")
 
     # verbose = 0
     if verbose > 0:
@@ -294,8 +291,8 @@ def _plot_trajectory_value(
     values = set(state_action.values())
     trivial_trajectory = len(values) == 1
 
-    needs_overlay = (values != {1})
-    if verbose > 1 or True:
+    needs_overlay = ((values != {1}) and verbose > 0) or force_overlay
+    if verbose > 1:
         print(f"{trivial_trajectory=} {needs_overlay=}")
     # pprint.pprint(values)
 
@@ -429,11 +426,6 @@ def _plot_trajectory_value(
         cb_h = h - 2 * cb_margin
         cb_w = 0.25 * cb_width
 
-        error_v = None
-        if len(values) > 2:
-            error_v = sorted(values)[-2]
-        print(error_v, sorted(values))
-
         if side == 1:
             painter.translate((1 - cb_r) * w, 0)
         else:
@@ -442,8 +434,7 @@ def _plot_trajectory_value(
 
         gradient = QLinearGradient(0, 0, 0, 1)
         gradient.setColorAt(0, Qt.green)
-        if error_v:
-            gradient.setColorAt(1-error_v, colormap(1))
+        gradient.setColorAt(.05, colormap(1))
         gradient.setColorAt(1, colormap(0))
         gradient.setCoordinateMode(QLinearGradient.ObjectMode)
         cb_box = QRectF(m, m, cb_w, cb_h)
@@ -462,11 +453,9 @@ def _plot_trajectory_value(
         )
 
         text_data = []
-        ticks = [_i / (cb_ticks - 1) for _i in range(cb_ticks)]
-        if error_v is not None:
-            ticks.append(error_v)
-        for u in ticks:
-            cb_y = u# diff_v * u + min_v
+        for _i in range(cb_ticks):
+            u = _i / (cb_ticks - 1)
+            cb_y = u
             # cb_y = round(cb_y)
             text = f"{cb_y:.2g}"
             if verbose > 1:

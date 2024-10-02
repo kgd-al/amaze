@@ -387,6 +387,7 @@ class MazeWidget(QLabel):
         verbose: int = 0,
         side: int = 0,
         square: bool = False,
+        force_overlay: bool = False,
         img_format: QImage.Format = QImage.Format_RGB32,
     ) -> Optional[QImage]:
         """Plots a trajectory stored in the provided simulation to the
@@ -399,6 +400,7 @@ class MazeWidget(QLabel):
         :param verbose: whether to provide additional information
         :param side: where to put the color bar (<0: left, >0: right, 0: auto)
         :param square: whether to generate a square image of size max(w,h)^2
+        :param force_overlay: whether to always draw the overlay (colorbar + labels)
         :param img_format: QImage.Format to use for the underlying QImage
         :param config: kw configuration values (see default_config())
         """
@@ -435,6 +437,7 @@ class MazeWidget(QLabel):
             verbose=verbose,
             side=side,
             square=square,
+            force_overlay=force_overlay,
             path=path,
             img_format=img_format,
         )
