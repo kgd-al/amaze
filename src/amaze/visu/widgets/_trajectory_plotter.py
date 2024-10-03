@@ -291,7 +291,8 @@ def _plot_trajectory_value(
     values = set(state_action.values())
     trivial_trajectory = len(values) == 1
 
-    needs_overlay = ((values != {1}) and verbose > 0) or force_overlay
+    needs_colormap = (values != {1})
+    needs_overlay = (needs_colormap and verbose > 0) or force_overlay
     if verbose > 1:
         print(f"{trivial_trajectory=} {needs_overlay=}")
     # pprint.pprint(values)
@@ -344,7 +345,7 @@ def _plot_trajectory_value(
 
     rotations = {(1, 0): 0, (0, 1): 90, (-1, 0): 180, (0, -1): 270}
 
-    if needs_overlay:
+    if needs_colormap:
         def colormap(v_): return QColor.fromHsvF(v_ / 6, 1, 1)
         def color(v_): return Qt.green if v_ == 1 else colormap(v_)
 
@@ -377,7 +378,7 @@ def _plot_trajectory_value(
         painter.drawPath(arrow)
         painter.restore()
 
-    if needs_overlay:
+    if needs_colormap:
         if not simulation.success():
             (x_, y_), a, c = _trajectory[-1]
             painter.save()
@@ -389,7 +390,8 @@ def _plot_trajectory_value(
         if force_square:
             painter.restore()
 
-        painter.restore()  # to before the space saved for the color bar
+        if needs_overlay:
+            painter.restore()  # to before the space saved for the color bar
         painter.setPen(config["foreground"])
 
         if verbose:
