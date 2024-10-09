@@ -354,7 +354,7 @@ def _get_image(key: DataKey):
 
     # First look in RAM cache
     if (img := _cache.get(key)) is not None:
-        logging.info(f"Using cached image for {key}")
+        logger.debug(f"Using cached image for {key}")
         return img
 
     # Else look in file cache
