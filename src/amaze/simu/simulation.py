@@ -54,6 +54,7 @@ class Simulation:
         maze: Resettable[Maze] = None,
         robot: Resettable[Robot.BuildData] = None,
         save_trajectory=False,
+        deadline_factor=4
     ):
 
         def test_valid_set_reset(o_, s_, a_):
@@ -78,10 +79,11 @@ class Simulation:
         self.dt = 1 if self.data.outputs is OutputType.DISCRETE else 0.1
 
         sl = len(self.maze.solution)
-        self.deadline = self.deadline_factor() * sl / self.dt
+        self._deadline_factor = deadline_factor
+        self.deadline = deadline_factor * sl / self.dt
         self.rewards = REWARDS["compute"](sl, self.dt)
         self.optimal_reward = REWARDS["optimal"](sl, self.dt)
-        self.minimal_reward = REWARDS["minimal"](sl, self.dt, self.deadline_factor(), self.rewards)
+        self.minimal_reward = REWARDS["minimal"](sl, self.dt, deadline_factor, self.rewards)
         self.stats = SimpleNamespace(steps=0, collisions=0, backsteps=0)
 
         self.observations = self._observations(self.data.inputs, self.data.vision)
@@ -105,8 +107,8 @@ class Simulation:
     def time(self):
         return self.timestep * self.dt
 
-    @staticmethod
-    def deadline_factor(): return 4
+    @property
+    def deadline_factor(self): return self._deadline_factor
 
     def success(self):
         """Return whether the agent has reached the target"""
