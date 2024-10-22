@@ -399,7 +399,7 @@ class Maze:
             self.walls[i_, j_, d_.value] = wall
 
     @classmethod
-    def generate(cls, data: BuildData):
+    def generate(cls, data: BuildData, warnings=True):
         assert isinstance(
             data, Maze.BuildData
         ), f"Wrong argument type {type(data)} instead of Maze.BuildData"
@@ -571,7 +571,7 @@ class Maze:
         if not clues:
             maze.signs_data[SignType.CLUE] = []
 
-        if not data.unicursive and not clues:
+        if not data.unicursive and not clues and warnings:
             logger.warning(
                 "Mazes with intersections and no clues are" " practically unsolvable"
             )
@@ -598,15 +598,18 @@ class Maze:
         return self.build_data().to_string()
 
     @classmethod
-    def from_string(cls, s, overrides: Optional[BuildData] = None) -> "Maze":
+    def from_string(cls, s, overrides: Optional[BuildData] = None,
+                    warnings=True) -> "Maze":
         """Generate a maze from its string description.
 
         Optionally, specific parameters can be overridden by values set in
         the `overrides` argument.
         The full syntax is described in :meth:`.BuildData.from_string`.
         """
-        return cls.generate(cls.BuildData.from_string(s, overrides))
+        return cls.generate(cls.BuildData.from_string(s, overrides),
+                            warnings=warnings)
 
     def all_rotations(self) -> List["Maze"]:
         """Returns all rotated versions of this maze"""
-        return [self.generate(d) for d in self.build_data().all_rotations()]
+        return [self.generate(d, warnings=False)
+                for d in self.build_data().all_rotations()]
