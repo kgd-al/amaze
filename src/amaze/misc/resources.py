@@ -360,7 +360,7 @@ def _get_image(key: DataKey):
     # Else look in file cache
     filename = _key_to_path(key)
     no_cache = no_file_cache()
-    if not no_cache:
+    if not no_cache and False:
         if filename.exists():
             img = QImage(str(filename))
             if not img.isNull():
@@ -517,7 +517,25 @@ def __generator__forbidden(lightness: float, size: int):
         painter.drawLine(QPointF(0.25, 0), QPointF(0.4, 0))
         painter.rotate(-i * 90)
         painter.translate(0, 1)
+    painter.end()
 
+    return img
+
+
+def __generator__rarrow(lightness: float, size: int):
+    img, painter = _image(size, lightness)
+    c = __pen_color(lightness)
+
+    img.fill(Qt.black)
+    painter.fillRect(QRectF(0.25, 0.375, .5, 0.25), c)
+
+    path = QPainterPath()
+    path.moveTo(.5, 0)
+    path.addRect(QRectF(.5, 0, .5, 1))
+    path.moveTo(.5, 0)
+    # path.
+    painter.fillPath(path, c)
+    painter.end()
     return img
 
 
