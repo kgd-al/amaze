@@ -360,6 +360,7 @@ def _get_image(key: DataKey):
     # Else look in file cache
     filename = _key_to_path(key)
     no_cache = no_file_cache()
+    logger.info("Bypassing cache")
     if not no_cache and False:
         if filename.exists():
             img = QImage(str(filename))
@@ -465,13 +466,13 @@ def __generator__error(lightness: float = 0, size: int = 15):
 def arrow_path():
     """Returns a plain arrow"""
     path = QPainterPath()
-    path.moveTo(0.0, 0.4)
-    path.lineTo(0.0, 0.6)
-    path.lineTo(0.6, 0.6)
+    path.moveTo(0.0, 0.425)
+    path.lineTo(0.0, 0.575)
+    path.lineTo(0.6, 0.575)
     path.lineTo(0.6, 0.8)
     path.lineTo(1.0, 0.5)
     path.lineTo(0.6, 0.2)
-    path.lineTo(0.6, 0.4)
+    path.lineTo(0.6, 0.425)
     path.closeSubpath()
     return path
 
@@ -499,7 +500,7 @@ def __generator__warning(lightness: float, size: int):
     )
     painter.fillRect(QRectF(0.3, 0.45, 0.4, 0.1), __pen_color(lightness))
     path = QPainterPath()
-    path.addEllipse(QRectF(0.15, 0.45, 0.1, 0.1))
+    path.addEllipse(QRectF(0.1, 0.4, 0.2, 0.2))
     painter.fillPath(path, __pen_color(lightness))
     painter.end()
 
@@ -522,19 +523,50 @@ def __generator__forbidden(lightness: float, size: int):
     return img
 
 
-def __generator__rarrow(lightness: float, size: int):
+def __generator__alien(lightness: float, size: int):
     img, painter = _image(size, lightness)
-    c = __pen_color(lightness)
-
-    img.fill(Qt.black)
-    painter.fillRect(QRectF(0.25, 0.375, .5, 0.25), c)
 
     path = QPainterPath()
-    path.moveTo(.5, 0)
-    path.addRect(QRectF(.5, 0, .5, 1))
-    path.moveTo(.5, 0)
-    # path.
-    painter.fillPath(path, c)
+    path.moveTo(0.0, -.5)
+    path.lineTo(0.4, -.5)
+    path.lineTo(1.0, 0.0)
+    path.lineTo(0.4, +.5)
+    path.lineTo(0.0, +.5)
+    path.lineTo(0.0, +.125)
+    path.lineTo(0.4, +.25)
+    path.lineTo(0.6, 0.0)
+    path.lineTo(0.4, -.25)
+    path.lineTo(0.0, -.125)
+    path.closeSubpath()
+    painter.translate(0, .5)
+    painter.fillPath(path, __pen_color(lightness))
+
+    painter.end()
+    return img
+
+
+def __generator__rarrow(lightness: float, size: int):
+    img, painter = _image(size, lightness)
+
+    path = QPainterPath()
+    path.moveTo(0.0, 0.4)
+    path.lineTo(0.0, 0.6)
+    path.lineTo(0.4, 0.6)
+    path.lineTo(0.6, 0.9)
+    path.lineTo(0.8, 1.0)
+    path.lineTo(1.0, 1.0)
+    path.lineTo(1.0, 0.8)
+    path.lineTo(0.7, 0.7)
+    path.lineTo(0.6, 0.5)
+    path.lineTo(0.7, 0.3)
+    path.lineTo(1.0, 0.2)
+    path.lineTo(1.0, 0.0)
+    path.lineTo(0.8, 0.0)
+    path.lineTo(0.6, 0.1)
+    path.lineTo(0.4, 0.4)
+    path.closeSubpath()
+    painter.fillPath(path, __pen_color(lightness))
+
     painter.end()
     return img
 
