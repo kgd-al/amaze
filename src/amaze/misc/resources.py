@@ -571,6 +571,30 @@ def __generator__rarrow(lightness: float, size: int):
     return img
 
 
+def __generator__star(lightness: float, size: int):
+    img, painter = _image(size, lightness)
+    painter.translate(0.5, 0.5)
+    painter.drawEllipse(QRectF(-0.25, -0.25, 0.5, 0.5))
+
+    path = QPainterPath()
+    path.moveTo(0, .05)
+    path.lineTo(.35, .05)
+    path.lineTo(.35, .1)
+    path.lineTo(.5, .0)
+    path.lineTo(.35, -.1)
+    path.lineTo(.35, -.05)
+    path.lineTo(0, -.05)
+    path.closeSubpath()
+
+    for i in range(8):
+        painter.save()
+        painter.rotate(i*45)
+        painter.fillPath(path, __pen_color(lightness))
+        painter.restore()
+
+    return img
+
+
 # -----------------------------------------------------------------------------
 # Global variables (must be last, will introspect above code)
 
