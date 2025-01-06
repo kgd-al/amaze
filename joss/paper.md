@@ -26,8 +26,6 @@ date: 21 June 2024
 bibliography: paper.bib
 ---
 
-<!-- Add lab2D and Maze explorer to the table. And some text to go along with it. Mention Lehman2011 and more (for benchmark-less mazes) -->
-
 # Summary
 
 The need to provide fair comparisons between agents, especially in the field of Reinforcement Learning, has led to a plethora of benchmarks.
@@ -39,14 +37,20 @@ By using visual cues in a maze-navigation task, the library empowers researchers
 
 AMaze is a pure-Python package with an emphasis on the easy and intuitive generation, evaluation and analysis of mazes.
 Its primary goal is to provide a way to quickly generate mazes of targeted difficulty, e.g., to test a Reinforcement Learning algorithm.
+By modeling loosely embodied robots with three distinct input/output spaces, AMaze makes it possible to prototype agent-centric scenarios of decision making, pattern recognition and general behavior through exposition to a wide array of contexts.
+
+[^1]: [https://amaze.readthedocs.io/en/latest/](https://amaze.readthedocs.io/en/latest/)
+
+![A sample maze from the AMaze library. In the API, every maze can be converted to and from a human-readable string where each underscore-separated component describes one of its facets. The *seed* seeds the random number generator used for the paths and stochastic placement of *lures* and *traps*. These have a specific probability, shape and/or value and may be specified multiple times to increase the complexity, as described in the documentation[^1]\label{fig:maze}](../docs/latex/maze/light-wide.png)
+
+# Features
+
 Users of AMaze have two main components to take into consideration: mazes and agents.
 These are introduced below with more details available in the documentation[^1].
 
-![A sample maze from the AMaze library. Every maze can be converted to and from a human-readable string where each underscore-separated component describes one of its facets. The *seed* seeds the random number generator used for the paths and stochastic placement of *lures* and *traps*. These have a specific probability, shape and/or value and may be specified multiple times to increase the complexity.\label{fig:maze}](../docs/latex/maze/light-wide.png)
-
 ## Mazes
 
-Every maze can be described by human-readable string as illustrated in \autoref{fig:maze}, where every component is optional with sensible default values.
+Every maze can be described by human-readable string as illustrated in \autoref{fig:maze}, where every component is optional.
 The *seed* is used in the random number generator responsible for: a) the depth-first search that creates the paths and b) the stochastic placement of the *lures* and *traps*.
 As will be detailed below, agents only see a single cell at a time making intersections impossible to handle without additional information.
 *Clues* provide such an information by helpfully pointing towards the correct direction.
@@ -69,9 +73,7 @@ which, informally, account for the likelihood of encountering different states (
 Through these metrics, experimenters can make an informed decision about the level of complexity of the mazes they use.
 As illustrated by the distributions of $S_M$ and $D_M$, sampled from 500'000 mazes across all five classes (\autoref{fig:complexity}), the space of all possible mazes is both diverse and arbitrarily complex.
 
-![Distribution of Surprisingness $S_M$ versus Deceptiveness $D_M$ across 500'000 unique mazes from all five different classes. Outlier mazes are depicted in the borders to illustrate the underlying Surprisingness (right column) or lack thereof (left column).\label{fig:complexity}](../docs/latex/complexity/light.png)
-
-[^1]: [https://amaze.readthedocs.io/en/latest/](https://amaze.readthedocs.io/en/latest/)
+![Distribution of Surprisingness $S_M$ versus Deceptiveness $D_M$ across 500'000 unique mazes from all five different classes. Outlier mazes are depicted in the borders to illustrate the underlying Surprisingness (right column) or lack thereof (left column).\label{fig:complexity}](../docs/latex/complexity/light.png){ width=76% }
 
 ![Discrete (left) and continuous (right) inputs for the examples shown in \autoref{fig:maze}. The former is solely used for the fully discrete case while the latter covers both hybrid and fully continuous cases.\label{fig:inputs}](../docs/latex/agents/light-1-3.png){ width=94% }
 
@@ -102,8 +104,15 @@ Indeed, while mazes are commonly used as evaluation environments in Machine Lear
 
 The test uses 81 variations of AMaze with different vision sizes (11, 15, 21), maze sizes (5, 10, 20), lure frequencies (0, 0.5, 1), and observation and action spaces (discrete, hybrid and continuous).
 This diversity of environment types was generated to give sufficient data for a fair comparison while also showcasing the ease with which AMaze can create feature-specific sets of mazes e.g. for benchmarking purposes.
+In the figure, $N$ is the number of unique environments used/provided by the library and Time is measured on 1000 time steps averaged over 10 replicates on an i7-1185G7 (3GHz).
+Discrete inputs are enumerable and finite while Continuous uses decimal values.
+Images can fall in either categories, but are characterized by a high number of inputs.
 
-![Comparison of AMaze with gymnasium's environments suite. Inputs, Outputs and amount of human Control are taken from the documentation while times are measured on 1000 timesteps averaged over 10 replicates on an i7-1185G7 (3GHz). AMaze is more computationally efficient than all but the simplest environments while also being the highly parametrizable.\label{tab:comparison}](../docs/latex/benchmarking/gym_pretty_table.pdf)
+![Comparison of AMaze with gymnasium's environments suite. Inputs, Outputs and amount of human Control are taken from the documentation while Time is measured on 1000 timesteps averaged over 10 replicates. AMaze is more computationally efficient than all but the simplest environments while also being the highly parametrizable.\label{tab:comparison}](../docs/latex/benchmarking/gym_pretty_table.pdf)
+
+Control describes how a human experimenter can specify, or at least influence, environmental features to suit their needs.
+Thus None implies fixed environments (most common) while various libraries use different methods to allow for customization such as the Lua scripting language (Lab2D), built-in Modes (ALE) or hand-made maps (Toy Text, Frozen Lake only).
+Extensive control requires a streamlined way to generate feature-specific custom environments with dense visual information.
 
 In terms of computational speed, while taking more time than Classical Control tasks [@Barto1983] or Toy Text environments [@Sutton2018], AMaze is demonstrably faster than those based on 2D ([Box2d](https://box2d.org/)) or 3D ([MuJoCo](https://github.com/google-deepmind/mujoco), @Todorov2012) simulators or the Arcade Learning Environment [@Bellemare2013].
 
