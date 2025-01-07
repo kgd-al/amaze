@@ -8,6 +8,7 @@
     api
 
     misc
+    development
 
 
 Indices and tables
