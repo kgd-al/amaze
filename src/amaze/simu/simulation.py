@@ -495,12 +495,12 @@ class Simulation:
         cls, maze: Maze, inputs: InputType, vision: int
     ) -> dict[Union[MazeMetrics, str]]:
         """
-        Computes metrics about a maze contents.
+        Computes metrics about a maze.
 
         :param maze: The maze to process
         :param inputs: The type of inputs (currently unused)
         :param vision: The agent's retina size (currently unused)
-        :return:
+        :return: a dictionary of the different metrics
         """
         inputs = InputType.DISCRETE  # Not implemented for continuous case
         return _maze_metrics(

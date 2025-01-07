@@ -98,13 +98,16 @@ AMaze differs from existing benchmarks on two important aspects:
 - *Computational efficiency* when compared to alternative vision-based tasks
 - *Extensive control* over the environment and *intuitive understanding* of an agent's behavior
 
-<!-- The former is important not only for generating numerous mazes, e.g. to explore specific  -->
+The former relates to the underlying LUT-based generation of visual information which alleviates the need for expensive rendering techniques.
+Through having only array pointers moving around, AMaze was designed to have fast-running simulations while still being directly usable with traditional architectures such as CNNs.
+On the latter point, the API allows precise tuning of many of a maze's characteristics, in addition to random exploration.
+Additionally, as an agent behavior is a 2D trajectory in a maze, it is very straightforward for a human observer to interpret its behavior and determine what went right or wrong, and when.
 
-To illustrate these statements, we compare AMaze to a sample of benchmark suites (\autoref{tab:comparison}).
+To illustrate the initial statements, we compare AMaze to a sample of benchmark suites (\autoref{tab:comparison}).
 This includes [gymnasium](https://gymnasium.farama.org/) [@Towers2023], an ubiquitous benchmark suite in the Python ecosystem; Lab2D [@Beattie2020], a grid-world environment with both text and script parametrization; and Maze Explorer [@Harries2019], a customizable 3D maze platform based on the DOOM video-game.
 Indeed, while mazes are commonly used as evaluation environments in Machine Learning [@Lehman2008;@Miconi2018] they are often ad-hock solutions, deeply tied to a specific framework as in @Beattie2016.
 
-The test uses 81 variations of AMaze with different vision sizes (11, 15, 21), maze sizes (5, 10, 20), lure frequencies (0, 0.5, 1), and observation and action spaces (discrete, hybrid and continuous).
+The test uses 81 variations of AMaze with different input image sizes (11x11, 15x15, 21x21), maze sizes (5, 10, 20), lure frequencies (0, 0.5, 1), and observation and action spaces (discrete, hybrid and continuous).
 This diversity of environment types was generated to give sufficient data for a fair comparison while also showcasing the ease with which AMaze can create feature-specific sets of mazes e.g. for benchmarking purposes.
 In the figure, $N$ is the number of unique environments used/provided by the library and Time is measured on 1000 time steps averaged over 10 replicates on an i7-1185G7 (3GHz).
 Discrete inputs are enumerable and finite while Continuous uses decimal values.
