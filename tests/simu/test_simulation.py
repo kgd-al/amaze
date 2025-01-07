@@ -6,7 +6,7 @@ import pytest
 from amaze import Maze, Robot, Simulation
 from amaze.simu.controllers.cheater import CheaterController
 from amaze.simu.controllers.random import RandomController
-from amaze.simu.simulation import MazeMetrics
+from amaze.simu import MazeMetrics
 
 param = pytest.param
 

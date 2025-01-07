@@ -135,6 +135,9 @@ deploy(){
 
     deactivate
     cd $wd
+
+    rm -rf $folder && echo "Cleared test folder" | tee -a $_log
+
     line
 }
 

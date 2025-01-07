@@ -51,19 +51,17 @@ The robot data is used to instantiate one of the builtin controller to which we 
 specific arguments.
 Using that same robot data we create a simulation with any one maze.
 
-.. kgd-literal-include:: 17
-    :pyobject: train
-.. kgd-literal-include:: 28
+.. kgd-literal-include:: 18-19
     :pyobject: train
 
 Then for a certain number of episodes:
 
-.. kgd-literal-include:: 29-30
+.. kgd-literal-include:: 35-38
     :pyobject: train
 
 we let the agent experience a maze and learn from it ...
 
-.. kgd-literal-include:: 36-38
+.. kgd-literal-include:: 42-44
     :pyobject: train
 
 ... while also monitoring its performance on unseen mazes.

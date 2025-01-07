@@ -5,13 +5,13 @@ from abc import ABC
 from copy import copy
 from dataclasses import fields, dataclass
 from functools import lru_cache
-from typing import get_args, get_origin, Union, Annotated
+from typing import get_args, get_origin, Union, Annotated, ClassVar
 
 logger = logging.getLogger(__name__)
 
 
 @dataclass
-class BaseBuildData(ABC):
+class BaseBuildData(ABC):  # noqa: B024
     class Unset:
         def __bool__(self):
             return False
@@ -19,7 +19,7 @@ class BaseBuildData(ABC):
         def __repr__(self):
             return "Unset"
 
-    unset = Unset()
+    unset: ClassVar[Unset] = Unset()
 
     def override_with(self, other):
         assert isinstance(other, self.__class__)

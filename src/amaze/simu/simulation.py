@@ -1,4 +1,3 @@
-import pprint
 from logging import getLogger
 from pathlib import Path
 from types import SimpleNamespace
@@ -8,12 +7,12 @@ import numpy as np
 import pandas as pd
 
 from ._inputs_evaluation import inputs_evaluation as _inputs_evaluation
-from ._maze_metrics import metrics as _maze_metrics, MazeMetrics
+from ._maze_metrics import metrics as _maze_metrics
 from .controllers.base import BaseController
 from .maze import Maze
 from .pos import Pos
 from .robot import Robot
-from .types import InputType, OutputType, Action, State
+from .types import InputType, OutputType, Action, State, MazeMetrics
 from ..misc import resources
 from ..misc.resources import SignType
 
@@ -22,10 +21,11 @@ logger = getLogger(__name__)
 REWARDS = {
     "optimal": lambda length, dt: length,
     "minimal": lambda length, dt, deadline, rewards: (
-        deadline * length
-        * (rewards.timestep
-           + min(rewards.backward, rewards.collision))
-        ) / dt,
+        deadline
+        * length
+        * (rewards.timestep + min(rewards.backward, rewards.collision))
+    )
+    / dt,
     "compute": lambda length, dt: SimpleNamespace(
         timestep=-dt,
         backward=-1 / 10,
@@ -54,7 +54,7 @@ class Simulation:
         maze: Resettable[Maze] = None,
         robot: Resettable[Robot.BuildData] = None,
         save_trajectory=False,
-        deadline_factor=4
+        deadline_factor=4,
     ):
 
         def test_valid_set_reset(o_, s_, a_):
@@ -83,7 +83,9 @@ class Simulation:
         self.deadline = deadline_factor * sl / self.dt
         self.rewards = REWARDS["compute"](sl, self.dt)
         self.optimal_reward = REWARDS["optimal"](sl, self.dt)
-        self.minimal_reward = REWARDS["minimal"](sl, self.dt, deadline_factor, self.rewards)
+        self.minimal_reward = REWARDS["minimal"](
+            sl, self.dt, deadline_factor, self.rewards
+        )
         self.stats = SimpleNamespace(steps=0, collisions=0, backsteps=0)
 
         self.observations = self._observations(self.data.inputs, self.data.vision)
@@ -108,7 +110,8 @@ class Simulation:
         return self.timestep * self.dt
 
     @property
-    def deadline_factor(self): return self._deadline_factor
+    def deadline_factor(self):
+        return self._deadline_factor
 
     def success(self):
         """Return whether the agent has reached the target"""
@@ -329,7 +332,10 @@ class Simulation:
         if self.done():
             reward += self.rewards.finish
 
-        if prev_prev_cell != self.robot.prev_cell and prev_prev_cell == self.robot.cell():
+        if (
+            prev_prev_cell != self.robot.prev_cell
+            and prev_prev_cell == self.robot.cell()
+        ):
             reward += self.rewards.backward
             self.stats.backsteps += 1
 
@@ -488,6 +494,14 @@ class Simulation:
     def compute_metrics(
         cls, maze: Maze, inputs: InputType, vision: int
     ) -> dict[Union[MazeMetrics, str]]:
+        """
+        Computes metrics about a maze contents.
+
+        :param maze: The maze to process
+        :param inputs: The type of inputs (currently unused)
+        :param vision: The agent's retina size (currently unused)
+        :return:
+        """
         inputs = InputType.DISCRETE  # Not implemented for continuous case
         return _maze_metrics(
             maze, cls.generate_visuals_map(maze, inputs, vision), inputs

@@ -939,13 +939,15 @@ class MainWindow(QWidget):
                     viewer_options[k] = b
 
                 self._init_from_robot_build_data(
-                    RBD.from_string(_try("robot", default="D"))
-                       .override_with(args_robot)
+                    RBD.from_string(_try("robot", default="D")).override_with(
+                        args_robot
+                    )
                 )
 
                 self._init_from_maze_build_data(
-                    MBD.from_string(_try("maze", default="M4_4x4_U"))
-                       .override_with(args_maze)
+                    MBD.from_string(_try("maze", default="M4_4x4_U")).override_with(
+                        args_maze
+                    )
                 )
 
                 config.beginGroup("sections")
@@ -962,8 +964,10 @@ class MainWindow(QWidget):
             return viewer_options
 
         except Exception as e:
-            logging.error(f"Failed to load configuration from {config.fileName()}... Purging...\n"
-                          f"Exception was: {e}")
+            logging.error(
+                f"Failed to load configuration from {config.fileName()}... Purging...\n"
+                f"Exception was: {e}"
+            )
             Path(config.fileName()).unlink()
             return self._restore_settings(args)
 

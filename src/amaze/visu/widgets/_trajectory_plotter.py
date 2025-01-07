@@ -1,7 +1,6 @@
 from pathlib import Path
 from typing import Optional
 
-import numpy as np
 import pandas as pd
 from PyQt5.QtCore import Qt, QRectF, QLineF, QPointF
 from PyQt5.QtGui import (
@@ -13,6 +12,7 @@ from PyQt5.QtGui import (
 )
 
 from ...simu.simulation import Simulation
+
 
 # Not as informative
 # def _plot_trajectory_duplicates(
@@ -230,7 +230,9 @@ def _plot_trajectory_value(
 
     r_min = simulation.minimal_reward
     r_range = simulation.optimal_reward - r_min
-    def v_norm(_v): return round((v - r_min) / r_range, 3)
+
+    def v_norm(_v):
+        return round((v - r_min) / r_range, 3)
 
     for i, px, py, ax, ay, r in trajectory.itertuples():
         if verbose > 2:  # pragma: no cover
@@ -242,7 +244,7 @@ def _plot_trajectory_value(
 
         cell = (int(px), int(py))
         if i < len(trajectory) - 1:
-            next_cell = tuple(int(_p) for _p in trajectory[["px", "py"]].iloc[i+1])
+            next_cell = tuple(int(_p) for _p in trajectory[["px", "py"]].iloc[i + 1])
             if verbose > 2:  # pragma: no cover
                 print(f"{cell=}, {next_cell=}")
             if cell == next_cell:
@@ -277,7 +279,7 @@ def _plot_trajectory_value(
         v = c_reward
         possible_steps = simulation.deadline - i
         steps = min(required_steps, possible_steps)
-        can_reach_goal = (r < 0 and required_steps < possible_steps)
+        can_reach_goal = r < 0 and required_steps < possible_steps
         if can_reach_goal:
             v += rewards.finish
 
@@ -291,7 +293,7 @@ def _plot_trajectory_value(
     values = set(state_action.values())
     trivial_trajectory = len(values) == 1
 
-    needs_colormap = (values != {1})
+    needs_colormap = values != {1}
     needs_overlay = (needs_colormap and verbose > 0) or force_overlay
     if verbose > 1:
         print(f"{trivial_trajectory=} {needs_overlay=}")
@@ -346,14 +348,20 @@ def _plot_trajectory_value(
     rotations = {(1, 0): 0, (0, 1): 90, (-1, 0): 180, (0, -1): 270}
 
     if needs_colormap:
-        def colormap(v_): return QColor.fromHsvF(v_ / 6, 1, 1)
-        def color(v_): return Qt.green if v_ == 1 else colormap(v_)
+
+        def colormap(v_):
+            return QColor.fromHsvF(v_ / 6, 1, 1)
+
+        def color(v_):
+            return Qt.green if v_ == 1 else colormap(v_)
 
     else:
-        def color(_): return Qt.green
+
+        def color(_):
+            return Qt.green
 
     _trajectory = []
-    for (((x, y), (i, j)), v) in state_action.items():
+    for ((x, y), (i, j)), v in state_action.items():
         _trajectory.append(((x, y), rotations[int(i), int(j)], color(v)))
 
     s = scale
@@ -402,8 +410,10 @@ def _plot_trajectory_value(
             )
             actions, unique_actions = len(trajectory), len(state_action)
             if actions != unique_actions:
-                cycle_legend = f"{unique_actions} unique actions out of {actions}"\
-                               f" ({100 * unique_actions / actions:.2g}%)"
+                cycle_legend = (
+                    f"{unique_actions} unique actions out of {actions}"
+                    f" ({100 * unique_actions / actions:.2g}%)"
+                )
             else:
                 cycle_legend = f"{actions} actions"
 
@@ -414,7 +424,8 @@ def _plot_trajectory_value(
                     width - cb_width,
                     0.5 * cb_width,
                 ),
-                Qt.AlignCenter, cycle_legend
+                Qt.AlignCenter,
+                cycle_legend,
             )
 
     elif force_square:
@@ -436,7 +447,7 @@ def _plot_trajectory_value(
 
         gradient = QLinearGradient(0, 0, 0, 1)
         gradient.setColorAt(0, Qt.green)
-        gradient.setColorAt(.05, colormap(1))
+        gradient.setColorAt(0.05, colormap(1))
         gradient.setColorAt(1, colormap(0))
         gradient.setCoordinateMode(QLinearGradient.ObjectMode)
         cb_box = QRectF(m, m, cb_w, cb_h)

@@ -46,11 +46,11 @@ By modeling loosely embodied robots with three distinct input/output spaces, AMa
 # Features
 
 Users of AMaze have two main components to take into consideration: mazes and agents.
-These are introduced below with more details available in the documentation[^1].
+These are introduced below with more details available in the [documentation](https://amaze.readthedocs.io/en/latest/).
 
 ## Mazes
 
-Every maze can be described by human-readable string as illustrated in \autoref{fig:maze}, where every component is optional.
+Mazes can be described by human-readable string as illustrated in \autoref{fig:maze}, where every component is optional.
 The *seed* is used in the random number generator responsible for: a) the depth-first search that creates the paths and b) the stochastic placement of the *lures* and *traps*.
 As will be detailed below, agents only see a single cell at a time making intersections impossible to handle without additional information.
 *Clues* provide such an information by helpfully pointing towards the correct direction.
@@ -73,13 +73,13 @@ which, informally, account for the likelihood of encountering different states (
 Through these metrics, experimenters can make an informed decision about the level of complexity of the mazes they use.
 As illustrated by the distributions of $S_M$ and $D_M$, sampled from 500'000 mazes across all five classes (\autoref{fig:complexity}), the space of all possible mazes is both diverse and arbitrarily complex.
 
-![Distribution of Surprisingness $S_M$ versus Deceptiveness $D_M$ across 500'000 unique mazes from all five different classes. Outlier mazes are depicted in the borders to illustrate the underlying Surprisingness (right column) or lack thereof (left column).\label{fig:complexity}](../docs/latex/complexity/light.png){ width=76% }
+![Distribution of Surprisingness $S_M$ versus Deceptiveness $D_M$ across 500'000 unique mazes from all five different classes. Outlier mazes are depicted in the borders to illustrate the underlying Surprisingness (right column) or lack thereof (left column).\label{fig:complexity}](../docs/latex/complexity/light.png){ width=85% }
 
 ![Discrete (left) and continuous (right) inputs for the examples shown in \autoref{fig:maze}. The former is solely used for the fully discrete case while the latter covers both hybrid and fully continuous cases.\label{fig:inputs}](../docs/latex/agents/light-1-3.png){ width=94% }
 
 ## Agents
 
-Agents in AMaze are loosely embodied robots that wander around mazes perceiving only local information (the cell they are in) and a single bit of memory (the direction they come from, if any).
+Agents in AMaze are loosely embodied robots that wander around mazes perceiving only local information (the cell they are in) and a  one-item memory (the direction they come from, if any).
 To accommodate various use cases, these agents come in three different forms: fully discrete, fully continuous and hybrid.
 In the former case, an agent has access to something akin to a pre-processed input, as in \autoref{fig:inputs}, where the first four fields describes the wall configuration and the remainder provide information about signs, if any.
 These can be distinguished through their luminosity as agents only perceive grayscale values.
@@ -98,7 +98,9 @@ AMaze differs from existing benchmarks on two important aspects:
 - *Computational efficiency* when compared to alternative vision-based tasks
 - *Extensive control* over the environment and *intuitive understanding* of an agent's behavior
 
-To illustrate both statements, we compare AMaze to a sample of benchmark suites (\autoref{tab:comparison}).
+<!-- The former is important not only for generating numerous mazes, e.g. to explore specific  -->
+
+To illustrate these statements, we compare AMaze to a sample of benchmark suites (\autoref{tab:comparison}).
 This includes [gymnasium](https://gymnasium.farama.org/) [@Towers2023], an ubiquitous benchmark suite in the Python ecosystem; Lab2D [@Beattie2020], a grid-world environment with both text and script parametrization; and Maze Explorer [@Harries2019], a customizable 3D maze platform based on the DOOM video-game.
 Indeed, while mazes are commonly used as evaluation environments in Machine Learning [@Lehman2008;@Miconi2018] they are often ad-hock solutions, deeply tied to a specific framework as in @Beattie2016.
 

@@ -355,6 +355,10 @@ class Maze:
         return self.signs[SignType.TRAP]
 
     def stats(self):
+        """
+        Prints various statistics about the maze
+        :return: a dictionary of relevant attributes
+        """
         return dict(
             size=(self.width, self.height),
             path=len(self.solution),
@@ -598,18 +602,19 @@ class Maze:
         return self.build_data().to_string()
 
     @classmethod
-    def from_string(cls, s, overrides: Optional[BuildData] = None,
-                    warnings=True) -> "Maze":
+    def from_string(
+        cls, s, overrides: Optional[BuildData] = None, warnings=True
+    ) -> "Maze":
         """Generate a maze from its string description.
 
         Optionally, specific parameters can be overridden by values set in
         the `overrides` argument.
         The full syntax is described in :meth:`.BuildData.from_string`.
         """
-        return cls.generate(cls.BuildData.from_string(s, overrides),
-                            warnings=warnings)
+        return cls.generate(cls.BuildData.from_string(s, overrides), warnings=warnings)
 
     def all_rotations(self) -> List["Maze"]:
         """Returns all rotated versions of this maze"""
-        return [self.generate(d, warnings=False)
-                for d in self.build_data().all_rotations()]
+        return [
+            self.generate(d, warnings=False) for d in self.build_data().all_rotations()
+        ]

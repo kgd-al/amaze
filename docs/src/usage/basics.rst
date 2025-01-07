@@ -29,21 +29,29 @@ The last component is the simulation object, created using both the maze and rob
 
 .. kgd-literal-include:: 10
 
-For the curious, line 10 will provide detailed statistics about the maze including its size,
-intersections, complexity, ...
+For the curious, line 10 will provide detailed :meth:`stats <amaze.simu.maze.Maze.stats>`
+about the maze including its size, intersections, etc.
 
-.. kgd-literal-include:: 13-14
+.. kgd-literal-include:: 13
+
+For the complexity metrics, which are theoretically dependant on the agent, one may use the
+simulation's dedicated method to
+:meth:`compute_metrics <amaze.simu.simulation.Simulation.compute_metrics>`.
+Note that, contrary to the statistics, this implies a fair amount of computation (O(n*m),
+for a maze of n rows and m columns)
+
+.. kgd-literal-include:: 16-17
 
 Next we retrieve one of the demonstration agents provided with the library and print some of the
 information stored alongside it.
 
-.. kgd-literal-include:: 16
+.. kgd-literal-include:: 19
 
 After which we let the simulation run freely until completion.
 This means either :meth:`~amaze.simu.simulation.Simulation.success` (the agent has reached the target) or
 :meth:`~amaze.simu.simulation.Simulation.failure` (the agent has exceeded the deadline).
 
-.. kgd-literal-include:: 19-22
+.. kgd-literal-include:: 22-25
 
 To conclude, we extract select pieces of information from the simulation (success, rewards) as well
 as the more exhaustive :meth:`~amaze.simu.simulation.Simulation.infos`.
