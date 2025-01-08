@@ -16,7 +16,7 @@ import numpy as np
 
 from ..misc.resources import Sign, SignType
 from ._build_data import BaseBuildData
-from .types import StartLocation, classproperty
+from .types import StartLocation, classproperty, MazeClass
 
 logger = getLogger(__name__)
 
@@ -367,6 +367,30 @@ class Maze:
             lures=len(self.signs_data[SignType.LURE]),
             traps=len(self.signs_data[SignType.TRAP]),
         )
+
+    def maze_class(self):
+        """Determines the maze's class based on its attributes
+
+        :return: the :class:`~amaze.simu.types.MazeClass`
+        """
+        _stats = self.stats()
+        i = _stats["intersections"]
+        if i == 0:
+            return MazeClass.TRIVIAL
+        else:
+            c, l, t = _stats["clues"], _stats["lures"], _stats["traps"]
+            if c == i and t == 0:
+                if l == 0:
+                    return MazeClass.SIMPLE
+                else:
+                    return MazeClass.LURES
+            elif c < i and t > 0 and c + t == i:
+                if l == 0:
+                    return MazeClass.TRAPS
+                else:
+                    return MazeClass.COMPLEX
+            else:
+                return MazeClass.INVALID
 
     def iter_cells(self):
         return ((i, j) for i in range(self.width) for j in range(self.height))

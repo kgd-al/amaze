@@ -66,9 +66,26 @@ class StartLocation(int, Enum):
         }[short]
 
 
-class classproperty(property):
-    def __get__(self, owner_self, owner_cls):
-        return self.fget(owner_cls)
+class MazeClass(Enum):
+    """The various high-level classes of mazes"""
+
+    TRIVIAL = auto()
+    """A maze without intersections"""
+
+    SIMPLE = auto()
+    """A maze with only clues"""
+
+    LURES = auto()
+    """A maze with clues and lures (but no traps)"""
+
+    TRAPS = auto()
+    """A maze with clues and traps (but no lures)"""
+
+    COMPLEX = auto()
+    """A maze with clues, traps and lures"""
+
+    INVALID = auto()
+    """An invalid maze type (e.g. one with intersections and no cues)"""
 
 
 class MazeMetrics(Flag):
@@ -86,3 +103,9 @@ class MazeMetrics(Flag):
 
     ALL = SURPRISINGNESS | DECEPTIVENESS | INSEPARABILITY
     """ Shorthand """
+
+
+class classproperty(property):
+    def __get__(self, owner_self, owner_cls):
+        return self.fget(owner_cls)
+

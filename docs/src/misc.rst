@@ -5,8 +5,8 @@ Miscellaneous
 Benchmark comparison
 ^^^^^^^^^^^^^^^^^^^^
 
-In the companion [JOSS](https://joss.theoj.org/)
-[paper](https://joss.theoj.org/papers/bc6892f6873808ced10bc8c4c222e635)
+In the companion `JOSS <https://joss.theoj.org/>`_
+`paper <https://joss.theoj.org/papers/bc6892f6873808ced10bc8c4c222e635>`_
 AMaze is compared against a number of other benchmarks from the Python ecosystem.
 The scripts (Python and Shell) to reproduce a under `docs/latex/benchmarking`:
 
@@ -18,8 +18,8 @@ The scripts (Python and Shell) to reproduce a under `docs/latex/benchmarking`:
     :linenos:
     :lines: 11-20
 
-- Individual workers will perform 1000 timesteps of every available environment in the
-  inspected library and report through a pandas dataframe
+- Individual workers will perform 1000 timesteps of every available environment (averaged
+  over 10 replicates) in the inspected library and report through a pandas dataframe
 
 - `format.py` performs the formatting of the raw data thus produced.
   Note that the one used for the aforementioned article is available under

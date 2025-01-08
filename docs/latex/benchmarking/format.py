@@ -62,7 +62,7 @@ table.sort_values(sort_keys, axis="rows", inplace=True)
 print(table)
 
 section("Labeled data")
-no_control="None"
+no_control = "None"
 def _key(library, family): return (library, family) if detailed else family
 manual_data = {
     _key("Gymnasium", "Classic Control"): ["Continuous", "Both", no_control],
