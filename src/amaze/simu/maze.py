@@ -172,7 +172,7 @@ class Maze:
             if self.p_lure and self.lure:
                 tokens.append(f"l{self.p_lure:.2g}".lstrip("0"))
                 tokens.extend(f"L{Sign.to_string(s)}" for s in self.lure)
-            if self.p_trap and self.trap:
+            if not self.unicursive and self.p_trap and self.trap:
                 tokens.append(f"t{self.p_trap:.2g}".lstrip("0"))
                 tokens.extend(f"T{Sign.to_string(s)}" for s in self.trap)
             return sep.join(tokens)

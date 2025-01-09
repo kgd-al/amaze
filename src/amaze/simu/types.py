@@ -69,22 +69,22 @@ class StartLocation(int, Enum):
 class MazeClass(Enum):
     """The various high-level classes of mazes"""
 
-    TRIVIAL = auto()
+    TRIVIAL = 0b000
     """A maze without intersections"""
 
-    SIMPLE = auto()
+    SIMPLE = 0b001
     """A maze with only clues"""
 
-    LURES = auto()
+    LURES = 0b011
     """A maze with clues and lures (but no traps)"""
 
-    TRAPS = auto()
+    TRAPS = 0b101
     """A maze with clues and traps (but no lures)"""
 
-    COMPLEX = auto()
+    COMPLEX = 0b111
     """A maze with clues, traps and lures"""
 
-    INVALID = auto()
+    INVALID = 0xFF
     """An invalid maze type (e.g. one with intersections and no cues)"""
 
 
