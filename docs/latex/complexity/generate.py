@@ -27,7 +27,7 @@ lures = [[], [signs[0]], [signs[0], signs[2]], signs]
 traps = [[], [signs[1]], [signs[0], signs[2]], signs]
 probas = [0, .25, .5, .75, 1]
 
-items = [seeds, sizes, clues, lures, traps, probas, probas]
+items = [seeds, clues, lures, traps, probas, probas, sizes]
 total = math.prod([len(i) for i in items])
 
 
@@ -42,7 +42,7 @@ for s in [signal.SIGINT, signal.SIGTERM]:
 
 
 if len(df) < total:
-    for seed, size, clue, lure, trap, p_lure, p_trap in track(
+    for seed, clue, lure, trap, p_lure, p_trap, size in track(
             itertools.product(*items), description="Processing", total=total):
 
         bd = Maze.BuildData(
@@ -51,7 +51,7 @@ if len(df) < total:
             clue=clue,
             p_lure=p_lure, lure=lure,
             p_trap=p_trap, trap=trap,
-            unicursive=(len(clue) == 0 or p_trap < 1)
+            unicursive=(len(clue) == 0)
         )
         name = bd.to_string()
         if name not in df.index:
