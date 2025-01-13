@@ -5,7 +5,9 @@ shopt -s inherit_errexit
 
 folder=$(realpath $(dirname $0))
 tmp=$folder/___cache___/
+mkdir -p $tmp
 downloads=$tmp/downloads
+mkdir -p $downloads
 log=$tmp/log
 
 workers=(
