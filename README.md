@@ -136,14 +136,19 @@ Currently, the library uses:
 - `numpy` and `pandas` for data processing and formatting
 - `PyQt5` for the interface
 
-Continuous integration and deployment is handled by github directly through the `test_and_deploy.yml` workflow file.
-While not directly runnable, the commands used therein are encapsulated in the generalist script `commands.sh`.
+Continuous integration and deployment is handled by github directly through the
+`test_and_deploy.yml` workflow file.
+While not directly runnable, the commands used therein are encapsulated in the
+generalist script `commands.sh`.
 Call it with `-h` to get a list of available instructions.
 
 Before performing a pull request, make sure to run the deployment tests first either through `commands.sh before-deploy` or by calling the dedicated script (`deploy_tests.sh`) directly.
 It will install the package under a temporary folder in multiple configurations (user, test, ...) and check for formatting and pep8 compliance.
 
 ## Acknowledgement
+
+The lead (and currently sole) developer for this library is K. Godin-Dubois.
+K. Miras and A. V. Kononova have contributed in an advisory and management capacity.
 
 This research was funded by the Hybrid Intelligence Center, a 10-year programme
 funded by the Dutch Ministry of Education, Culture and Science through the
