@@ -1,10 +1,12 @@
 import math
 import pprint
+
+import numpy as np
 import sys
 from pathlib import Path
 from random import Random
 
-from PIL import Image
+from PIL import Image, ImageFilter
 import matplotlib.pyplot as plt
 import matplotlib.colors as mcolors
 from matplotlib import patches
@@ -88,7 +90,7 @@ g.figure.set_size_inches(2*fs, fs)
 plt.subplots_adjust(left=.25, right=.75)
 
 for i, m_class, fn, bxy, zoom in [
-            (0, "Complex", lambda x, y: eqd(x, y), (1, .75), (.75, .75, 225)),
+            (0, "Complex", lambda x, y: eqd(x, y), (1, .75), (0, 0, .25, .25)),
             (1, "Traps", lambda _, y: y, (0, .75), ()),
             (2, "Lures", lambda x, _: x, (1, .25), ()),
             (4, "Trivial", lambda x, y: -eqd(x, y), (0, .25), ()),
@@ -96,9 +98,9 @@ for i, m_class, fn, bxy, zoom in [
 
     c_df = sample_df[sample_df.Class == m_class]
     m = c_df.apply(process(fn), axis=1).idxmax()
-    output = examples.joinpath(f"{m_class.lower()}__{m}.png")
+    output = examples.joinpath(f"{m_class.lower()}.png")
     if not output.exists():
-        amaze_main(f"--maze {m} --render {output} --dark --colorblind --width 500")
+        amaze_main(f"--maze {m} --render {output} --dark --colorblind --cell-width=10")
 
     img = Image.open(output)
     target_size = 2 * fs * dpi // 5
@@ -115,39 +117,6 @@ for i, m_class, fn, bxy, zoom in [
                              annotation_clip=False)
     g.ax_joint.add_artist(ann_box)
 
-    if len(zoom) > 0:
-        zx, zy, za = zoom
-        zxy = (bxy[0] + zx * .1 - .1, bxy[1] + zy * .1)
-        cs = .1
-
-        clip_width = 1.4 * cs
-        circ = patches.Ellipse((zxy[0] - .0135,
-                                zxy[1] + .01),
-                               clip_width, clip_width * 2,
-                               transform=g.figure.transFigure)
-
-        img_zoom_box = OffsetImage(img.crop(((zx - cs) * img.width,
-                                             (zy - cs) * img.height,
-                                             (zx + cs) * img.width,
-                                             (zy + cs) * img.height)),
-                                   zoom=5*72./dpi)#, clip_path=circ)
-        # img_zoom_box.set_clip_path(circ)
-        # img_zoom_box.set_clip_on(True)
-
-        ann_ann_box = AnnotationBbox(img_zoom_box, xy=zxy,
-                                     xycoords='figure fraction',
-                                     frameon=True,
-                                     bboxprops=dict(
-                                         boxstyle="Circle", facecolor="none",
-                                         edgecolor="red", linewidth=5,
-                                     ),
-                                     pad=0,
-                                     annotation_clip=False)
-        
-        g.ax_joint.add_artist(ann_ann_box)
-
 # All done. Save
-# g.figure.tight_layout()
-g.figure.savefig('foo.pdf', bbox_inches='tight', dpi=dpi)
-g.figure.savefig('foo.png', bbox_inches='tight', dpi=dpi)
+g.figure.savefig(root.joinpath("distributions.pdf"), bbox_inches='tight', dpi=dpi)
 

@@ -73,7 +73,7 @@ which, informally, account for the likelihood of encountering different states (
 Through these metrics, experimenters can make an informed decision about the level of complexity of the mazes they use.
 As illustrated by the distributions of $S_M$ and $D_M$, sampled from 500'000 mazes across all five classes (\autoref{fig:complexity}), the space of all possible mazes is both diverse and arbitrarily complex.
 
-![Distribution of Surprisingness $S_M$ versus Deceptiveness $D_M$ across 500'000 unique mazes from all five different classes. Outlier mazes are depicted in the borders to illustrate the underlying Surprisingness (right column) or lack thereof (left column).\label{fig:complexity}](../docs/latex/complexity/light.png){ width=85% }
+![Distribution of Surprisingness $S_M$ versus Deceptiveness $D_M$ across 500'000 unique mazes from all five different classes. Outlier mazes are depicted in the borders to illustrate the underlying Surprisingness (right column) or lack thereof (left column).\label{fig:complexity}](../docs/latex/complexity/light.png){ width=90% }
 
 ![Discrete (left) and continuous (right) inputs for the examples shown in \autoref{fig:maze}. The former is solely used for the fully discrete case while the latter covers both hybrid and fully continuous cases.\label{fig:inputs}](../docs/latex/agents/light-1-3.png){ width=94% }
 
@@ -89,7 +89,7 @@ In the hybrid case, actions are identical while observations are coarse-grained 
 The temporal information of the previous direction is still provided, as a single white pixel centered on the appropriate side.
 More importantly, the center of the image is used to display an arbitrary shape as a sign (clue, lure or trap).
 Finally, the fully continuous case is characterized by having the robot control its acceleration.
-Thus, the agent must also infer and take into consideration its position and intertia.
+Thus, the agent must also infer and take into consideration its position and inertia.
 
 # Comparison to existing literature
 

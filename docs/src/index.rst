@@ -7,6 +7,8 @@
     usage/index
     api
 
+    complexity
+
     misc
     development
 

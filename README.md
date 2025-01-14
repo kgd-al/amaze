@@ -120,6 +120,33 @@ According to the combinations of input and output spaces, the library can work i
 
 ![example_cc](https://raw.githubusercontent.com/kgd-al/amaze/master/docs/demo/cc.gif)
 
+## Maze space complexity
+
+To properly correlate mazes that may look very different, AMaze provides two complementary
+complexity metrics $S_M$ and $D_M$.
+The former measures the "surprisingness" of the maze, defined as the entropy over every input state.
+The latter corresponds to the deceptiveness which, similarly, is an entropy measure but focused on
+the odds of seeing the same state with different cues.
+More details can be found in the companion
+[article](https://joss.theoj.org/papers/bc6892f6873808ced10bc8c4c222e635).
+
+<picture>
+    <source
+        media="(prefers-color-scheme: dark)"
+        srcset="https://raw.githubusercontent.com/kgd-al/amaze/master/docs/latex/complexity/dark.png">
+    <img
+        alt="Complexity of maze space"
+        src="https://raw.githubusercontent.com/kgd-al/amaze/master/docs/latex/complexity/light.png">
+</picture>
+
+The graph above illustrates the respective distribution of five classes of mazes according to these
+two metrics.
+There, one can see that complex mazes (with clues, lures and traps) are very diverse while solely 
+using traps or lures generates mazes with a bias towards Deceptiveness and Surprisingness,
+respectively.
+
+
+
 ## Further reading
 The documentation is available at (https://amaze.readthedocs.io/) including
 installation instruction (pip) and detailed examples.
