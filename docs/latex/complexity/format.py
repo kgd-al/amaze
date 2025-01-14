@@ -1,4 +1,5 @@
 import math
+import pprint
 import sys
 from pathlib import Path
 from random import Random
@@ -6,7 +7,9 @@ from random import Random
 from PIL import Image
 import matplotlib.pyplot as plt
 import matplotlib.colors as mcolors
+from matplotlib import patches
 from matplotlib.offsetbox import OffsetImage, AnnotationBbox
+from mpl_toolkits.axes_grid1.inset_locator import zoomed_inset_axes
 from scipy import spatial
 
 import pandas as pd
@@ -17,6 +20,7 @@ import seaborn as sns
 from amaze import amaze_main
 from amaze.simu.types import MazeClass
 
+plt.rcParams["image.composite_image"] = False
 dpi = 300
 
 root = Path(__file__).parent
@@ -57,9 +61,9 @@ kwargs = dict(x="Surprisingness", y="Deceptiveness", hue="Class", hue_order=hue_
 sns.set_style("darkgrid")
 g = sns.jointplot(data=df, **kwargs,
                   kind="kde", cut=0, levels=10, thresh=.01, bw_adjust=.7,
-                  fill=True, alpha=.5,
+                  fill=True, alpha=1,
                   marginal_kws=dict(
-                      multiple="stack", alpha=.25, linewidth=.1,
+                      multiple="stack", alpha=.5, linewidth=.1,
                       bw_adjust=.8,
                       warn_singular=False
                   ),
@@ -93,12 +97,11 @@ for i, m_class, fn, bxy, zoom in [
     c_df = sample_df[sample_df.Class == m_class]
     m = c_df.apply(process(fn), axis=1).idxmax()
     output = examples.joinpath(f"{m_class.lower()}__{m}.png")
-    if not output.exists() or True:
+    if not output.exists():
         amaze_main(f"--maze {m} --render {output} --dark --colorblind --width 500")
 
     img = Image.open(output)
     target_size = 2 * fs * dpi // 5
-    print(img.width, target_size)
     img_box = OffsetImage(img.resize((target_size, target_size)), zoom=72./dpi)
     xy = c_df.loc[m][["Surprisingness", "Deceptiveness"]]
     b_anchor = (bxy[0], .5)
@@ -114,20 +117,37 @@ for i, m_class, fn, bxy, zoom in [
 
     if len(zoom) > 0:
         zx, zy, za = zoom
-        cs = .05
+        zxy = (bxy[0] + zx * .1 - .1, bxy[1] + zy * .1)
+        cs = .1
+
+        clip_width = 1.4 * cs
+        circ = patches.Ellipse((zxy[0] - .0135,
+                                zxy[1] + .01),
+                               clip_width, clip_width * 2,
+                               transform=g.figure.transFigure)
+
         img_zoom_box = OffsetImage(img.crop(((zx - cs) * img.width,
                                              (zy - cs) * img.height,
                                              (zx + cs) * img.width,
                                              (zy + cs) * img.height)),
-                                   zoom=5*72./dpi)
-        ann_ann_box = AnnotationBbox(img_zoom_box, xy=(bxy[0] + zx * .25,
-                                                       bxy[1] + zy * .25),
+                                   zoom=5*72./dpi)#, clip_path=circ)
+        # img_zoom_box.set_clip_path(circ)
+        # img_zoom_box.set_clip_on(True)
+
+        ann_ann_box = AnnotationBbox(img_zoom_box, xy=zxy,
                                      xycoords='figure fraction',
                                      frameon=True,
+                                     bboxprops=dict(
+                                         boxstyle="Circle", facecolor="none",
+                                         edgecolor="red", linewidth=5,
+                                     ),
+                                     pad=0,
                                      annotation_clip=False)
+        
         g.ax_joint.add_artist(ann_ann_box)
 
 # All done. Save
-g.figure.tight_layout()
+# g.figure.tight_layout()
 g.figure.savefig('foo.pdf', bbox_inches='tight', dpi=dpi)
+g.figure.savefig('foo.png', bbox_inches='tight', dpi=dpi)
 
