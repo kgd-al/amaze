@@ -133,10 +133,10 @@ More details can be found in the companion
 <picture>
     <source
         media="(prefers-color-scheme: dark)"
-        srcset="https://raw.githubusercontent.com/kgd-al/amaze/master/docs/latex/complexity/dark.png">
+        srcset="https://raw.githubusercontent.com/kgd-al/amaze/joss/docs/latex/complexity/dark.png">
     <img
         alt="Complexity of maze space"
-        src="https://raw.githubusercontent.com/kgd-al/amaze/master/docs/latex/complexity/light.png">
+        src="https://raw.githubusercontent.com/kgd-al/amaze/joss/docs/latex/complexity/light.png">
 </picture>
 
 The graph above illustrates the respective distribution of five classes of mazes according to these
