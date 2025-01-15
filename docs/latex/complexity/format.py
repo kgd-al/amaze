@@ -31,6 +31,7 @@ df = pd.read_csv(df_file, index_col=0)
 
 print(df)
 hue_order = [c.name.capitalize() for c in list(reversed(MazeClass))[1:]]
+print()
 
 if len(sys.argv) > 1:
     print("Fast-mode: sampling 10000 points from the data")
@@ -57,6 +58,7 @@ for m_class in hue_order:
     ])
 
 print("Sample:", sample_df)
+print()
 
 # Plot kde of data + extracted sample
 kwargs = dict(x="Surprisingness", y="Deceptiveness", hue="Class", hue_order=hue_order)
@@ -99,8 +101,10 @@ for i, m_class, fn, bxy, zoom in [
     c_df = sample_df[sample_df.Class == m_class]
     m = c_df.apply(process(fn), axis=1).idxmax()
     output = examples.joinpath(f"{m_class.lower()}.png")
-    if not output.exists():
-        amaze_main(f"--maze {m} --render {output} --dark --colorblind --cell-width=10")
+    print(">", m_class.capitalize(), "example:", m)
+    if not output.exists() or True:
+        amaze_main(f"--maze {m} --render {output}"
+                   f" --dark --colorblind --cell-width=20 --width=500")
 
     img = Image.open(output)
     target_size = 2 * fs * dpi // 5
@@ -118,5 +122,7 @@ for i, m_class, fn, bxy, zoom in [
     g.ax_joint.add_artist(ann_box)
 
 # All done. Save
-g.figure.savefig(root.joinpath("distributions.pdf"), bbox_inches='tight', dpi=dpi)
+o = root.joinpath("distributions.pdf")
+g.figure.savefig(o, bbox_inches='tight', dpi=dpi)
+print("Generated", o)
 

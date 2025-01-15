@@ -299,7 +299,7 @@ def _plot_trajectory_value(
         print(f"{trivial_trajectory=} {needs_overlay=}")
     # pprint.pprint(values)
 
-    width, height = functions["size"](maze, size, square)
+    width, height = functions["size"](maze, width=size, square=square)
     scale = min(width / maze.width, height / maze.height)
 
     cb_r = 0.2 if needs_overlay else 0

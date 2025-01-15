@@ -406,24 +406,35 @@ def main(sys_args: Optional[Sequence[str] | str] = None):
 
     if args.render:
         maze = __make_maze(args)
-        if MazeWidget.static_render_to_file(maze, args.render, width=args.width):
-            print(f"Saved {maze.to_string()}" f" to {args.render}")
-
-    if not window:
-        simulation, controller = __make_simulation(args)
-
-        if args.render:
-            widget = MazeWidget.from_simulation(
-                simulation,
+        if MazeWidget.static_render_to_file(
+                maze, args.render,
+                width=args.width,
+                cell_width=args.cell_width,
                 config=dict(
                     robot=False,
                     solution=True,
                     dark=args.dark,
                     colorblind=args.colorblind,
-                ),
-            )
-            if widget.render_to_file(args.render, width=args.width):
-                print(f"Saved {simulation.maze.to_string()}" f" to {args.render}")
+                )):
+            print(f"Saved {maze.to_string()} to {args.render}")
+        else:
+            print(f"Failed to save {maze.to_string()} to {args.render}")
+
+    if not window:
+        simulation, controller = __make_simulation(args)
+
+        # if args.render:
+        #     widget = MazeWidget.from_simulation(
+        #         simulation,
+        #         config=dict(
+        #             robot=False,
+        #             solution=True,
+        #             dark=args.dark,
+        #             colorblind=args.colorblind,
+        #         ),
+        #     )
+        #     if widget.render_to_file(args.render, width=args.width):
+        #         print(f"Saved {simulation.maze.to_string()}" f" to {args.render}")
 
         if simulate:
             simulation.reset(save_trajectory=True)

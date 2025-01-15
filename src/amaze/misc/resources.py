@@ -360,8 +360,7 @@ def _get_image(key: DataKey):
     # Else look in file cache
     filename = _key_to_path(key)
     no_cache = no_file_cache()
-    logger.info("Bypassing cache")
-    if not no_cache and False:
+    if not no_cache:
         if filename.exists():
             img = QImage(str(filename))
             if not img.isNull():
