@@ -10,6 +10,13 @@ downloads=$tmp/downloads
 mkdir -p $downloads
 log=$tmp/log
 
+line(){
+    n=$(tput cols)
+    printf "=%.0s" $(seq $n)
+    printf "\n"
+}
+export -f line
+
 workers=(
     "amaze amaze-benchmarker"
     "gymnasium numpy<2;mujoco<3;gymnasium[classic-control,box2d,mujoco,atari,accept-rom-license]"
