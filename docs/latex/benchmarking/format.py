@@ -40,6 +40,7 @@ misc = "Miscellaneous"
 df.loc[(df.Library == "misc"), "Library"] = misc
 
 section("Raw data")
+df = df[df.Family != "LabMaze"]
 # for family in ["LabMaze", "ObstacleTower"]:
 #     df.loc[f"{family.lower()}-placeholder",:] = [misc, family, "", float("nan")]
 print(df)
@@ -83,6 +84,16 @@ if detailed:
         _key(misc, "Metaworld"): ["Continuous", "Continuous", no_control],
         _key(misc, "ProcGen"): ["Image", "Discrete", "Modes"],
         # _key(misc, "ObstacleTower"): ["Image", "Discrete", "Extensive"],
+        _key(misc, "URLB"): ["Both", "Continuous", "None"],
+        _key("Retro-Gym", "GameBoy"): [
+            r"\multirow{5}{*}{Image}",
+            r"\multirow{5}{*}{Discrete}",
+            r"\multirow{5}{*}{None}",
+        ]
+    })
+    manual_data.update({
+        _key("Retro-Gym", console): ["", "", ""]
+        for console in ["Sms", "Nes", "Genesis", "Snes"]
     })
 else:
     manual_data.update({
@@ -188,7 +199,7 @@ with open(pretty_tex, "w") as f:
     tr[2] = tr[2].replace(r"Time \\", r"\multicolumn{2}{c}{Time (s)} \\ ")
     tr.insert(3, fr"\cmidrule(lr){{{6+detailed}-{7+detailed}}}")
 
-    multirow = 9.77 if not detailed else 16.1
+    multirow = 9.77 if not detailed else 22.53
 
     tr[4] = "&".join(
         tr[5].split("&")[0:1+detailed]
@@ -205,7 +216,7 @@ with open(pretty_tex, "w") as f:
         #del tr[-2]
         tr[6] = " & ".join([r"\textbf{AMaze}"] + tr[6].split(" & ")[1:])
 
-        img_height = 15.75
+        img_height = 22.125
 
     else:
         tr[8] = " & ".join(r"\textbf{" + v + r"}" for v in tr[8].replace(r"\\", "").split(" & ")) + r"\\"

@@ -15,6 +15,7 @@ def _evaluate(env_name):
             env.reset()
 
     env.close()
+    return True
 
 
 def process(df):

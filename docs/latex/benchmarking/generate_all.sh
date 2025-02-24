@@ -3,6 +3,8 @@
 set -euo pipefail
 shopt -s inherit_errexit
 
+eval "$(pyenv init -)"
+
 folder=$(realpath $(dirname $0))
 tmp=$folder/___cache___/
 mkdir -p $tmp
@@ -17,15 +19,25 @@ line(){
 }
 export -f line
 
+amaze_root=.
+while [ ! -f $amaze_root/pyproject.toml ]
+do
+    amaze_root=$amaze_root/..
+done
+amaze_root=$(realpath $amaze_root)
+echo "Using local amaze version at $amaze_root"
+
 workers=(
-    "amaze amaze-benchmarker"
-    "gymnasium numpy<2;mujoco<3;gymnasium[classic-control,box2d,mujoco,atari,accept-rom-license]"
-    "procgen procgen"
-    "metaworld git+https://github.com/Farama-Foundation/Metaworld.git@master#egg=metaworld"
-    "levdoom https://github.com/TTomilin/LevDoom;opencv-python>=3.0"
-    "lab2d dmlab2d"
-    "labmaze labmaze"
-    "mazeexplorer git+https://github.com/microsoft/MazeExplorer"
+    "urlb 3.8 https://github.com/rll-research/url_benchmark;numpy==1.19.2"
+    "gymretro 3.8 gym-retro;gym==0.25.2"
+    "amaze 3.10 $amaze_root" #amaze-benchmarker"
+    "gymnasium 3.10 numpy<2;mujoco<3;gymnasium[classic-control,box2d,mujoco,atari,accept-rom-license]"
+    "procgen 3.10 procgen"
+    "metaworld 3.10 git+https://github.com/Farama-Foundation/Metaworld.git@master#egg=metaworld"
+    "levdoom 3.10 https://github.com/TTomilin/LevDoom;opencv-python>=3.0;gymnasium==0.28.1"
+    "lab2d 3.10 dmlab2d"
+    "labmaze 3.10 labmaze"
+    "mazeexplorer 3.10 git+https://github.com/microsoft/MazeExplorer"
 )
 pretty_packages="pandas rich"
 
@@ -46,19 +58,23 @@ date > $log
 for data in "${workers[@]}"
 do
     line | tee -a $log
-    read worker package <<< $data
-    echo "worker: $worker"
+    read worker python_version package <<< $data
     venv=$tmp/venvs/__$worker
     install_ok=$venv/install_ok
 
     git_repo=""
     [ ${package:0:5} == "https" ] && git_repo="git_repo"
 
+    pyenv shell $python_version
+    python=python$python_version
+
+    echo "worker: $worker ($(python --version) - $($python --version))"
+
     if [ ! -d $venv ] || [ ! -f $install_ok ]
     then
         [ -d $venv ] && rm -rf $venv
 
-        python -m venv $venv
+        $python -m venv $venv
         source $venv/bin/activate
 
         if [ -z $git_repo ]
@@ -67,8 +83,8 @@ do
           echo "packages: $packages"
 
 #          set -x
-          python -m pip download -d $downloads $packages --exists-action i #| short_output
-          python -m pip install --upgrade --find-links=$downloads $packages $pretty_packages \
+          $python -m pip download -d $downloads $packages --exists-action i #| short_output
+          $python -m pip install --upgrade --find-links=$downloads $packages $pretty_packages \
           #| short_output
 
         else
@@ -80,9 +96,35 @@ do
           echo "packages: $packages"
           git clone $git $git_repo
           cd $git_repo
+
+          if [ "$worker" == "urlb" ]
+          then
+            echo "Creating package structure"
+
+            echo "Generating setup.py"
+            yaml_packages=$(tail -n+17 conda_env.yml | grep -v 'pip:' | sed -e "s/.* - //" -e 's/.*dm_control.git.*/dm_control/' -e 's/mujoco_py.*/mujoco_py==2.1.2.14/')
+            packages="$packages $yaml_packages"
+            cat <<- EOF > setup.py
+from setuptools import setup, find_packages
+
+setup(
+    name='urlb',
+    url='$git_repo',
+    version='1.0.0',
+    packages=find_packages(),
+    install_requires=[],
+)
+EOF
+          fi
+
           pip install . --upgrade --find-links=$downloads $packages $pretty_packages \
-          | short_output
+#           | short_output
           pip uninstall $worker -y
+        fi
+
+        if [ "$worker" == "gymretro" ]
+        then
+            python3 -m retro.import $(dirname $0)/gym-retro-roms | short_output
         fi
 
         pip list
@@ -95,9 +137,11 @@ do
     OLD_PYTHONPATH=${PYTHONPATH+""}
     [ -n "$git_repo" ] && export PYTHONPATH="$OLD_PYTHONPATH:$venv/$git_repo"
 
-    $folder/generate_one.py $worker
+    $python $folder/generate_one.py $worker
 
     export PYTHONPATH="$OLD_PYTHONPATH"
 
 done
 line
+
+unset PYENV_VERSION

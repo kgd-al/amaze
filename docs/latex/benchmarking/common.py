@@ -52,7 +52,8 @@ class Progress(RichProgress):
             try:
                 start = time.time_ns()
                 for i in range(REPLICATES):
-                    fn(**kwargs)
+                    if not fn(**kwargs):
+                        start = float("NaN")
 
                     super().update(self.task, advance=1,
                                    description=f"{self.description}:"

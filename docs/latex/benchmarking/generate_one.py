@@ -14,6 +14,8 @@ pd.options.display.float_format = '{:.3f}'.format
 worker = sys.argv[1]
 detailed = (len(sys.argv) > 2)
 
+print("Python version in subscript:", sys.version)
+
 # print(sys.argv)
 # print(worker)
 # print(detailed)

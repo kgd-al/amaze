@@ -13,6 +13,7 @@ def _evaluate(env_class):
 
         if terminated or truncated:
             env.reset()
+    return True
 
 
 def process(df):

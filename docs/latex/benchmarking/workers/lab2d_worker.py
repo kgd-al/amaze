@@ -29,6 +29,7 @@ def _evaluate(env_name, observation):
             env.reset()
 
     env.close()
+    return True
 
 
 def process(df):

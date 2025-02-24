@@ -16,6 +16,7 @@ def _evaluate(size, resolution, complexity, density):
         obs, rewards, dones, info = maze.step(maze.action_space.sample())
         if dones:
             maze.reset()
+    return True
 
 
 def process(df):

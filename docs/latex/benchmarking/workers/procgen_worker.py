@@ -13,6 +13,7 @@ def _evaluate(env_name, **kwargs):
         env.step(action)
 
     env.close()
+    return True
 
 
 def process(df):

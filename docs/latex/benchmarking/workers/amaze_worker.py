@@ -21,6 +21,8 @@ def _evaluate(maze, robot):
         if simulation.done():
             simulation.reset()
 
+    return True
+
 
 def process(df):
     visions = [11, 15, 21, 37]

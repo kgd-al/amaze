@@ -6,7 +6,7 @@ from common import Progress, STEPS
 
 def _evaluate(size):
     maze = labmaze.RandomMaze(height=size, width=size, random_seed=42)
-    pass
+    return True
 
 
 def process(df):
