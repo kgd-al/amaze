@@ -101,7 +101,7 @@ AMaze differs from existing benchmarks on two important aspects:
 The former relates to the underlying LUT-based generation of visual information which alleviates the need for expensive rendering techniques.
 Through having only array pointers moving around, AMaze was designed to have fast-running simulations while still being directly usable with traditional architectures such as CNNs.
 On the latter point, the API allows precise tuning of many of a maze's characteristics, in addition to random exploration.
-Additionally, as an agent behavior is a 2D trajectory in a maze, it is very straightforward for a human observer to interpret its behavior and determine what went right or wrong, and when.
+Additionally, as an agent behavior is a 2D trajectory in a maze, it is very straightforward for a human observer to interpret its behavior and determine what went right or wrong, and when [@GodinDubois2025].
 
 To illustrate the initial statements, we compare AMaze to a sample of benchmark suites (\autoref{tab:comparison}).
 This includes [gymnasium](https://gymnasium.farama.org/) [@Towers2023], an ubiquitous benchmark suite in the Python ecosystem; Lab2D [@Beattie2020], a grid-world environment with both text and script parametrization; and Maze Explorer [@Harries2019], a customizable 3D maze platform based on the DOOM video-game.
