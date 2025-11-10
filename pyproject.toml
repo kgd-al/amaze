@@ -87,7 +87,7 @@ testpaths = ["tests"]
 #qt_log_level_fail = "WARNING"
 
 [tool.black]
-line-length = 88
+line-length = 89
 
 [tool.flake8]
 max-line-length = 88
