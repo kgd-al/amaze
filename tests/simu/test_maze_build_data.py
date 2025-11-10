@@ -4,6 +4,8 @@ import dataclasses
 import pytest
 
 from amaze import Maze, StartLocation, Sign
+from amaze.misc import SignType
+from amaze.simu.types import MazeClass
 
 SL = StartLocation
 
@@ -81,6 +83,14 @@ def test_maze_build_data_from_string(mbd_kwargs):
     assert bd == bd2
     _test_build_data(bd2)
 
+    if bd.unicursive:
+        bd_simple = bd.where(clue=[], p_trap=None, trap=[])
+        bd_simple_str = bd_simple.to_string(simplify=True)
+        bd2_simple = Maze.BuildData.from_string(bd_simple_str)
+        assert bd_simple_str == bd2_simple.to_string()
+        assert bd_simple == bd2_simple
+        _test_build_data(bd2)
+
     for field in dataclasses.fields(bd):
         kwargs = {field.name: Maze.BuildData.Unset()}
         override = bd.where(**kwargs)
@@ -133,3 +143,19 @@ def test_maze_base_build_data(mbd_kwargs):
     # assert args.maze_outputs == o
     # assert args.maze_vision == v
     # print(robot.override_with(Maze.BuildData.from_argparse(args)))
+
+
+@pytest.mark.parametrize("maze_str, m_class", [
+    ("2x2_U", MazeClass.TRIVIAL),
+    ("50x50_C1", MazeClass.SIMPLE),
+    ("50x50_C1_L1_l.5", MazeClass.LURES),
+    ("50x50_C1_T1_t.5", MazeClass.TRAPS),
+    ("50x50_C1_T1_t.5_L1_l.5", MazeClass.COMPLEX),
+])
+def test_maze_class(maze_str, m_class):
+    maze = Maze.from_string(maze_str)
+    assert maze.maze_class() == m_class
+
+    if maze.intersections() > 0:
+        maze.signs_data[SignType.CLUE] = []
+        assert maze.maze_class() == MazeClass.INVALID

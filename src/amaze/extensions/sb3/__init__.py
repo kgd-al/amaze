@@ -1,5 +1,4 @@
-""" Contains wrapper code to make AMaze work smoothly with stable baselines 3
-"""
+"""Contains wrapper code to make AMaze work smoothly with stable baselines 3"""
 
 from pathlib import Path
 from typing import Type

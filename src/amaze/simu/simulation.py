@@ -423,7 +423,7 @@ class Simulation:
 
     @staticmethod
     def _discrete_visual(
-        visual: Union[DiscreteVisual, float]
+        visual: Union[DiscreteVisual, float],
     ) -> Optional[DiscreteVisual]:
         return visual if not isinstance(visual, float) or not np.isnan(visual) else None
 

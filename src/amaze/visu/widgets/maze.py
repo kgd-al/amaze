@@ -210,10 +210,12 @@ class MazeWidget(QLabel):
         super().update()
 
     @staticmethod
-    def __compute_size(maze: Maze,
-                       width: Optional[int] = None,
-                       cell_width: Optional[int] = None,
-                       square: bool = False):
+    def __compute_size(
+        maze: Maze,
+        width: Optional[int] = None,
+        cell_width: Optional[int] = None,
+        square: bool = False,
+    ):
         cell_width = cell_width or 15
         c_width = maze.width * cell_width
         width = width or c_width
@@ -246,9 +248,9 @@ class MazeWidget(QLabel):
 
         painter.end()
 
-    def render_to_file(self, path,
-                       width: Optional[int] = None,
-                       cell_width: Optional[int] = None):
+    def render_to_file(
+        self, path, width: Optional[int] = None, cell_width: Optional[int] = None
+    ):
         """Render this widget to a file
 
         :param path: destination path for the resulting image
@@ -261,9 +263,9 @@ class MazeWidget(QLabel):
         self.render_onto(painter, width=width, cell_width=cell_width)
         return self._save_image(path, img, painter)
 
-    def pretty_render(self,
-                      width: Optional[int] = None,
-                      cell_width: Optional[int] = None):
+    def pretty_render(
+        self, width: Optional[int] = None, cell_width: Optional[int] = None
+    ):
         """Render this widget to an image
 
         :param width: requested width of the image
@@ -272,16 +274,19 @@ class MazeWidget(QLabel):
         :return: The generated image
         """
         img, painter = self._image_drawer(width=width)
-        self.render_onto(painter, width=width)
+        self.render_onto(painter, width=width, cell_width=cell_width)
         painter.end()
         return img
 
     @classmethod
-    def static_render_to_file(cls,
-                              maze: Maze, path: Path,
-                              width: Optional[int] = None,
-                              cell_width: Optional[int] = None,
-                              **kwargs):
+    def static_render_to_file(
+        cls,
+        maze: Maze,
+        path: Path,
+        width: Optional[int] = None,
+        cell_width: Optional[int] = None,
+        **kwargs,
+    ):
         """Render the provided maze to a file (in png format).
 
         :param maze: Maze to render
@@ -324,9 +329,12 @@ class MazeWidget(QLabel):
 
         QtPainter(painter, config).render(maze, config)
 
-    def render_onto(self, painter: QPainter,
-                    width: Optional[int] = None,
-                    cell_width: Optional[int] = None,):
+    def render_onto(
+        self,
+        painter: QPainter,
+        width: Optional[int] = None,
+        cell_width: Optional[int] = None,
+    ):
         if self._config["robot"]:
             robot = self._robot.to_dict()
         else:
@@ -351,7 +359,6 @@ class MazeWidget(QLabel):
             config["scale"] = cell_width
         elif width is not None:
             config["scale"] = width / self._maze.width
-        print("[kgd-debug]", "render_onto", config)
 
         self.__render(painter, self._maze, self._maze.height * config["scale"], config)
 
@@ -386,7 +393,8 @@ class MazeWidget(QLabel):
 
     def _image_drawer(
         self,
-        width: Optional[int] = None, cell_width: Optional[int] = None,
+        width: Optional[int] = None,
+        cell_width: Optional[int] = None,
         img_format: QImage.Format = QImage.Format_RGB32,
     ) -> Tuple[QImage, QPainter]:
 

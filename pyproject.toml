@@ -60,7 +60,8 @@ tests = [
   "coverage",
   "flake8", "flake8-bugbear", "flake8-pyproject",
   "black",
-  "psutil"
+  "psutil",
+  "tabulate"
 ]
 
 docs = [

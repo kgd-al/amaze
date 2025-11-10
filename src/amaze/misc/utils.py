@@ -1,5 +1,4 @@
-""" Various utility functions from handling the Qt Application
-"""
+"""Various utility functions from handling the Qt Application"""
 
 import os
 

@@ -399,6 +399,7 @@ def main(sys_args: Optional[Sequence[str] | str] = None):
         controller = __make_controller(args)
         if controller is None:
             raise ValueError("Cannot evaluate inputs without a controller")
+        print(f"[kgd-debug|{__name__}]", "eval_inputs")
         res = Simulation.inputs_evaluation(
             args.eval_inputs, controller, __make_maze(args).signs
         )
@@ -407,15 +408,17 @@ def main(sys_args: Optional[Sequence[str] | str] = None):
     if args.render:
         maze = __make_maze(args)
         if MazeWidget.static_render_to_file(
-                maze, args.render,
-                width=args.width,
-                cell_width=args.cell_width,
-                config=dict(
-                    robot=False,
-                    solution=True,
-                    dark=args.dark,
-                    colorblind=args.colorblind,
-                )):
+            maze,
+            args.render,
+            width=args.width,
+            cell_width=args.cell_width,
+            config=dict(
+                robot=False,
+                solution=True,
+                dark=args.dark,
+                colorblind=args.colorblind,
+            ),
+        ):
             print(f"Saved {maze.to_string()} to {args.render}")
         else:
             print(f"Failed to save {maze.to_string()} to {args.render}")

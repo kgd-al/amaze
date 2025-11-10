@@ -1,4 +1,4 @@
-""" Various utility functions """
+"""Various utility functions"""
 
 import numpy as np
 from gymnasium import Space

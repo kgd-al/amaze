@@ -1,5 +1,4 @@
-"""Root package for the AMaze benchmark generator
-"""
+"""Root package for the AMaze benchmark generator"""
 
 from .misc.resources import Sign
 from .misc.utils import qt_application

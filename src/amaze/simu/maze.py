@@ -1,5 +1,4 @@
-"""Data structures describing a maze and its parameters
-"""
+"""Data structures describing a maze and its parameters"""
 
 import random
 import re
@@ -154,8 +153,10 @@ class Maze:
                     )
                 assert_ok(k, field_type=list, value_tester=self._valid_signs)
 
-        def to_string(self) -> str:
+        def to_string(self, simplify: bool = False) -> str:
             """Generate a string representation of this object
+
+            :param simplify: Whether to simplify the resulting string
 
             :see: from_string
             """
@@ -168,11 +169,12 @@ class Maze:
                 tokens.append("U")
             if not self.rotated:
                 tokens.append("R")
-            tokens.extend(f"C{Sign.to_string(s)}" for s in self.clue)
+            if not (simplify and self.unicursive):
+                tokens.extend(f"C{Sign.to_string(s)}" for s in self.clue)
             if self.p_lure and self.lure:
                 tokens.append(f"l{self.p_lure:.2g}".lstrip("0"))
                 tokens.extend(f"L{Sign.to_string(s)}" for s in self.lure)
-            if not self.unicursive and self.p_trap and self.trap:
+            if not (simplify and self.unicursive) and self.p_trap and self.trap:
                 tokens.append(f"t{self.p_trap:.2g}".lstrip("0"))
                 tokens.extend(f"T{Sign.to_string(s)}" for s in self.trap)
             return sep.join(tokens)

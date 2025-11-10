@@ -1,5 +1,4 @@
-""" Handles image generation, loading and conversion Qt <-> numpy conversion
-"""
+"""Handles image generation, loading and conversion Qt <-> numpy conversion"""
 
 import copy
 import logging

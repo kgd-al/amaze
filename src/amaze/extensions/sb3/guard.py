@@ -1,4 +1,4 @@
-""" Implementation of a python guard to prevent negative interactions
+"""Implementation of a python guard to prevent negative interactions
 between opencv2 and PyQT5"""
 
 import os
