@@ -87,9 +87,9 @@ jobs:
           name: log-sources
           path: ./logs/*.log
 
-  post_build:
+  publish-to-testpypi:
     needs: [build_wheel, build_sdist]
-    name: Post-build processing
+    name: Publishing to TestPyPI
     runs-on: ubuntu-latest
     permissions:
       id-token: write
@@ -118,9 +118,24 @@ jobs:
           verbose: true
           skip-existing: true
 
+  publish-to-pypi:
+    needs: [build_wheel, build_sdist]
+    name: Post-build processing
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+
+    if: ${{ always() && !cancelled() && github.ref_name == 'main' && contains(github.event.head_commit.message, '[Release') }}
+    steps:
+      - uses: actions/download-artifact@v4
+        name: download sdist/wheels
+        with:
+          path: dist
+          pattern: dist-*
+          merge-multiple: true
+
       - name: upload to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
-        if: "github.ref_name == 'main' && contains(github.event.head_commit.message, '[Release')"
         with:
           user: __token__
           password: ${{ secrets.pypi_password }}
