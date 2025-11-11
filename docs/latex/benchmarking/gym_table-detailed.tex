@@ -1,0 +1,32 @@
+\begin{tabular}{llrlllr}
+\toprule
+ &  & N & Inputs & Outputs & Control & Time \\
+ &  &  &  &  &  & median \\
+Library & Family &  &  &  &  &  \\
+\midrule
+\multirow[t]{3}{*}{AMaze} & Discrete & 64 & Discrete & Discrete & Extensive & 0.010 \\
+ & Hybrid & 64 & Image & Discrete & Extensive & 0.025 \\
+ & Continuous & 64 & Continuous & Continuous & Extensive & 0.102 \\
+\cline{1-7}
+\multirow[t]{5}{*}{Gymnasium} & Toy Text & 5 & Discrete & Discrete & None & 0.009 \\
+ & Classic Control & 5 & Continuous & Both & None & 0.023 \\
+ & Mujoco & 22 & Continuous & Continuous & None & 0.090 \\
+ & Box2D & 8 & Continuous & Both & None & 0.112 \\
+ & ALE & 104 & Image & Discrete & Modes & 0.400 \\
+\cline{1-7}
+\multirow[t]{4}{*}{Miscellaneous} & ProcGen & 100 & Image & Discrete & Modes & 0.031 \\
+ & Lab2D & 11 & Both & Discrete & Script & 0.056 \\
+ & Metaworld & 50 & Continuous & Continuous & None & 1.228 \\
+ & URLB & 24 & Both & Continuous & None & 3.929 \\
+\cline{1-7}
+\multirow[t]{5}{*}{Retro-Gym} & GameBoy & 27 & \multirow{5}{*}{Image} & \multirow{5}{*}{Discrete} & \multirow{5}{*}{None} & 0.197 \\
+ & Sms & 88 &  &  &  & 0.269 \\
+ & Nes & 295 &  &  &  & 0.355 \\
+ & Genesis & 331 &  &  &  & 0.472 \\
+ & Snes & 184 &  &  &  & 0.736 \\
+\cline{1-7}
+\multirow[t]{2}{*}{VizDoom} & MazeExplorer & 81 & Image & Discrete & Extensive & 0.553 \\
+ & LevDoom & 72 & Image & Discrete & None & 1.059 \\
+\cline{1-7}
+\bottomrule
+\end{tabular}

@@ -1,4 +1,4 @@
-""" Half-hearted attempt a making a custom CNN.
+"""Half-hearted attempt a making a custom CNN.
 
 Improvements are being worked on.
 """

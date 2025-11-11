@@ -13,22 +13,23 @@ pd.options.display.float_format = '{:.3f}'.format
 
 worker = sys.argv[1]
 detailed = (len(sys.argv) > 2)
-fname = "table" + ("-detailed" if detailed else "")
 
-print(sys.argv)
-print(worker)
-print(detailed)
-print(fname)
+print("Python version in subscript:", sys.version)
+
+# print(sys.argv)
+# print(worker)
+# print(detailed)
 
 # ================================================================================================
 # == Record reading/creation
 # ================================================================================================
 
 #line()
-folder=Path(__file__).parent
-datafile=folder.joinpath(f"{fname}.csv")
+folder = Path(__file__).parent
+datafile = folder.joinpath(f"table.csv")
 #print("Datafile:", datafile)
 
+columns = ["Library", "Family", "Class", "Time"]
 try:
     df = pd.read_csv(datafile, index_col="Name")
 
@@ -37,11 +38,11 @@ try:
     #print(f"to {len(df)}\033[0m")
 
 except FileNotFoundError:
-    df = pd.DataFrame(columns=["Library", "Family", "Time"])
+    df = pd.DataFrame(columns=columns)
     df.index.name = "Name"
 
 # ================================================================================================
-# == Process workers
+# == Process worker
 # ================================================================================================
 
 errors = 0
@@ -53,22 +54,23 @@ try:
     module = importlib.util.module_from_spec(spec)
     sys.modules[file.stem] = module
     spec.loader.exec_module(module)
-    module.process(df, detailed)
+    errors += module.process(df)
 except Exception as e:
     print("Failed:", e)
-    #raise e
     errors += 1
+    raise e
 
 # ================================================================================================
 # == Write up
 # ================================================================================================
 
-line("-")
-print("==", "Dataframe:")
+# line("-")
+# print("==", "Dataframe:")
 
+df.sort_values(by=["Library", "Family", "Name"], inplace=True)
 df.to_csv(datafile)
-print(df)
-#exit(42)
+# print(df)
 
 if errors > 0:
+    print("Exiting unhappily after", errors, "errors")
     exit(1)

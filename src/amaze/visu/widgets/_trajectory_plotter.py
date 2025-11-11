@@ -1,7 +1,6 @@
 from pathlib import Path
 from typing import Optional
 
-import numpy as np
 import pandas as pd
 from PyQt5.QtCore import Qt, QRectF, QLineF, QPointF
 from PyQt5.QtGui import (
@@ -13,6 +12,7 @@ from PyQt5.QtGui import (
 )
 
 from ...simu.simulation import Simulation
+
 
 # Not as informative
 # def _plot_trajectory_duplicates(
@@ -205,6 +205,7 @@ def _plot_trajectory_value(
     verbose: int = 0,
     side: int = 0,
     square: bool = False,
+    force_overlay: bool = False,
     img_format: QImage.Format = QImage.Format_RGB32,
 ) -> Optional[QImage]:
 
@@ -222,78 +223,83 @@ def _plot_trajectory_value(
     if side == 0:
         side = -1 if maze.start[0] == 0 else 1
 
-    # First look for cycles
-    data = pd.DataFrame(columns=["i", "j", "cr", "steps", "value"])
     c_reward = 0
-    values = []
     solution_index = 0
     backtrack_stack = []
-    state_action = set()
-    cycle = None
+    state_action = dict()
+
+    r_min = simulation.minimal_reward
+    r_range = simulation.optimal_reward - r_min
+
+    def v_norm(_v):
+        return round((v - r_min) / r_range, 3)
+
     for i, px, py, ax, ay, r in trajectory.itertuples():
         if verbose > 2:  # pragma: no cover
             print("===")
 
-        if config["cycles"]:
-            # Detect cycles
-            k = ((px, py), (ax, ay))
-            if k in state_action:
-                cycle = i
-                if verbose > 1:
-                    print("Cycle detected")
-                break
-            state_action.add(k)
-
         # Compute value
         c_reward += r
-        v = c_reward + rewards.finish
-
-        steps = 0
+        required_steps = 0
 
         cell = (int(px), int(py))
-        next_cell = (int(px + ax), int(py + ay))
-        if verbose > 2:  # pragma: no cover
-            print(f"{cell=}, {next_cell=}")
-        if next_cell == maze.solution[solution_index + 1]:
+        if i < len(trajectory) - 1:
+            next_cell = tuple(int(_p) for _p in trajectory[["px", "py"]].iloc[i + 1])
             if verbose > 2:  # pragma: no cover
-                print("Still on track")
-            solution_index += 1
-        elif next_cell == maze.solution[solution_index]:
-            if verbose > 2:  # pragma: no cover
-                print("Backward")
-            solution_index -= 1
-        else:
-            if verbose > 2:  # pragma: no cover
-                print("Off track")
-            steps += len(backtrack_stack)
-            if backtrack_stack and next_cell == backtrack_stack[-1]:
-                backtrack_stack.pop()
-            # elif cell != maze.solution[solution_index]:
+                print(f"{cell=}, {next_cell=}")
+            if cell == next_cell:
+                if verbose > 2:
+                    print("Hitting a wall")
+                pass
+            elif next_cell == maze.solution[solution_index + 1]:
+                if verbose > 2:  # pragma: no cover
+                    print("Still on track")
+                solution_index += 1
+            elif next_cell == maze.solution[solution_index]:
+                if verbose > 2:  # pragma: no cover
+                    print("Backward")
+                solution_index -= 1
             else:
-                backtrack_stack.append(cell)
-        if verbose > 2:  # pragma: no cover
-            print(len(backtrack_stack), backtrack_stack)
-        steps += len(maze.solution) - solution_index - 1
+                if verbose > 2:  # pragma: no cover
+                    print("Off track")
+                required_steps += len(backtrack_stack)
+                if backtrack_stack and next_cell == backtrack_stack[-1]:
+                    backtrack_stack.pop()
+                # elif cell != maze.solution[solution_index]:
+                else:
+                    backtrack_stack.append(cell)
+            if verbose > 2:  # pragma: no cover
+                print(len(backtrack_stack), backtrack_stack)
 
-        v += steps * rewards.timestep
-        v /= len(maze.solution)
-        data.loc[len(data)] = [*cell, c_reward, steps, v]
-        values.append(v)
+        elif simulation.success():
+            solution_index += 1
+
+        required_steps += len(maze.solution) - solution_index
+
+        v = c_reward
+        possible_steps = simulation.deadline - i
+        steps = min(required_steps, possible_steps)
+        can_reach_goal = r < 0 and required_steps < possible_steps
+        if can_reach_goal:
+            v += rewards.finish
+
+        v += (steps - 1) * rewards.timestep
+        v = v_norm(v)
+        assert 0 <= v <= 1, v
+
+        k = ((px, py), (ax, ay))
+        state_action[k] = v
+
+    values = set(state_action.values())
+    trivial_trajectory = len(values) == 1
+
+    needs_colormap = values != {1}
+    needs_overlay = (needs_colormap and verbose > 0) or force_overlay
     if verbose > 1:
-        print(trajectory.merge(data, left_index=True, right_index=True))
-
-    if verbose > 1 and cycle:
-        print(f"Cycle: [0:{cycle}]")
-
-    trivial_trajectory = len(set(values)) == 1
-
-    needs_color_bar = cycle and not trivial_trajectory
-    needs_overlay = cycle or needs_color_bar
-    if verbose > 1:
-        print(f"{trivial_trajectory=} {needs_color_bar=}")
+        print(f"{trivial_trajectory=} {needs_overlay=}")
     # pprint.pprint(values)
 
-    width, height = functions["size"](maze, size, square)
+    width, height = functions["size"](maze, width=size, square=square)
     scale = min(width / maze.width, height / maze.height)
 
     cb_r = 0.2 if needs_overlay else 0
@@ -334,45 +340,29 @@ def _plot_trajectory_value(
             lures=lures,
             traps=traps,
             outputs=simulation.data.outputs,
-            robot=simulation.robot_dict() if config["robot"] else None,
+            robot=simulation.robot.to_dict() if config["robot"] else None,
         )
     )
     functions["render"](painter=painter, maze=maze, height=height, config=render_config)
 
-    min_v, max_v = np.quantile(values, [0, 1])
-    diff_v = max_v - min_v
-    if verbose > 1:
-        print("Value range:", min_v, max_v, diff_v)
-
     rotations = {(1, 0): 0, (0, 1): 90, (-1, 0): 180, (0, -1): 270}
 
-    if needs_overlay:
-        if trivial_trajectory:
+    if needs_colormap:
 
-            def color(_):
-                return Qt.red
+        def colormap(v_):
+            return QColor.fromHsvF(v_ / 6, 1, 1)
 
-        else:
-
-            def colormap(v_):
-                return QColor.fromHsvF(v_ / 6, 1, 1)
-
-            def color(v_):
-                return Qt.green if v_ == max_v else colormap((v_ - min_v) / diff_v)
+        def color(v_):
+            return Qt.green if v_ == 1 else colormap(v_)
 
     else:
 
         def color(_):
             return Qt.green
 
-    assert not cycle or len(values) == cycle, f"{len(values)} != {cycle}"
-    assert cycle or len(values) == len(
-        trajectory
-    ), f"{len(values)} != {len(trajectory)}"
-
     _trajectory = []
-    for (x, y, i, j, _), cr in zip(trajectory.itertuples(index=False), values):
-        _trajectory.append(((x, y), rotations[int(i), int(j)], color(cr)))
+    for ((x, y), (i, j)), v in state_action.items():
+        _trajectory.append(((x, y), rotations[int(i), int(j)], color(v)))
 
     s = scale
     arrow = QPainterPath()
@@ -396,18 +386,20 @@ def _plot_trajectory_value(
         painter.drawPath(arrow)
         painter.restore()
 
-    if needs_overlay:
-        (x_, y_), a, c = _trajectory[-1]
-        painter.save()
-        painter.translate(x_ * s, y_ * s)
-        painter.rotate(a)
-        painter.fillRect(QRectF(0.4 * s, -0.5 * s + 1, 0.1 * s, s - 2), Qt.red)
-        painter.restore()
+    if needs_colormap:
+        if not simulation.success():
+            (x_, y_), a, c = _trajectory[-1]
+            painter.save()
+            painter.translate(x_ * s, y_ * s)
+            painter.rotate(a)
+            painter.fillRect(QRectF(0.4 * s, -0.5 * s + 1, 0.1 * s, s - 2), Qt.red)
+            painter.restore()
 
         if force_square:
             painter.restore()
 
-        painter.restore()  # to before the space saved for the color bar
+        if needs_overlay:
+            painter.restore()  # to before the space saved for the color bar
         painter.setPen(config["foreground"])
 
         if verbose:
@@ -416,6 +408,15 @@ def _plot_trajectory_value(
                 Qt.AlignCenter,
                 "Expected return",
             )
+            actions, unique_actions = len(trajectory), len(state_action)
+            if actions != unique_actions:
+                cycle_legend = (
+                    f"{unique_actions} unique actions out of {actions}"
+                    f" ({100 * unique_actions / actions:.2g}%)"
+                )
+            else:
+                cycle_legend = f"{actions} actions"
+
             painter.drawText(
                 QRectF(
                     x_offset,
@@ -424,13 +425,13 @@ def _plot_trajectory_value(
                     0.5 * cb_width,
                 ),
                 Qt.AlignCenter,
-                f"First cycle" f" ({100 * cycle / len(trajectory):.2g}%)",
+                cycle_legend,
             )
 
     elif force_square:
         painter.restore()
 
-    if needs_color_bar:
+    if needs_overlay:
         # w, h = maze.width, maze.height
         w, h = width, height
         m = cb_margin
@@ -446,7 +447,7 @@ def _plot_trajectory_value(
 
         gradient = QLinearGradient(0, 0, 0, 1)
         gradient.setColorAt(0, Qt.green)
-        gradient.setColorAt((max_v - sorted(set(values))[-2]) / diff_v, colormap(1))
+        gradient.setColorAt(0.05, colormap(1))
         gradient.setColorAt(1, colormap(0))
         gradient.setCoordinateMode(QLinearGradient.ObjectMode)
         cb_box = QRectF(m, m, cb_w, cb_h)
@@ -465,9 +466,9 @@ def _plot_trajectory_value(
         )
 
         text_data = []
-        for i_ in range(cb_ticks):
-            u = i_ / (cb_ticks - 1)
-            cb_y = diff_v * u + min_v
+        for _i in range(cb_ticks):
+            u = _i / (cb_ticks - 1)
+            cb_y = u
             # cb_y = round(cb_y)
             text = f"{cb_y:.2g}"
             if verbose > 1:

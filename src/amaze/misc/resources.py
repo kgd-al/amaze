@@ -1,5 +1,4 @@
-""" Handles image generation, loading and conversion Qt <-> numpy conversion
-"""
+"""Handles image generation, loading and conversion Qt <-> numpy conversion"""
 
 import copy
 import logging
@@ -354,7 +353,7 @@ def _get_image(key: DataKey):
 
     # First look in RAM cache
     if (img := _cache.get(key)) is not None:
-        logging.info(f"Using cached image for {key}")
+        logger.debug(f"Using cached image for {key}")
         return img
 
     # Else look in file cache
@@ -465,13 +464,13 @@ def __generator__error(lightness: float = 0, size: int = 15):
 def arrow_path():
     """Returns a plain arrow"""
     path = QPainterPath()
-    path.moveTo(0.0, 0.4)
-    path.lineTo(0.0, 0.6)
-    path.lineTo(0.6, 0.6)
+    path.moveTo(0.0, 0.425)
+    path.lineTo(0.0, 0.575)
+    path.lineTo(0.6, 0.575)
     path.lineTo(0.6, 0.8)
     path.lineTo(1.0, 0.5)
     path.lineTo(0.6, 0.2)
-    path.lineTo(0.6, 0.4)
+    path.lineTo(0.6, 0.425)
     path.closeSubpath()
     return path
 
@@ -499,7 +498,7 @@ def __generator__warning(lightness: float, size: int):
     )
     painter.fillRect(QRectF(0.3, 0.45, 0.4, 0.1), __pen_color(lightness))
     path = QPainterPath()
-    path.addEllipse(QRectF(0.15, 0.45, 0.1, 0.1))
+    path.addEllipse(QRectF(0.1, 0.4, 0.2, 0.2))
     painter.fillPath(path, __pen_color(lightness))
     painter.end()
 
@@ -517,6 +516,79 @@ def __generator__forbidden(lightness: float, size: int):
         painter.drawLine(QPointF(0.25, 0), QPointF(0.4, 0))
         painter.rotate(-i * 90)
         painter.translate(0, 1)
+    painter.end()
+
+    return img
+
+
+def __generator__alien(lightness: float, size: int):
+    img, painter = _image(size, lightness)
+
+    path = QPainterPath()
+    path.moveTo(0.0, -0.5)
+    path.lineTo(0.4, -0.5)
+    path.lineTo(1.0, 0.0)
+    path.lineTo(0.4, +0.5)
+    path.lineTo(0.0, +0.5)
+    path.lineTo(0.0, +0.125)
+    path.lineTo(0.4, +0.25)
+    path.lineTo(0.6, 0.0)
+    path.lineTo(0.4, -0.25)
+    path.lineTo(0.0, -0.125)
+    path.closeSubpath()
+    painter.translate(0, 0.5)
+    painter.fillPath(path, __pen_color(lightness))
+
+    painter.end()
+    return img
+
+
+def __generator__rarrow(lightness: float, size: int):
+    img, painter = _image(size, lightness)
+
+    path = QPainterPath()
+    path.moveTo(0.0, 0.4)
+    path.lineTo(0.0, 0.6)
+    path.lineTo(0.4, 0.6)
+    path.lineTo(0.6, 0.9)
+    path.lineTo(0.8, 1.0)
+    path.lineTo(1.0, 1.0)
+    path.lineTo(1.0, 0.8)
+    path.lineTo(0.7, 0.7)
+    path.lineTo(0.6, 0.5)
+    path.lineTo(0.7, 0.3)
+    path.lineTo(1.0, 0.2)
+    path.lineTo(1.0, 0.0)
+    path.lineTo(0.8, 0.0)
+    path.lineTo(0.6, 0.1)
+    path.lineTo(0.4, 0.4)
+    path.closeSubpath()
+    painter.fillPath(path, __pen_color(lightness))
+
+    painter.end()
+    return img
+
+
+def __generator__star(lightness: float, size: int):
+    img, painter = _image(size, lightness)
+    painter.translate(0.5, 0.5)
+    painter.drawEllipse(QRectF(-0.25, -0.25, 0.5, 0.5))
+
+    path = QPainterPath()
+    path.moveTo(0, 0.05)
+    path.lineTo(0.35, 0.05)
+    path.lineTo(0.35, 0.1)
+    path.lineTo(0.5, 0.0)
+    path.lineTo(0.35, -0.1)
+    path.lineTo(0.35, -0.05)
+    path.lineTo(0, -0.05)
+    path.closeSubpath()
+
+    for i in range(8):
+        painter.save()
+        painter.rotate(i * 45)
+        painter.fillPath(path, __pen_color(lightness))
+        painter.restore()
 
     return img
 

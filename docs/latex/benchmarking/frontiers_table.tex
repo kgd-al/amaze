@@ -1,0 +1,61 @@
+\documentclass{standalone}
+\usepackage{tabularray}
+\usepackage{graphicx}
+\usepackage{xcolor}
+\usepackage{adjustbox}
+\definecolor{frontiers_header_gray}{HTML}{8F9496}
+\definecolor{frontiers_line_gray}{HTML}{A2A2A2}
+\begin{document}
+\newlength{\img}%
+\setlength{\img}{12.2cm}%
+\begin{tblr}{
+  colspec={llrlllc@{}X@{}},
+  hlines = {frontiers_line_gray, .5pt}, vlines = {frontiers_line_gray, .5pt},
+  hline{3,6,11,15,20} = {2}{-}{frontiers_line_gray, .5pt, solid},
+  cell{1}{1-6} = {r=2}{c},
+  row{1-2} = {bg=frontiers_header_gray, fg=white, font=\Large\bfseries},
+  cell{2}{8} = {white},
+  cell{15}{4-6} = {r=5}{t},
+  vspan=even,
+%   stretch=0,
+  row{1,2}={ht=1.5\baselineskip},
+  row{3-20}={ht=\baselineskip},
+ }
+ Library & Family & N & Inputs & Outputs & Control & \SetCell[c=2]{c} Time (s) \\
+ & &  &  &  &  & Median\hspace{1em} &
+ \SetCell[r=20]{t}%
+ \smash{\raisebox{-.506\totalheight}{%
+  \adjincludegraphics[height=\img]
+   {/home/kgd/work/code/vu/amaze/docs/latex/benchmarking/gym_table-detailed.pdf}%
+ }}
+ \\
+
+ \SetCell[r=3]{t} \textbf{AMaze}
+ & Discrete & 64 & Discrete & Discrete & Extensive & 0.010 \\
+ & Hybrid & 64 & Image & Discrete & Extensive & 0.025 \\
+ & Continuous & 64 & Continuous & Continuous & Extensive & 0.102 \\
+
+ \SetCell[r=5]{t} Gymnasium
+ & Toy Text & 5 & Discrete & Discrete & None & 0.009 \\
+ & Classic Control & 5 & Continuous & Both & None & 0.023 \\
+ & Mujoco & 22 & Continuous & Continuous & None & 0.090 \\
+ & Box2D & 8 & Continuous & Both & None & 0.112 \\
+ & ALE & 104 & Image & Discrete & Modes & 0.400 \\
+
+ \SetCell[r=4]{t} Miscellaneous & ProcGen & 100 & Image & Discrete & Modes & 0.031 \\
+ & Lab2D & 11 & Both & Discrete & Script & 0.056 \\
+ & Metaworld & 50 & Continuous & Continuous & None & 1.228 \\
+ & URLB & 24 & Both & Continuous & None & 3.929 \\
+
+ \SetCell[r=5]{t} Retro-Gym
+ & GameBoy & 27 & Image & Discrete & None & 0.197 \\
+ & Sms & 88 &  &  &  & 0.269 \\
+ & Nes & 295 &  &  &  & 0.355 \\
+ & Genesis & 331 &  &  &  & 0.472 \\
+ & Snes & 184 &  &  &  & 0.736 \\
+
+ \SetCell[r=2]{t} VizDoom
+ & MazeExplorer & 81 & Image & Discrete & Extensive & 0.553 \\
+ & LevDoom & 72 & Image & Discrete & None & 1.059 \\
+\end{tblr}
+\end{document}

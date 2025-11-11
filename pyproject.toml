@@ -1,6 +1,6 @@
 [project]
 name = "amaze-benchmarker"
-version = "1.0rc1-post1"
+version = "1.0"
 authors = [{ name="Kevin Godin-Dubois", email="k.j.m.godin-dubois@vu.nl"}]
 description = "Benchmark generator for sighted maze-navigating agents"
 readme = "README.md"
@@ -44,7 +44,7 @@ build-backend = "setuptools.build_meta"
 
 [project.optional-dependencies]
 sb3 = [
-  "stable_baselines3[extra]",
+  "stable_baselines3",
   "tensorboard",
   "graphviz"
 ]
@@ -60,7 +60,8 @@ tests = [
   "coverage",
   "flake8", "flake8-bugbear", "flake8-pyproject",
   "black",
-  "psutil"
+  "psutil",
+  "tabulate"
 ]
 
 docs = [
@@ -86,7 +87,7 @@ testpaths = ["tests"]
 #qt_log_level_fail = "WARNING"
 
 [tool.black]
-line-length = 88
+line-length = 89
 
 [tool.flake8]
 max-line-length = 88

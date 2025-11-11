@@ -1,5 +1,4 @@
-"""Data structures describing a maze and its parameters
-"""
+"""Data structures describing a maze and its parameters"""
 
 import random
 import re
@@ -16,7 +15,7 @@ import numpy as np
 
 from ..misc.resources import Sign, SignType
 from ._build_data import BaseBuildData
-from .types import StartLocation, classproperty
+from .types import StartLocation, classproperty, MazeClass
 
 logger = getLogger(__name__)
 
@@ -154,8 +153,10 @@ class Maze:
                     )
                 assert_ok(k, field_type=list, value_tester=self._valid_signs)
 
-        def to_string(self) -> str:
+        def to_string(self, simplify: bool = False) -> str:
             """Generate a string representation of this object
+
+            :param simplify: Whether to simplify the resulting string
 
             :see: from_string
             """
@@ -168,11 +169,12 @@ class Maze:
                 tokens.append("U")
             if not self.rotated:
                 tokens.append("R")
-            tokens.extend(f"C{Sign.to_string(s)}" for s in self.clue)
+            if not (simplify and self.unicursive):
+                tokens.extend(f"C{Sign.to_string(s)}" for s in self.clue)
             if self.p_lure and self.lure:
                 tokens.append(f"l{self.p_lure:.2g}".lstrip("0"))
                 tokens.extend(f"L{Sign.to_string(s)}" for s in self.lure)
-            if self.p_trap and self.trap:
+            if not (simplify and self.unicursive) and self.p_trap and self.trap:
                 tokens.append(f"t{self.p_trap:.2g}".lstrip("0"))
                 tokens.extend(f"T{Sign.to_string(s)}" for s in self.trap)
             return sep.join(tokens)
@@ -355,6 +357,10 @@ class Maze:
         return self.signs[SignType.TRAP]
 
     def stats(self):
+        """
+        Prints various statistics about the maze
+        :return: a dictionary of relevant attributes
+        """
         return dict(
             size=(self.width, self.height),
             path=len(self.solution),
@@ -363,6 +369,30 @@ class Maze:
             lures=len(self.signs_data[SignType.LURE]),
             traps=len(self.signs_data[SignType.TRAP]),
         )
+
+    def maze_class(self):
+        """Determines the maze's class based on its attributes
+
+        :return: the :class:`~amaze.simu.types.MazeClass`
+        """
+        _stats = self.stats()
+        i = _stats["intersections"]
+        if i == 0:
+            return MazeClass.TRIVIAL
+        else:
+            c, l, t = _stats["clues"], _stats["lures"], _stats["traps"]
+            if c == i and t == 0:
+                if l == 0:
+                    return MazeClass.SIMPLE
+                else:
+                    return MazeClass.LURES
+            elif c < i and t > 0 and c + t == i:
+                if l == 0:
+                    return MazeClass.TRAPS
+                else:
+                    return MazeClass.COMPLEX
+            else:
+                return MazeClass.INVALID
 
     def iter_cells(self):
         return ((i, j) for i in range(self.width) for j in range(self.height))
@@ -399,7 +429,7 @@ class Maze:
             self.walls[i_, j_, d_.value] = wall
 
     @classmethod
-    def generate(cls, data: BuildData):
+    def generate(cls, data: BuildData, warnings=True):
         assert isinstance(
             data, Maze.BuildData
         ), f"Wrong argument type {type(data)} instead of Maze.BuildData"
@@ -571,7 +601,7 @@ class Maze:
         if not clues:
             maze.signs_data[SignType.CLUE] = []
 
-        if not data.unicursive and not clues:
+        if not data.unicursive and not clues and warnings:
             logger.warning(
                 "Mazes with intersections and no clues are" " practically unsolvable"
             )
@@ -598,15 +628,19 @@ class Maze:
         return self.build_data().to_string()
 
     @classmethod
-    def from_string(cls, s, overrides: Optional[BuildData] = None) -> "Maze":
+    def from_string(
+        cls, s, overrides: Optional[BuildData] = None, warnings=True
+    ) -> "Maze":
         """Generate a maze from its string description.
 
         Optionally, specific parameters can be overridden by values set in
         the `overrides` argument.
         The full syntax is described in :meth:`.BuildData.from_string`.
         """
-        return cls.generate(cls.BuildData.from_string(s, overrides))
+        return cls.generate(cls.BuildData.from_string(s, overrides), warnings=warnings)
 
     def all_rotations(self) -> List["Maze"]:
         """Returns all rotated versions of this maze"""
-        return [self.generate(d) for d in self.build_data().all_rotations()]
+        return [
+            self.generate(d, warnings=False) for d in self.build_data().all_rotations()
+        ]

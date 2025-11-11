@@ -2,7 +2,7 @@ import pprint
 import gymnasium as gym
 import ale_py
 
-from common import line, evaluate, Progress, STEPS
+from common import line, Progress, STEPS
 
 
 registration = gym.envs.registration
@@ -23,9 +23,10 @@ def _evaluate(env_name):
             observation, info = env.reset()
 
     env.close()
+    return True
 
 
-def process(df, detailed):
+def process(df):
     # ===========================================================================================
     # == Candidates collection
     # ===========================================================================================
@@ -151,12 +152,13 @@ def process(df, detailed):
     # ===========================================================================================
     line("-")
 
-    with Progress("Gymnasium") as progress:
-        task = progress.add_task(sum(len(fc) for fc in candidates.values()))
+    with Progress(df, "Gymnasium") as progress:
+        progress.add_task(sum(len(fc) for fc in candidates.values()))
 
         for family, f_candidates in candidates.items():
             for candidate in f_candidates:
-                evaluate(df, "Gymnasium", family, candidate, _evaluate, env_name=candidate)
-                progress.update(task, candidate)
+                progress.evaluate(family, candidate, _evaluate, env_name=candidate)
 
-        progress.update(task, None)
+        progress.close()
+
+    return progress.errors

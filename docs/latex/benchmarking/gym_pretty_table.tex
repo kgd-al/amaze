@@ -5,19 +5,22 @@
 \usetikzlibrary{calc, positioning, tikzmark}
 \begin{document}
 \newlength{\img}%
-\setlength{\img}{7.2\baselineskip}%
+\setlength{\img}{9.2\baselineskip}%
 \begin{tabular}{lrlllc@{ }r@{}}
 \toprule
  &\multirow{2}{*}{ N }&\multirow{2}{*}{ Inputs }&\multirow{2}{*}{ Outputs }&\multirow{2}{*}{ Control }& \multicolumn{2}{c}{Time (s)} \\ 
 \cmidrule(lr){6-7}
-Family &  &  &  &  & Median & \multirow{7.77}{*}{\includegraphics[height=\img]{/home/kgd/work/code/vu/amaze/docs/latex/benchmarking/gym_table.pdf}} \\
-\cmidrule(r){1-6}
-Toy Text & 5 & Discrete & Discrete & - & 0.010 \\
-AMaze & 63 & Both & Both & Extensive & 0.027 \\
-\textbf{Classic Control} & \textbf{5} & \textbf{Continuous} & \textbf{Both} & \textbf{-} & \textbf{0.034 }\\
-Mujoco & 11 & Continuous & Continuous & - & 0.119 \\
-Box2D & 5 & Continuous & Both & - & 0.177 \\
-ALE & 104 & Image & Discrete & Modes & 0.419 \\
+Family &  &  &  &  & Median &
+ \multirow{9.77}{*}{\includegraphics[height=\img]{/home/kgd/work/code/vu/amaze/docs/latex/benchmarking/gym_table.pdf}} \\
+\midrule
+Toy Text & 5 & Discrete & Discrete & None & 0.009 \\
+Classic Control & 5 & Continuous & Both & None & 0.023 \\
+\textbf{AMaze} & \textbf{192} & \textbf{Both} & \textbf{Both} & \textbf{Extensive} & \textbf{0.025 }\\
+Lab2D & 11 & Both & Discrete & Script & 0.056 \\
+Mujoco & 22 & Continuous & Continuous & None & 0.090 \\
+Box2D & 8 & Continuous & Both & None & 0.112 \\
+ALE & 104 & Image & Discrete & Modes & 0.400 \\
+MazeExplorer & 81 & Image & Discrete & Extensive & 0.553 \\
 \bottomrule
 \end{tabular}
 

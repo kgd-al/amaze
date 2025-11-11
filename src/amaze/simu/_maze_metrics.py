@@ -2,7 +2,6 @@
 Private module for computing maze metrics
 """
 
-import enum
 from collections import defaultdict, namedtuple
 from math import log2 as log
 from typing import Tuple
@@ -10,15 +9,8 @@ from typing import Tuple
 import numpy as np
 
 from .maze import Maze
-from .types import InputType
+from .types import InputType, MazeMetrics
 from ..misc.resources import Sign
-
-
-class MazeMetrics(enum.Flag):
-    SURPRISINGNESS = enum.auto()
-    DECEPTIVENESS = enum.auto()
-    INSEPARABILITY = enum.auto()
-    ALL = SURPRISINGNESS | DECEPTIVENESS | INSEPARABILITY
 
 
 def __inputs(c, r, maze, visuals):
@@ -96,7 +88,7 @@ def __solution_path(maze, visuals):
 #     return cost
 
 
-class InputsEntropy:
+class _InputsEntropy:
     def __init__(self):
         self.__count = 0
         self.__inputs = defaultdict(lambda: 0)
@@ -245,7 +237,7 @@ def metrics(maze: Maze, visuals: np.ndarray, input_type: InputType):
     # ======
 
     k = "all"
-    s_metric = InputsEntropy()
+    s_metric = _InputsEntropy()
     for i in __all_inputs(maze, visuals):
         s_metric.process(i)
     n_inputs[k] = s_metric.count()

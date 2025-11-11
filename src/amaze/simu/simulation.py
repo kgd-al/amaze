@@ -7,12 +7,12 @@ import numpy as np
 import pandas as pd
 
 from ._inputs_evaluation import inputs_evaluation as _inputs_evaluation
-from ._maze_metrics import metrics as _maze_metrics, MazeMetrics
+from ._maze_metrics import metrics as _maze_metrics
 from .controllers.base import BaseController
 from .maze import Maze
 from .pos import Pos
 from .robot import Robot
-from .types import InputType, OutputType, Action, State
+from .types import InputType, OutputType, Action, State, MazeMetrics
 from ..misc import resources
 from ..misc.resources import SignType
 
@@ -20,6 +20,12 @@ logger = getLogger(__name__)
 
 REWARDS = {
     "optimal": lambda length, dt: length,
+    "minimal": lambda length, dt, deadline, rewards: (
+        deadline
+        * length
+        * (rewards.timestep + min(rewards.backward, rewards.collision))
+    )
+    / dt,
     "compute": lambda length, dt: SimpleNamespace(
         timestep=-dt,
         backward=-1 / 10,
@@ -48,6 +54,7 @@ class Simulation:
         maze: Resettable[Maze] = None,
         robot: Resettable[Robot.BuildData] = None,
         save_trajectory=False,
+        deadline_factor=4,
     ):
 
         def test_valid_set_reset(o_, s_, a_):
@@ -72,9 +79,13 @@ class Simulation:
         self.dt = 1 if self.data.outputs is OutputType.DISCRETE else 0.1
 
         sl = len(self.maze.solution)
-        self.deadline = 4 * sl / self.dt
+        self._deadline_factor = deadline_factor
+        self.deadline = deadline_factor * sl / self.dt
         self.rewards = REWARDS["compute"](sl, self.dt)
         self.optimal_reward = REWARDS["optimal"](sl, self.dt)
+        self.minimal_reward = REWARDS["minimal"](
+            sl, self.dt, deadline_factor, self.rewards
+        )
         self.stats = SimpleNamespace(steps=0, collisions=0, backsteps=0)
 
         self.observations = self._observations(self.data.inputs, self.data.vision)
@@ -98,6 +109,10 @@ class Simulation:
     def time(self):
         return self.timestep * self.dt
 
+    @property
+    def deadline_factor(self):
+        return self._deadline_factor
+
     def success(self):
         """Return whether the agent has reached the target"""
         return self.robot.cell() == self.maze.end
@@ -107,13 +122,21 @@ class Simulation:
         return self.timestep >= self.deadline
 
     def done(self):
+        """Return whether the simulation has run its course
+
+        @see :meth:`success()` and :meth:`failure()` to check the outcome
+        """
         return self.success() or self.failure()
 
     def cumulative_reward(self):
         return self.robot.reward
 
     def normalized_reward(self):
-        """Return the agent's cumulative reward in :math:`(-\\inf, 1]`"""
+        """Return the agent's cumulative reward in :math:`[-1, 1]`"""
+        r_max, r_min = self.optimal_reward, self.minimal_reward
+        r = round(2 * (self.robot.reward - r_min) / (r_max - r_min) - 1, 3)
+        assert -1 <= r <= 1, r
+        return r
         return (
             2 * int(self.success())
             - self.dt * self.stats.steps / (len(self.maze.solution) - 1)
@@ -309,7 +332,10 @@ class Simulation:
         if self.done():
             reward += self.rewards.finish
 
-        if prev_prev_cell == self.robot.cell():
+        if (
+            prev_prev_cell != self.robot.prev_cell
+            and prev_prev_cell == self.robot.cell()
+        ):
             reward += self.rewards.backward
             self.stats.backsteps += 1
 
@@ -397,7 +423,7 @@ class Simulation:
 
     @staticmethod
     def _discrete_visual(
-        visual: Union[DiscreteVisual, float]
+        visual: Union[DiscreteVisual, float],
     ) -> Optional[DiscreteVisual]:
         return visual if not isinstance(visual, float) or not np.isnan(visual) else None
 
@@ -468,6 +494,14 @@ class Simulation:
     def compute_metrics(
         cls, maze: Maze, inputs: InputType, vision: int
     ) -> dict[Union[MazeMetrics, str]]:
+        """
+        Computes metrics about a maze.
+
+        :param maze: The maze to process
+        :param inputs: The type of inputs (currently unused)
+        :param vision: The agent's retina size (currently unused)
+        :return: a dictionary of the different metrics
+        """
         inputs = InputType.DISCRETE  # Not implemented for continuous case
         return _maze_metrics(
             maze, cls.generate_visuals_map(maze, inputs, vision), inputs
@@ -479,6 +513,7 @@ class Simulation:
         results_path: Union[Path, str],
         controller: BaseController,
         signs: dict[SignType, Maze.Signs],
+        empty_intersections: bool = False,
         draw_inputs: bool = False,
         draw_individual_files: bool = False,
         draw_summary_file: bool = True,
@@ -497,6 +532,8 @@ class Simulation:
         :param results_path: Folder under which to store the resulting files.
         :param controller: Controller to evaluate.
         :param signs: Dictionary of clues/lures/traps.
+        :param empty_intersections: Also evaluate agent on intersections without signs
+         (nasty, disabled by default)
         :param draw_inputs: Whether to draw inputs (without the actions)
         :param draw_individual_files: Whether to generate a separate file for
          every input/action
@@ -531,6 +568,7 @@ class Simulation:
             drawer=drawer,
             observations=cls._observations(i_type, controller.vision),
             controller=controller,
+            empty_intersections=empty_intersections,
             draw_inputs=draw_inputs,
             draw_individual_files=draw_individual_files,
             draw_summary_file=draw_summary_file,

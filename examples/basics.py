@@ -7,7 +7,10 @@ maze = Maze.from_string("M16_10x10_U")
 robot = Robot.BuildData.from_string("DD")
 simulation = Simulation(maze, robot)
 
-print(f"Maze stats: {pprint.pformat(maze.stats())}")
+print("Maze stats:", pprint.pformat(maze.stats()))
+print()
+print("Maze complexity:")
+pprint.pprint(simulation.compute_metrics(maze, robot.inputs, robot.vision))
 
 print("=" * 80)
 controller = load("examples/agents/unicursive_tabular.zip")

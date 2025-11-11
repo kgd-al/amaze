@@ -105,7 +105,7 @@ class Robot:
                     )
 
             if bd.inputs is InputType.CONTINUOUS:
-                if ix < len(robot) > 2:
+                if ix < len(robot):
                     bd.vision = int(robot[ix:])
                     if (bd.vision % 2) != 1:
                         raise ValueError("Retina size must be odd")

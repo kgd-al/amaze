@@ -1,4 +1,4 @@
-""" Implements a wrapper around common models from stable baselines 3 """
+"""Implements a wrapper around common models from stable baselines 3"""
 
 import io
 from typing import Optional, Dict, Type, Union, Tuple

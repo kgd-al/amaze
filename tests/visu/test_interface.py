@@ -194,7 +194,9 @@ def test_interface_render(kgd_qt, tmp_path):
 
 @pytest.mark.parametrize("maze_t", [str, Maze.BuildData, Maze])
 @pytest.mark.parametrize("robot", ["D", "H"])
-def test_maze_widget(maze_t, robot, kgd_qt, tmp_path):
+@pytest.mark.parametrize("width", [None, 100])
+@pytest.mark.parametrize("cell_width", [None, 10])
+def test_maze_widget(maze_t, robot, kgd_qt, tmp_path, width, cell_width):
     with TimedOffscreenApplication(kgd_qt):
         robot = Robot(Robot.BuildData.from_string(robot))
 
@@ -209,12 +211,17 @@ def test_maze_widget(maze_t, robot, kgd_qt, tmp_path):
         mw = MazeWidget(maze=maze, robot=robot)
         pytest.raises(ValueError, mw.set_maze, None)
         mw.set_maze(maze)
-        print(mw.minimumSize())
+
+        args = dict()
+        if width is not None:
+            args["width"] = width
+        if cell_width is not None:
+            args["cell_width"] = cell_width
 
         robot.reset(Pos(0.5, 0.5))
-        mw.render_to_file(tmp_path.joinpath("maze.png"))
+        mw.render_to_file(tmp_path.joinpath("maze.png"), **args)
         mw.update_config(robot=False)
-        mw.pretty_render().save(str(tmp_path.joinpath("maze_no_robot.png")))
+        mw.pretty_render(**args).save(str(tmp_path.joinpath("maze_no_robot.png")))
 
 
 @pytest.mark.parametrize(

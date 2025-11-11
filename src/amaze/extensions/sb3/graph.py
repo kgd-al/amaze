@@ -1,4 +1,4 @@
-""" Collection of functions to generate a user-friendly representation of
+"""Collection of functions to generate a user-friendly representation of
 a neural network from stable baselines 3"""
 
 from abc import ABC, abstractmethod

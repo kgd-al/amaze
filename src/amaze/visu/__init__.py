@@ -1,5 +1,4 @@
-""" Module for everything graphic: interfaces, plots, ...
-"""
+"""Module for everything graphic: interfaces, plots, ..."""
 
 from .viewer import MainWindow
 from .widgets.maze import MazeWidget

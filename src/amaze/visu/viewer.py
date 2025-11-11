@@ -93,7 +93,6 @@ class MainWindow(QWidget):
 
     def __init__(self, args: Optional = None, runnable=True):
         super().__init__()
-        self.setMaximumWidth(500)
         self.args = args
 
         # holder = QWidget()
@@ -835,7 +834,7 @@ class MainWindow(QWidget):
 
     def _connect_signals(self):
         reset_maze = functools.partial(self.reset, MainWindow.Reset.MAZE)
-        for k in ["width", "height", "seed", "vision", "p_lure", "p_trap"]:
+        for k in ["width", "height", "seed", "p_lure", "p_trap"]:
             self.config[k].valueChanged.connect(reset_maze)
         for k in ["traps", "lures", "clues"]:
             c = self.config[k]
@@ -848,6 +847,7 @@ class MainWindow(QWidget):
         reset_robot = functools.partial(
             self.reset, MainWindow.Reset.ROBOT | MainWindow.Reset.CONTROL
         )
+        self.config["vision"].valueChanged.connect(reset_robot)
         for k in ["inputs", "outputs"]:
             self.config[k].currentTextChanged.connect(reset_robot)
 
@@ -886,73 +886,90 @@ class MainWindow(QWidget):
         return QSettings("kgd", "amaze")
 
     def _restore_settings(self, args):
-        if args.restore_config:
-            config = self._settings()
-            logger.info(f"Loading configuration from {config.fileName()}")
+        try:
+            if args.restore_config:
+                config = self._settings()
+                logger.info(f"Loading configuration from {config.fileName()}")
 
-        def _try(name, f_=None, default=None):
-            if (v_ := config.value(name.replace("_", "/"))) is not None:
-                return f_(v_) if f_ else v_
-            else:
-                return default
+            def _try(name, f_=None, default=None):
+                if (v_ := config.value(name.replace("_", "/"))) is not None:
+                    return f_(v_) if f_ else v_
+                else:
+                    return default
 
-        if args.restore_config:
-            _try("pos", lambda p: self.move(p))
-            _try("size", lambda s: self.resize(s))
+            if args.restore_config:
+                _try("pos", lambda p: self.move(p))
+                _try("size", lambda s: self.resize(s))
 
-        if (w := args.width) is not None or (w := self.width()) < 500:
-            w_, h_ = self.width(), self.height()
-            self.resize(w, w * h_ // w_)
+            if (w := args.width) is not None or (w := self.width()) < 500:
+                w_, h_ = self.width(), self.height()
+                self.resize(w, w * h_ // w_)
 
-        def restore_bool(s, k__):
-            b_ = bool(int(s))
-            self.config[k__].setChecked(b_)
-            return b_
+            def restore_bool(s, k__):
+                b_ = bool(int(s))
+                self.config[k__].setChecked(b_)
+                return b_
 
-        viewer_options = {}
+            viewer_options = {}
 
-        if args.robot is not None:
-            args_robot = Robot.BuildData.from_string(
-                args.robot,
-                Robot.BuildData.from_argparse(args, set_defaults=False),
-            )
-        else:
-            args_robot = Robot.BuildData.from_argparse(args, set_defaults=True)
+            defaults = not args.restore_config
 
-        if args.maze is not None:
-            args_maze = Maze.BuildData.from_string(
-                args.maze,
-                Maze.BuildData.from_argparse(args, set_defaults=False),
-            )
-        else:
-            args_maze = Maze.BuildData.from_argparse(args, set_defaults=True)
-
-        if args.restore_config:
-            for k in MazeWidget.default_config().keys():
-                k_ = "show_" + k
-                b = _try(k_, functools.partial(restore_bool, k__=k_))
-                viewer_options[k] = b
-
-            self._init_from_robot_build_data(
-                Robot.BuildData(**_try("robot", default={})).override_with(args_robot)
-            )
-
-            self._init_from_maze_build_data(
-                Maze.BuildData(**_try("maze", default={})).override_with(args_maze)
-            )
-
-            config.beginGroup("sections")
-            for k in self.sections:
-                self.sections[k].set_collapsed(
-                    bool(int(config.value(k.value.lower(), False)))
+            RBD = Robot.BuildData
+            if args.robot is not None:
+                args_robot = RBD.from_string(
+                    args.robot,
+                    RBD.from_argparse(args, set_defaults=False),
                 )
-            config.endGroup()
+            else:
+                args_robot = RBD.from_argparse(args, set_defaults=defaults)
 
-        else:
-            self._init_from_robot_build_data(args_robot)
-            self._init_from_maze_build_data(args_maze)
+            MBD = Maze.BuildData
+            if args.maze is not None:
+                args_maze = MBD.from_string(
+                    args.maze,
+                    MBD.from_argparse(args, set_defaults=False),
+                )
+            else:
+                args_maze = MBD.from_argparse(args, set_defaults=defaults)
 
-        return viewer_options
+            if args.restore_config:
+                for k in MazeWidget.default_config().keys():
+                    k_ = "show_" + k
+                    b = _try(k_, functools.partial(restore_bool, k__=k_))
+                    viewer_options[k] = b
+
+                self._init_from_robot_build_data(
+                    RBD.from_string(_try("robot", default="D")).override_with(
+                        args_robot
+                    )
+                )
+
+                self._init_from_maze_build_data(
+                    MBD.from_string(_try("maze", default="M4_4x4_U")).override_with(
+                        args_maze
+                    )
+                )
+
+                config.beginGroup("sections")
+                for k in self.sections:
+                    self.sections[k].set_collapsed(
+                        bool(int(config.value(k.value.lower(), False)))
+                    )
+                config.endGroup()
+
+            else:
+                self._init_from_robot_build_data(args_robot)
+                self._init_from_maze_build_data(args_maze)
+
+            return viewer_options
+
+        except Exception as e:
+            logging.error(
+                f"Failed to load configuration from {config.fileName()}... Purging...\n"
+                f"Exception was: {e}"
+            )
+            Path(config.fileName()).unlink()
+            return self._restore_settings(args)
 
     def _save_settings(self):
         if not self.args or not self.args.restore_config:
@@ -964,8 +981,8 @@ class MainWindow(QWidget):
         config.setValue("pos", self.pos())
         config.setValue("size", self.size())
 
-        config.setValue("maze", self.maze_data().__dict__)
-        config.setValue("robot", self._robot_data().__dict__)
+        config.setValue("maze", self.maze_data().to_string())
+        config.setValue("robot", self._robot_data().to_string())
 
         config.beginGroup("show")
         for k in MazeWidget.default_config().keys():

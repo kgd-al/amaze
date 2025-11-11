@@ -1,4 +1,4 @@
-from enum import Enum
+from enum import Enum, Flag, auto
 
 import numpy as np
 
@@ -9,11 +9,26 @@ class InputType(Enum):
     """Describes the type of input provided to the maze-navigating agent"""
 
     DISCRETE = "DISCRETE"
-    """ Input is made of 8 pre-processed floats"""
+    """ Input is made of 8 pre-processed floats:
+
+        * First walls and previous direction in direct order
+          (EAST, NORTH, WEST, SOUTH)
+        * Then signs (same order). Only one value will be above 0
+
+        See the readme for examples.
+    """
 
     CONTINUOUS = "CONTINUOUS"
     """ Input is a raw image representing the current cell, at a given
-    resolution """
+        resolution. Iteration order is
+
+        .. code-block::
+
+            for y in range(v):
+                for x in range(v):
+
+        where v is the agent retina size. See the readme for examples.
+     """
 
 
 class OutputType(Enum):
@@ -49,6 +64,45 @@ class StartLocation(int, Enum):
             "NE": cls.NORTH_EAST,
             "NW": cls.NORTH_WEST,
         }[short]
+
+
+class MazeClass(Enum):
+    """The various high-level classes of mazes"""
+
+    TRIVIAL = 0b000
+    """A maze without intersections"""
+
+    SIMPLE = 0b001
+    """A maze with only clues"""
+
+    LURES = 0b011
+    """A maze with clues and lures (but no traps)"""
+
+    TRAPS = 0b101
+    """A maze with clues and traps (but no lures)"""
+
+    COMPLEX = 0b111
+    """A maze with clues, traps and lures"""
+
+    INVALID = 0xFF
+    """An invalid maze type (e.g. one with intersections and no cues)"""
+
+
+class MazeMetrics(Flag):
+    """The various metrics one can extract from a maze."""
+
+    SURPRISINGNESS = auto()
+    """ The entropy of the mazes states, i.e. how likely to see different cells """
+
+    DECEPTIVENESS = auto()
+    """ The entropy of the mazes similar states, i.e. how likely to see the same
+     corridor/intersection with only the cue to differentiate them """
+
+    INSEPARABILITY = auto()
+    """ The difference between signs (not implemented)"""
+
+    ALL = SURPRISINGNESS | DECEPTIVENESS | INSEPARABILITY
+    """ Shorthand """
 
 
 class classproperty(property):

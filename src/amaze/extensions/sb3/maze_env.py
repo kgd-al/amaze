@@ -1,4 +1,4 @@
-""" SB3 wrapper for the maze environment """
+"""SB3 wrapper for the maze environment"""
 
 import logging
 from typing import Optional, List

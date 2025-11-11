@@ -11,6 +11,8 @@ stash/
 tmp/
 tmp
 
+___cache___
+
 docs/src/_auto*
 docs/dependencies/dependencies
 joss/inara/
